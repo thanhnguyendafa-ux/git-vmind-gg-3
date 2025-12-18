@@ -13,39 +13,39 @@ type AuthViewMode = 'landing' | 'login' | 'signup';
 // --- Visual Components ---
 
 const GlassCard: React.FC<{ children: React.ReactNode; className?: string; delay?: number }> = ({ children, className = '', delay = 0 }) => (
-  <div 
-    className={`
+    <div
+        className={`
       relative overflow-hidden rounded-3xl backdrop-blur-xl transition-all duration-500
       dark:bg-white/5 dark:border-white/10 dark:shadow-2xl dark:shadow-black/50
       bg-white/60 border border-white/60 shadow-xl shadow-emerald-100/50
       ${className}
     `}
-    style={{ animation: 'fadeIn 0.8s ease-out backwards', animationDelay: `${delay}ms` }}
-  >
-    {/* Subtle inner light reflection */}
-    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none opacity-50 dark:opacity-10" />
-    {children}
-  </div>
+        style={{ animation: 'fadeIn 0.8s ease-out backwards', animationDelay: `${delay}ms` }}
+    >
+        {/* Subtle inner light reflection */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none opacity-50 dark:opacity-10" />
+        {children}
+    </div>
 );
 
 const BentoCard: React.FC<{ title: string; desc: string; icon: string; className?: string; delay?: number; children?: React.ReactNode }> = ({ title, desc, icon, className, delay, children }) => {
-  const { theme } = useUIStore();
-  const isDark = theme === 'dark';
+    const { theme } = useUIStore();
+    const isDark = theme === 'dark';
 
-  return (
-    <GlassCard className={`group hover:-translate-y-1 transition-all duration-500 ${isDark ? 'hover:bg-white/10 hover:border-white/20' : 'hover:bg-white/80 hover:border-white/80'} ${className}`} delay={delay}>
-      <div className="relative z-10 p-6 flex flex-col h-full">
-        <div className={`mb-4 p-3 w-fit rounded-2xl transition-colors shadow-inner ${isDark ? 'bg-white/10 text-primary-400 group-hover:text-primary-300' : 'bg-white text-primary-600 shadow-sm border border-secondary-100'}`}>
-          <Icon name={icon} className="w-6 h-6" />
-        </div>
-        <h3 className={`text-xl font-bold mb-2 font-serif tracking-wide ${isDark ? 'text-white' : 'text-slate-800'}`}>{title}</h3>
-        <p className={`text-sm mb-4 leading-relaxed font-nunitosans ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{desc}</p>
-        <div className="mt-auto w-full">
-          {children}
-        </div>
-      </div>
-    </GlassCard>
-  );
+    return (
+        <GlassCard className={`group hover:-translate-y-1 transition-all duration-500 ${isDark ? 'hover:bg-white/10 hover:border-white/20' : 'hover:bg-white/80 hover:border-white/80'} ${className}`} delay={delay}>
+            <div className="relative z-10 p-6 flex flex-col h-full">
+                <div className={`mb-4 p-3 w-fit rounded-2xl transition-colors shadow-inner ${isDark ? 'bg-white/10 text-primary-400 group-hover:text-primary-300' : 'bg-white text-primary-600 shadow-sm border border-secondary-100'}`}>
+                    <Icon name={icon} className="w-6 h-6" />
+                </div>
+                <h3 className={`text-xl font-bold mb-2 font-serif tracking-wide ${isDark ? 'text-white' : 'text-slate-800'}`}>{title}</h3>
+                <p className={`text-sm mb-4 leading-relaxed font-nunitosans ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{desc}</p>
+                <div className="mt-auto w-full">
+                    {children}
+                </div>
+            </div>
+        </GlassCard>
+    );
 };
 
 // --- Auth Form Component ---
@@ -82,7 +82,7 @@ const AuthForm: React.FC<{ mode: 'login' | 'signup'; onBack: () => void; onSwitc
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 relative z-10 animate-fade-scale-in">
+        <div className="min-h-[100dvh] flex items-center justify-center p-4 relative z-10 animate-fade-scale-in">
             <div className="absolute top-8 left-8">
                 <button onClick={onBack} className={`flex items-center gap-2 transition-colors group ${isDark ? 'text-gray-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'}`}>
                     <div className={`p-2 rounded-full transition-colors ${isDark ? 'bg-white/5 group-hover:bg-white/10' : 'bg-white group-hover:bg-slate-100 shadow-sm'}`}>
@@ -130,7 +130,7 @@ const AuthForm: React.FC<{ mode: 'login' | 'signup'; onBack: () => void; onSwitc
                             <p className={`text-xs ${isDark ? 'text-red-200' : 'text-red-700'}`}>{error}</p>
                         </div>
                     )}
-                    
+
                     {message && (
                         <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-3">
                             <Icon name="check-circle" className="w-5 h-5 text-green-500" />
@@ -138,9 +138,9 @@ const AuthForm: React.FC<{ mode: 'login' | 'signup'; onBack: () => void; onSwitc
                         </div>
                     )}
 
-                    <Button 
-                        type="submit" 
-                        disabled={loading} 
+                    <Button
+                        type="submit"
+                        disabled={loading}
                         className="w-full h-12 text-base font-bold bg-gradient-to-r from-primary-600 to-emerald-600 hover:from-primary-500 hover:to-emerald-500 text-white border-none shadow-lg shadow-primary-900/20 transform hover:scale-[1.02] transition-transform duration-200"
                     >
                         {loading ? <Icon name="spinner" className="w-5 h-5 animate-spin" /> : (mode === 'login' ? 'Log In' : 'Create Account')}
@@ -162,15 +162,15 @@ const AuthForm: React.FC<{ mode: 'login' | 'signup'; onBack: () => void; onSwitc
 
 // --- Landing View ---
 
-const LandingView: React.FC<{ 
-    onGuestLogin: () => void; 
-    onNavigateAuth: (mode: 'login' | 'signup') => void 
+const LandingView: React.FC<{
+    onGuestLogin: () => void;
+    onNavigateAuth: (mode: 'login' | 'signup') => void
 }> = ({ onGuestLogin, onNavigateAuth }) => {
     const { theme } = useUIStore();
     const isDark = theme === 'dark';
 
     return (
-        <div className="relative z-10 min-h-screen flex flex-col">
+        <div className="relative z-10 min-h-[100dvh] flex flex-col">
             {/* Navbar */}
             <nav className="w-full px-6 py-6 flex justify-between items-center max-w-7xl mx-auto animate-fadeIn">
                 <div className="flex items-center gap-2">
@@ -180,13 +180,13 @@ const LandingView: React.FC<{
                     <span className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-primary-950'}`}>Vmind</span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <button 
+                    <button
                         onClick={() => onNavigateAuth('login')}
                         className={`text-sm font-semibold transition-colors px-4 py-2 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-600 hover:text-primary-600'}`}
                     >
                         Log In
                     </button>
-                    <button 
+                    <button
                         onClick={onGuestLogin}
                         className={`text-sm font-bold px-5 py-2.5 rounded-full transition-all shadow-lg active:scale-95 border ${isDark ? 'bg-primary-400 hover:bg-primary-300 text-primary-950 border-transparent hover:shadow-primary-500/25' : 'bg-white hover:bg-secondary-50 text-primary-600 border-secondary-200'}`}
                     >
@@ -202,27 +202,27 @@ const LandingView: React.FC<{
                         <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></span>
                         <span className={`text-xs font-medium tracking-wide uppercase ${isDark ? 'text-primary-100' : 'text-primary-800'}`}>Vmind 2.6 is Live</span>
                     </div>
-                    
+
                     <h1 className={`text-6xl md:text-8xl font-serif font-medium tracking-tight leading-[1.1] ${isDark ? 'text-white' : 'text-primary-950'}`}>
-                        Master Vocabulary.<br/>
+                        Master Vocabulary.<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-emerald-400 to-sky-400">
                             Cultivate Your Mind.
                         </span>
                     </h1>
-                    
+
                     <p className={`text-lg md:text-xl max-w-2xl mx-auto font-light leading-relaxed ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                        The AI-powered spaced repetition system that turns memory into a living garden. 
+                        The AI-powered spaced repetition system that turns memory into a living garden.
                         Create, study, and watch your knowledge grow.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                        <button 
+                        <button
                             onClick={onGuestLogin}
                             className="h-14 px-8 rounded-full bg-gradient-to-r from-primary-500 to-emerald-600 hover:from-primary-400 hover:to-emerald-500 text-white font-bold text-lg shadow-xl shadow-primary-500/20 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
                         >
                             Start Growing Now
                         </button>
-                        <button 
+                        <button
                             onClick={() => onNavigateAuth('signup')}
                             className={`h-14 px-8 rounded-full font-bold text-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 w-full sm:w-auto border ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white' : 'bg-white/80 hover:bg-white border-white text-slate-700 shadow-md'}`}
                         >
@@ -236,8 +236,8 @@ const LandingView: React.FC<{
             <section className="px-4 py-20 w-full max-w-7xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[minmax(200px,auto)]">
                     {/* Card 1: AI (Wide) */}
-                    <BentoCard 
-                        title="Gemini AI Intelligence" 
+                    <BentoCard
+                        title="Gemini AI Intelligence"
                         desc="Generate example sentences, explanations, and visual mnemonics instantly. Your personal AI tutor is built into every card."
                         icon="sparkles"
                         className="md:col-span-2 md:row-span-1"
@@ -251,8 +251,8 @@ const LandingView: React.FC<{
                     </BentoCard>
 
                     {/* Card 2: Garden (Tall) */}
-                    <BentoCard 
-                        title="The Garden" 
+                    <BentoCard
+                        title="The Garden"
                         desc="Visualize your progress as a living ecosystem. Earn droplets by studying to nurture your Spirit Tree from a seed to an eternal guardian."
                         icon="tree"
                         className={`md:col-span-1 md:row-span-2 ${isDark ? 'bg-gradient-to-b from-white/5 to-emerald-900/20' : 'bg-gradient-to-b from-white/60 to-emerald-50/50'}`}
@@ -265,8 +265,8 @@ const LandingView: React.FC<{
                     </BentoCard>
 
                     {/* Card 3: Confidence */}
-                    <BentoCard 
-                        title="Confidence Mode" 
+                    <BentoCard
+                        title="Confidence Mode"
                         desc="A short-term mastery loop designed for rapid cramming. Sort cards by how well you know them."
                         icon="stack-of-cards"
                         className="md:col-span-1"
@@ -274,8 +274,8 @@ const LandingView: React.FC<{
                     />
 
                     {/* Card 4: Theater */}
-                    <BentoCard 
-                        title="Theater Mode" 
+                    <BentoCard
+                        title="Theater Mode"
                         desc="Hands-free passive learning. Watch your vocabulary play out like a movie while you work or relax."
                         icon="film"
                         className="md:col-span-1"
@@ -323,18 +323,18 @@ const LandingView: React.FC<{
 const AuthScreen: React.FC = () => {
     const [viewMode, setViewMode] = React.useState<AuthViewMode>('landing');
     const { handleGuestLogin } = useUserStore();
-    
+
     return (
-        <div className="min-h-screen font-sans text-text-main overflow-x-hidden selection:bg-primary-500/30 selection:text-primary-900 relative">
+        <div className="min-h-[100dvh] font-sans text-text-main overflow-x-hidden selection:bg-primary-500/30 selection:text-primary-900 relative">
             <AuroraBackground />
-            
+
             {viewMode === 'landing' ? (
-                <LandingView 
+                <LandingView
                     onGuestLogin={handleGuestLogin}
                     onNavigateAuth={(mode) => setViewMode(mode)}
                 />
             ) : (
-                <AuthForm 
+                <AuthForm
                     mode={viewMode as 'login' | 'signup'}
                     onBack={() => setViewMode('landing')}
                     onSwitchMode={() => setViewMode(viewMode === 'login' ? 'signup' : 'login')}

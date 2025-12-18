@@ -10,7 +10,7 @@ import { extractVideoID } from '../../utils/youtubeUtils';
 import { useTableStore } from '../../stores/useTableStore';
 import { StudyMode } from '../../types';
 
-const normalizeText = (s: string) => s.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"").replace(/\s{2,}/g," ").trim();
+const normalizeText = (s: string) => s.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").replace(/\s{2,}/g, " ").trim();
 
 interface LinkedSnippet {
     endSegmentIndex: number;
@@ -44,7 +44,7 @@ const DictationSessionScreen: React.FC = () => {
     const playerRef = useRef<any>(null);
     const segmentTimeoutRef = useRef<number | null>(null);
     const loopCounterRef = useRef(0);
-    
+
     const videoId = extractVideoID(note.youtubeUrl);
     const currentEntry = transcript[activeIndex];
 
@@ -80,7 +80,7 @@ const DictationSessionScreen: React.FC = () => {
                         width: '0',
                         videoId: videoId,
                         host: 'https://www.youtube.com', // Explicit host often helps
-                        playerVars: { 
+                        playerVars: {
                             'playsinline': 1,
                             'origin': window.location.origin, // Critical for embedded permissions
                             'enablejsapi': 1,
@@ -116,7 +116,7 @@ const DictationSessionScreen: React.FC = () => {
             if (segmentTimeoutRef.current) clearTimeout(segmentTimeoutRef.current);
             try {
                 playerRef.current?.destroy();
-            } catch(e) { /* ignore destruction errors */ }
+            } catch (e) { /* ignore destruction errors */ }
         };
     }, [videoId, startTime, showToast]);
 
@@ -127,27 +127,27 @@ const DictationSessionScreen: React.FC = () => {
         }
 
         if (!playerRef.current || !currentEntry || !playerRef.current.seekTo) {
-             showToast("Video player is loading...", "info");
+            showToast("Video player is loading...", "info");
             return;
         }
 
         if (segmentTimeoutRef.current) {
             clearTimeout(segmentTimeoutRef.current);
         }
-        
+
         const duration = activeSnippet ? activeSnippet.audioDuration : currentEntry.duration;
 
         loopCounterRef.current = 1;
         // Ensure playback rate is set
-        if(playerRef.current.setPlaybackRate) {
-             playerRef.current.setPlaybackRate(playbackRate);
+        if (playerRef.current.setPlaybackRate) {
+            playerRef.current.setPlaybackRate(playbackRate);
         }
 
         const executePlay = () => {
             try {
                 playerRef.current.seekTo(currentEntry.start, true);
                 playerRef.current.playVideo();
-    
+
                 segmentTimeoutRef.current = window.setTimeout(() => {
                     if (loopCount === -1 || loopCounterRef.current < loopCount) {
                         loopCounterRef.current++;
@@ -161,17 +161,17 @@ const DictationSessionScreen: React.FC = () => {
                 showToast("Playback failed. Try refreshing.", "error");
             }
         };
-        
+
         executePlay();
     };
-    
+
     const handleCheck = () => {
         const userAnswer = userInputs[activeIndex] || '';
         const correctText = activeSnippet ? activeSnippet.fullText : currentEntry.text;
         const isCorrect = normalizeText(userAnswer) === normalizeText(correctText);
-        setResults(prev => ({...prev, [activeIndex]: isCorrect ? 'correct' : 'incorrect'}));
+        setResults(prev => ({ ...prev, [activeIndex]: isCorrect ? 'correct' : 'incorrect' }));
     };
-    
+
     const handleFinish = () => {
         const correctCount = Object.values(results).filter(r => r === 'correct').length;
         handleFinishDictationSession(activeDictationSession, { correct: correctCount, total: transcript.length });
@@ -184,7 +184,7 @@ const DictationSessionScreen: React.FC = () => {
             setIsJournaled(false);
         }
     };
-    
+
     const handleNext = () => {
         if (activeSnippet) {
             navigate(activeSnippet.endSegmentIndex + 1);
@@ -201,9 +201,9 @@ const DictationSessionScreen: React.FC = () => {
 
     const hasChecked = results[activeIndex] !== 'untouched';
     const resultStyle = results[activeIndex] === 'correct' ? 'border-success-500' : (results[activeIndex] === 'incorrect' ? 'border-error-500' : 'border-secondary-300 dark:border-secondary-600');
-    
+
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-background dark:bg-secondary-900">
+        <div className="flex flex-col md:flex-row h-[100dvh] bg-background dark:bg-secondary-900 pb-[env(safe-area-inset-bottom)]">
             <div id="yt-player-session" className="absolute w-0 h-0"></div>
             <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto">
                 <header className="flex-shrink-0 flex justify-between items-center mb-4">
@@ -223,9 +223,9 @@ const DictationSessionScreen: React.FC = () => {
                         <button onClick={handleFinish} className="bg-primary-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-primary-700">Finish</button>
                     </div>
                 </header>
-                
+
                 {playerError && (
-                     <div className="mb-4 p-3 bg-error-100 border border-error-200 text-error-700 rounded-md text-sm flex items-center gap-2">
+                    <div className="mb-4 p-3 bg-error-100 border border-error-200 text-error-700 rounded-md text-sm flex items-center gap-2">
                         <Icon name="error-circle" className="w-5 h-5" />
                         {playerError}
                     </div>
@@ -235,11 +235,11 @@ const DictationSessionScreen: React.FC = () => {
                     <div className="w-full max-w-2xl bg-surface dark:bg-secondary-800 border border-secondary-200/80 dark:border-secondary-700/50 rounded-xl shadow-lg p-6">
                         <button onClick={playCurrentSegment} className={`w-40 h-40 mx-auto flex items-center justify-center rounded-full mb-6 shadow-lg transition-transform hover:scale-105 ${playerError ? 'bg-secondary-400 cursor-not-allowed' : 'bg-primary-500 hover:bg-primary-600'}`}>
                             {activeSnippet && <Icon name="link" className="w-8 h-8 absolute top-4 right-4 text-white/50" />}
-                            <Icon name={playerError ? 'error-circle' : 'play'} className="w-16 h-16 text-white"/>
+                            <Icon name={playerError ? 'error-circle' : 'play'} className="w-16 h-16 text-white" />
                         </button>
 
                         <div className="flex items-center justify-center gap-6 mb-4">
-                             <div>
+                            <div>
                                 <label htmlFor="loop-select-session" className="block text-xs font-medium text-secondary-600 dark:text-secondary-400 mb-1 text-center">Loop</label>
                                 <select id="loop-select-session" value={loopCount} onChange={e => setLoopCount(Number(e.target.value))} className="bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md px-2 py-1.5 text-sm">
                                     <option value="1">1x</option>
@@ -261,7 +261,7 @@ const DictationSessionScreen: React.FC = () => {
 
                         <textarea
                             value={userInputs[activeIndex] || ''}
-                            onChange={(e) => setUserInputs(prev => ({...prev, [activeIndex]: e.target.value}))}
+                            onChange={(e) => setUserInputs(prev => ({ ...prev, [activeIndex]: e.target.value }))}
                             disabled={hasChecked}
                             placeholder="Type what you hear..."
                             rows={activeSnippet ? 5 : 3}
@@ -281,10 +281,10 @@ const DictationSessionScreen: React.FC = () => {
                                 </div>
                             </div>
                         )}
-                         <div className="flex justify-between items-center mt-4">
-                            <button onClick={() => navigate(activeIndex - 1)} disabled={activeIndex === 0} className="p-2 rounded-full disabled:opacity-30 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700"><Icon name="arrowLeft" className="w-8 h-8"/></button>
+                        <div className="flex justify-between items-center mt-4">
+                            <button onClick={() => navigate(activeIndex - 1)} disabled={activeIndex === 0} className="p-2 rounded-full disabled:opacity-30 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700"><Icon name="arrowLeft" className="w-8 h-8" /></button>
                             <span className="font-semibold text-secondary-600 dark:text-secondary-300">{activeIndex + 1} / {transcript.length}</span>
-                            <button onClick={handleNext} disabled={activeIndex >= transcript.length - 1} className="p-2 rounded-full disabled:opacity-30 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700"><Icon name="arrowRight" className="w-8 h-8"/></button>
+                            <button onClick={handleNext} disabled={activeIndex >= transcript.length - 1} className="p-2 rounded-full disabled:opacity-30 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700"><Icon name="arrowRight" className="w-8 h-8" /></button>
                         </div>
                     </div>
                 </div>
@@ -292,23 +292,24 @@ const DictationSessionScreen: React.FC = () => {
             <aside className="w-full md:w-80 flex-shrink-0 bg-surface dark:bg-secondary-800 border-t md:border-t-0 md:border-l border-secondary-200 dark:border-secondary-700 flex flex-col">
                 <div className="p-3 border-b border-secondary-200 dark:border-secondary-700 flex justify-between items-center">
                     <h3 className="font-semibold text-sm">Transcript Index</h3>
-                    <button onClick={() => setIsTranscriptVisible(!isTranscriptVisible)} title="Toggle transcript visibility" className="p-1 text-text-subtle"><Icon name={isTranscriptVisible ? 'eye-off' : 'eye'} className="w-5 h-5"/></button>
+                    <button onClick={() => setIsTranscriptVisible(!isTranscriptVisible)} title="Toggle transcript visibility" className="p-1 text-text-subtle"><Icon name={isTranscriptVisible ? 'eye-off' : 'eye'} className="w-5 h-5" /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto">
                     {transcript.map((entry, index) => {
                         const isLinkedStart = practiceMode === 'linked' && linkedSnippetsMap.has(index);
                         return (
-                        <div key={index} onClick={() => navigate(index)} className={`p-3 cursor-pointer border-l-4 flex items-start gap-2 ${activeIndex === index ? 'bg-secondary-100 dark:bg-secondary-900/50 border-primary-500' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}>
-                            {isLinkedStart && <Icon name="link" className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" title="Linked Snippet" />}
-                            <div className="flex-grow">
-                                <div className="flex items-center gap-2 text-xs font-mono text-text-subtle">
-                                    <Icon name={results[index] === 'correct' ? 'check-circle' : (results[index] === 'incorrect' ? 'error-circle' : 'circle-outline')} className={`w-4 h-4 ${results[index] === 'correct' ? 'text-success-500' : (results[index] === 'incorrect' ? 'text-error-500' : 'text-secondary-400')}`}/>
-                                    <span>{new Date(entry.start * 1000).toISOString().substr(14, 5)}</span>
+                            <div key={index} onClick={() => navigate(index)} className={`p-3 cursor-pointer border-l-4 flex items-start gap-2 ${activeIndex === index ? 'bg-secondary-100 dark:bg-secondary-900/50 border-primary-500' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}>
+                                {isLinkedStart && <Icon name="link" className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" title="Linked Snippet" />}
+                                <div className="flex-grow">
+                                    <div className="flex items-center gap-2 text-xs font-mono text-text-subtle">
+                                        <Icon name={results[index] === 'correct' ? 'check-circle' : (results[index] === 'incorrect' ? 'error-circle' : 'circle-outline')} className={`w-4 h-4 ${results[index] === 'correct' ? 'text-success-500' : (results[index] === 'incorrect' ? 'text-error-500' : 'text-secondary-400')}`} />
+                                        <span>{new Date(entry.start * 1000).toISOString().substr(14, 5)}</span>
+                                    </div>
+                                    {isTranscriptVisible && <p className="text-xs text-secondary-600 dark:text-secondary-300 mt-1 pl-6">{entry.text}</p>}
                                 </div>
-                                {isTranscriptVisible && <p className="text-xs text-secondary-600 dark:text-secondary-300 mt-1 pl-6">{entry.text}</p>}
                             </div>
-                        </div>
-                    )})}
+                        )
+                    })}
                 </div>
             </aside>
         </div>

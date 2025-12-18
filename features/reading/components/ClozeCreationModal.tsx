@@ -79,7 +79,7 @@ const ClozeCreationModal: React.FC<ClozeCreationModalProps> = ({ isOpen, onClose
                     scope // Pass scope parameter
                 }
             });
-            
+
             const countMsg = scope === 'all' ? `Created ${occurrenceCount} cloze cards` : 'Cloze card created';
             showToast(`${countMsg} successfully!`, 'success');
             onClose();
@@ -95,11 +95,11 @@ const ClozeCreationModal: React.FC<ClozeCreationModalProps> = ({ isOpen, onClose
     const otherTables = React.useMemo(() => tables.filter(t => !t.name.startsWith('Reading Notes')), [tables]);
 
     return (
-        <Modal 
-            isOpen={isOpen} 
-            onClose={onClose} 
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
             title="Create Cloze Card"
-            containerClassName="w-screen h-screen max-w-none rounded-none flex flex-col bg-surface dark:bg-secondary-900 overflow-hidden"
+            containerClassName="w-screen h-[100dvh] max-w-none rounded-none flex flex-col bg-surface dark:bg-secondary-900 overflow-hidden"
         >
             <div className="flex flex-col md:flex-row h-full overflow-hidden">
                 {/* LEFT PANE: Configuration - Reduced width to 4/12 (33%) */}
@@ -131,8 +131,8 @@ const ClozeCreationModal: React.FC<ClozeCreationModalProps> = ({ isOpen, onClose
                     {/* NEW Section: Target Scope */}
                     {occurrenceCount > 1 && (
                         <div className="animate-fadeIn">
-                             <label className="block text-xs font-bold text-text-subtle uppercase mb-3">Target Scope</label>
-                             <div className="flex flex-col gap-2">
+                            <label className="block text-xs font-bold text-text-subtle uppercase mb-3">Target Scope</label>
+                            <div className="flex flex-col gap-2">
                                 <label className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${scope === 'single' ? 'bg-primary-50 border-primary-500 ring-1 ring-primary-500 dark:bg-primary-900/20' : 'bg-surface border-secondary-200 dark:border-secondary-700 hover:bg-secondary-50 dark:hover:bg-secondary-800'}`}>
                                     <input type="radio" name="scope" value="single" checked={scope === 'single'} onChange={() => setScope('single')} className="mr-3 w-4 h-4 text-primary-600 focus:ring-primary-500" />
                                     <div className="flex-1">
@@ -150,7 +150,7 @@ const ClozeCreationModal: React.FC<ClozeCreationModalProps> = ({ isOpen, onClose
                                         <span className="text-xs text-text-subtle">Auto-generate <strong>{occurrenceCount}</strong> cards from the whole note.</span>
                                     </div>
                                 </label>
-                             </div>
+                            </div>
                         </div>
                     )}
 
@@ -166,7 +166,7 @@ const ClozeCreationModal: React.FC<ClozeCreationModalProps> = ({ isOpen, onClose
                                     <Button size="sm" variant="secondary" onClick={() => setContextBefore(v => Math.min(3, v + 1))} className="h-8 w-8 p-0">+</Button>
                                 </div>
                             </div>
-                             <div>
+                            <div>
                                 <label className="block text-[10px] font-medium text-text-subtle mb-1">Sentences After</label>
                                 <div className="flex items-center gap-2">
                                     <Button size="sm" variant="secondary" onClick={() => setContextAfter(v => Math.max(0, v - 1))} className="h-8 w-8 p-0">-</Button>
@@ -181,7 +181,7 @@ const ClozeCreationModal: React.FC<ClozeCreationModalProps> = ({ isOpen, onClose
                     <div>
                         <label className="block text-xs font-bold text-text-subtle uppercase mb-3">Options</label>
                         <div className="grid grid-cols-2 gap-3">
-                             <div className="flex rounded-md bg-secondary-100 dark:bg-secondary-700 p-1">
+                            <div className="flex rounded-md bg-secondary-100 dark:bg-secondary-700 p-1">
                                 <button onClick={() => setClozeType(StudyMode.ClozeTyping)} className={`flex-1 text-xs font-semibold py-1.5 rounded transition-all ${clozeType === StudyMode.ClozeTyping ? 'bg-white dark:bg-secondary-600 shadow text-primary-600 dark:text-primary-400' : 'text-text-subtle'}`}>Typing</button>
                                 <button onClick={() => setClozeType(StudyMode.ClozeMCQ)} className={`flex-1 text-xs font-semibold py-1.5 rounded transition-all ${clozeType === StudyMode.ClozeMCQ ? 'bg-white dark:bg-secondary-600 shadow text-primary-600 dark:text-primary-400' : 'text-text-subtle'}`}>MCQ</button>
                             </div>
@@ -209,9 +209,9 @@ const ClozeCreationModal: React.FC<ClozeCreationModalProps> = ({ isOpen, onClose
                     <div className="absolute top-4 right-4 bg-white/80 dark:bg-secondary-800/80 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-text-subtle shadow-sm border border-secondary-200 dark:border-secondary-700 pointer-events-none z-10">
                         LIVE PREVIEW
                     </div>
-                    
+
                     <div className="w-full h-full max-h-[600px] flex items-center justify-center">
-                        <ClozePreviewPane 
+                        <ClozePreviewPane
                             contextBefore={textBefore}
                             contextAfter={textAfter}
                             clozeAnswer={selectionText}
@@ -227,8 +227,8 @@ const ClozeCreationModal: React.FC<ClozeCreationModalProps> = ({ isOpen, onClose
             <div className="p-4 bg-surface dark:bg-secondary-800 border-t border-secondary-200 dark:border-secondary-700 flex justify-end gap-3 flex-shrink-0">
                 <Button variant="secondary" onClick={onClose} disabled={isCreating}>Cancel</Button>
                 <Button onClick={handleCreate} disabled={isCreating} className="min-w-[140px] justify-center shadow-md">
-                    {isCreating 
-                        ? <><Icon name="spinner" className="w-4 h-4 mr-2 animate-spin" />Creating...</> 
+                    {isCreating
+                        ? <><Icon name="spinner" className="w-4 h-4 mr-2 animate-spin" />Creating...</>
                         : (scope === 'all' ? `Create ${occurrenceCount} Cards` : 'Create Card')
                     }
                 </Button>

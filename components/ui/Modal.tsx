@@ -41,7 +41,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, contain
   const overlayPaddingClass = fullScreen ? 'p-0' : 'p-0 sm:p-4';
   const overlayAlignClass = fullScreen ? '' : 'sm:items-center';
   const defaultContainerClass = fullScreen
-    ? 'w-screen h-screen max-w-none rounded-none shadow-none'
+    ? 'w-screen h-[100dvh] max-w-none rounded-none shadow-none'
     : 'sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border-t border-x sm:border';
 
   const modalContent = (
