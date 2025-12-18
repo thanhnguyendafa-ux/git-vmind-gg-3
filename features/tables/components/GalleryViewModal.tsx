@@ -65,7 +65,7 @@ const GalleryViewModal: React.FC<GalleryViewModalProps> = ({ table, initialRowId
   }, [initialRowId]);
 
   return (
-    <div className="fixed inset-0 bg-background/80 dark:bg-secondary-900/80 backdrop-blur-sm z-50 flex flex-col animate-fadeIn">
+    <div className="fixed inset-0 bg-background/80 dark:bg-secondary-900/80 backdrop-blur-sm z-[1000] flex flex-col animate-fadeIn">
       <header className="flex-shrink-0 bg-surface/80 dark:bg-secondary-800/80 backdrop-blur-md p-4 border-b border-secondary-200 dark:border-secondary-700 flex justify-between items-center">
         <h2 className="text-xl font-bold text-text-main dark:text-secondary-100 truncate pr-4">
           Gallery: {table.name}
@@ -77,11 +77,11 @@ const GalleryViewModal: React.FC<GalleryViewModalProps> = ({ table, initialRowId
       <div className="flex-grow overflow-y-auto p-4 sm:p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {table.rows.map(row => (
-            <GalleryCard 
-              key={row.id} 
-              row={row} 
-              table={table} 
-              isInitial={row.id === initialRowId} 
+            <GalleryCard
+              key={row.id}
+              row={row}
+              table={table}
+              isInitial={row.id === initialRowId}
               scrollRef={initialCardRef}
             />
           ))}

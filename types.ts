@@ -119,18 +119,18 @@ export interface Relation {
   name: string;
   questionColumnIds: string[];
   answerColumnIds: string[];
-  
+
   // --- Logic Layer (v2.6) ---
   answerFormula?: string; // e.g., "{Word} ({Phonetic})"
   targetLabel?: string;   // e.g., "Meaning"
-  
+
   compatibleModes?: StudyMode[];
   design?: RelationDesign;
   isCustom?: boolean;
   tags?: string[];
   audioConfig?: RelationAudioConfig;
   displayTiers?: Record<string, DisplayTier>;
-  
+
   // --- Relation-Driven Q&A Config (v2.6) ---
   promptType?: 'column' | 'custom_text';
   customPromptText?: string;
@@ -225,7 +225,7 @@ export interface AnkiConfig {
 }
 
 export interface Table {
-  id:string;
+  id: string;
   name: string;
   shortCode?: string; // NEW v2.7: Namespaced ID (e.g. "VOC")
   columns: Column[];
@@ -323,14 +323,28 @@ export interface Note {
 // --- New: Context Link Type ---
 export interface ContextLink {
   id: string;
-  rowId: string; // Foreign key to VocabRow
-  sourceType: 'reading' | 'dictation';
-  sourceId: string; // ID of the Note or DictationNote
+  rowId: string; // Foreign key to VocabRow (The "From" side or the "Subject")
+
+  // 'reading'/'dictation' = Context from a source (Legacy)
+  // 'row' = Direct link to another row
+  sourceType: 'reading' | 'dictation' | 'row';
+
+  sourceId: string; // ID of the Note, DictationNote, or OTHER Row (The "Target" side)
+
+  // Defines the nature of the relationship
+  // 'context': Default for reading/dictation (Source contains the Row)
+  // 'parent': sourceId is the PARENT of rowId
+  // 'child': sourceId is the CHILD of rowId
+  // 'peer': sourceId and rowId are related (synonym, antonym, collocation)
+  linkType?: 'context' | 'parent' | 'child' | 'peer';
+
   metadata: {
     snippet?: string;
     selection?: string;
     timestamp?: number;
     selectionStartIndex?: number;
+    // For Row links, we might store why they are linked
+    description?: string;
   };
   createdAt: number;
 }
@@ -359,8 +373,8 @@ export interface DictationNote {
 }
 
 export interface DictationSessionData {
-    note: DictationNote;
-    startTime: number;
+  note: DictationNote;
+  startTime: number;
 }
 
 
@@ -420,12 +434,12 @@ export interface ConfidenceProgress {
   /** @deprecated Use tagIds instead */
   tags?: string[];
   createdAt: number;
-  
+
   // Session state
   queue: string[]; // array of row IDs
   currentIndex: number;
   // Persistent status map for visualizing progress (rowId -> status)
-  cardStates?: Record<string, FlashcardStatus>; 
+  cardStates?: Record<string, FlashcardStatus>;
 
   intervalConfig?: FlashcardIntervalConfig;
   newWordCount?: number;
@@ -455,19 +469,19 @@ export interface VmindNotification {
 
 
 export interface AppState {
-    tables: Table[];
-    folders: Folder[];
-    stats: UserStats;
-    notes: Note[];
-    dictationNotes: DictationNote[];
-    contextLinks: ContextLink[]; // New top-level state
-    settings: AppSettings;
-    // FIX: Renamed from flashcardProgresses to confidenceProgresses.
-    confidenceProgresses?: ConfidenceProgress[];
-    studyProgresses?: StudyProgress[];
-    ankiProgresses?: AnkiProgress[];
-    notifications?: VmindNotification[];
-    tags?: Tag[]; // New global tags
+  tables: Table[];
+  folders: Folder[];
+  stats: UserStats;
+  notes: Note[];
+  dictationNotes: DictationNote[];
+  contextLinks: ContextLink[]; // New top-level state
+  settings: AppSettings;
+  // FIX: Renamed from flashcardProgresses to confidenceProgresses.
+  confidenceProgresses?: ConfidenceProgress[];
+  studyProgresses?: StudyProgress[];
+  ankiProgresses?: AnkiProgress[];
+  notifications?: VmindNotification[];
+  tags?: Tag[]; // New global tags
 }
 
 export interface Question {
@@ -532,45 +546,45 @@ export interface ConfidenceSession {
 
 // --- New: Advanced Study Settings ---
 export type StudySource = {
-    tableId: string;
-    relationId: string;
+  tableId: string;
+  relationId: string;
 };
 
 export type TableModeComposition = {
-    strategy: 'balanced' | 'percentage';
-    percentages: { [tableId: string]: number };
+  strategy: 'balanced' | 'percentage';
+  percentages: { [tableId: string]: number };
 };
 
-export type CriteriaSortField = 
-    | 'priorityScore'
-    | 'rankPoint'
-    | 'level'
-    | 'successRate'
-    | 'lastPracticeDate'
-    | 'failed'
-    | 'totalAttempts'
-    | 'inQueueCount'
-    | 'wasQuit'
-    | 'random';
+export type CriteriaSortField =
+  | 'priorityScore'
+  | 'rankPoint'
+  | 'level'
+  | 'successRate'
+  | 'lastPracticeDate'
+  | 'failed'
+  | 'totalAttempts'
+  | 'inQueueCount'
+  | 'wasQuit'
+  | 'random';
 
 
 export type CriteriaSort = {
-    field: CriteriaSortField;
-    direction: 'asc' | 'desc';
+  field: CriteriaSortField;
+  direction: 'asc' | 'desc';
 };
 
 export interface StudySettings {
-    sources: StudySource[];
-    modes: StudyMode[];
-    randomizeModes?: boolean;
+  sources: StudySource[];
+  modes: StudyMode[];
+  randomizeModes?: boolean;
 
-    // Word selection
-    wordSelectionMode: 'auto' | 'manual';
-    wordCount?: number; // Used in 'auto' mode
-    manualWordIds?: string[]; // Used in 'manual' mode
-    
-    // Criteria Mode specific
-    criteriaSorts?: CriteriaSort[];
+  // Word selection
+  wordSelectionMode: 'auto' | 'manual';
+  wordCount?: number; // Used in 'auto' mode
+  manualWordIds?: string[]; // Used in 'manual' mode
+
+  // Criteria Mode specific
+  criteriaSorts?: CriteriaSort[];
 }
 
 // --- New: Study Progress ---
@@ -579,9 +593,9 @@ export interface StudyProgress {
   name: string;
   createdAt: number;
   settings: StudySettings;
-  
+
   // Session state for resuming
-  queue: Question[]; 
+  queue: Question[];
   currentIndex: number;
 }
 
@@ -607,32 +621,32 @@ export interface Sort {
 
 // --- New: Theater Mode Types ---
 export interface TheaterSessionSettings {
-    sources: StudySource[];
-    partDelay: number; // in milliseconds
-    cardInterval: number; // in milliseconds
-    sessionDuration: number; // in minutes, 0 for unlimited
+  sources: StudySource[];
+  partDelay: number; // in milliseconds
+  cardInterval: number; // in milliseconds
+  sessionDuration: number; // in minutes, 0 for unlimited
 }
 
 export interface TheaterSessionData {
-    settings: TheaterSessionSettings;
-    queue: string[]; // array of rowIds
-    startTime: number;
-    history: { rowId: string; timestamp: number }[];
+  settings: TheaterSessionSettings;
+  queue: string[]; // array of rowIds
+  startTime: number;
+  history: { rowId: string; timestamp: number }[];
 }
 
 // --- Scramble Mode Types ---
 export interface ScrambleSessionSettings {
-    sources: StudySource[];
-    splitCount: number;
-    interactionMode: 'click' | 'typing';
+  sources: StudySource[];
+  splitCount: number;
+  interactionMode: 'click' | 'typing';
 }
 
 export interface ScrambleSessionData {
-    settings: ScrambleSessionSettings;
-    queue: { rowId: string, scrambledParts: string[], originalSentence: string }[];
-    currentIndex: number;
-    history: { rowId: string; status: FlashcardStatus; timestamp: number }[];
-    startTime: number;
+  settings: ScrambleSessionSettings;
+  queue: { rowId: string, scrambledParts: string[], originalSentence: string }[];
+  currentIndex: number;
+  history: { rowId: string; status: FlashcardStatus; timestamp: number }[];
+  startTime: number;
 }
 
 // --- New: Anki SRS Types ---
@@ -668,7 +682,7 @@ export interface AnkiSessionData {
 
 // --- Sync Engine Types (v2.6) ---
 
-export type SyncActionType = 
+export type SyncActionType =
   | 'UPSERT_ROW'
   | 'UPSERT_TABLE'
   | 'DELETE_TABLE'
@@ -754,7 +768,7 @@ export interface QuestionCard {
   id: string;
   rowId: string;
   type: QuestionType;
-  
+
   content: {
     promptText: string;
     image?: string;
@@ -768,7 +782,7 @@ export interface QuestionCard {
 
 export interface AnswerSubmission {
   questionId: string;
-  userAnswer: any; 
+  userAnswer: any;
   timestamp: number;
 }
 
@@ -814,34 +828,34 @@ export interface LibraryItem {
 // ==========================================
 
 export interface CommunityTopic {
-    id: string;
-    name: string;
-    slug: string;
-    icon: string;
-    color: string;
+  id: string;
+  name: string;
+  slug: string;
+  icon: string;
+  color: string;
 }
 
 export interface CommunityPost {
-    id: string;
-    userId: string;
-    userName: string; // Simplified for MVP mock
-    title: string;
-    content: string;
-    topicId: string;
-    tableId?: string; // Optional attached table
-    tableName?: string; // Snapshot of table name
-    likes: number;
-    comments: number;
-    isPinned: boolean;
-    isLiked: boolean; // Current user like status (Optimistic)
-    createdAt: number;
+  id: string;
+  userId: string;
+  userName: string; // Simplified for MVP mock
+  title: string;
+  content: string;
+  topicId: string;
+  tableId?: string; // Optional attached table
+  tableName?: string; // Snapshot of table name
+  likes: number;
+  comments: number;
+  isPinned: boolean;
+  isLiked: boolean; // Current user like status (Optimistic)
+  createdAt: number;
 }
 
 export interface CommunityComment {
-    id: string;
-    postId: string;
-    userId: string;
-    userName: string;
-    content: string;
-    createdAt: number;
+  id: string;
+  postId: string;
+  userId: string;
+  userName: string;
+  content: string;
+  createdAt: number;
 }

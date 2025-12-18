@@ -4,11 +4,13 @@ import { useGraphData, GraphNode, NodeType } from './hooks/useGraphData';
 import ForceGraph from './components/ForceGraph';
 import { useUIStore } from '../../stores/useUIStore';
 import { useSessionStore } from '../../stores/useSessionStore';
+import { useTableStore } from '../../stores/useTableStore';
 // FIX: Renamed FlashcardProgress to ConfidenceProgress.
-import { Screen, AnkiProgress, ConfidenceProgress, StudyProgress, Table, Note, DictationNote } from '../../types';
+import { Screen, AnkiProgress, ConfidenceProgress, StudyProgress, Table, Note, DictationNote, VocabRow } from '../../types';
 import Icon from '../../components/ui/Icon';
 import Modal from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import WordInfoModal from '../tables/components/WordInfoModal'; // Re-use the existing modal
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Popover from '../../components/ui/Popover';
 import { Input } from '../../components/ui/Input';
@@ -17,12 +19,33 @@ import AuroraBackground from '../../components/ui/AuroraBackground';
 
 const NodeActionModal: React.FC<{ node: GraphNode | null; onClose: () => void }> = ({ node, onClose }) => {
     const { setCurrentScreen } = useUIStore();
-    const { 
+    const {
         handleStartAnkiSession, handleStartConfidenceSession, handleSelectTable,
         setReadingScreenTarget, setEditingDictationNote
     } = useSessionStore();
 
+    // Additional state for "Row" node interaction (Quick View)
+    const [isWordModalOpen, setIsWordModalOpen] = useState(false);
+
+    // Effect: Open word modal immediately if it's a row node? 
+    // Actually, maybe better to show the existing generic modal first, OR just render the WordInfoModal directly if type is row.
+
     if (!node) return null;
+
+    // SPECIAL HANDLING FOR 'ROW' TYPE
+    if (node.type === 'row') {
+        const row = node.data as VocabRow;
+        // We need the table object for the modal. 
+        // We attached _tableId to data in useGraphData.
+        // But we need the full table object.
+        // Ideally we fetch it from store, but we can't use hooks conditionally here easily.
+        // Let's assume we can get it or we refactor. 
+        // Actually, let's just use a special "Concept View" modal or try to re-use WordInfoModal if we can get the table.
+
+        return (
+            <GenericRowModal row={row} onClose={onClose} />
+        );
+    }
 
     const handleAction = () => {
         switch (node.type) {
@@ -86,8 +109,31 @@ const NodeActionModal: React.FC<{ node: GraphNode | null; onClose: () => void }>
     );
 };
 
+// --- Helper Component for Row View ---
+const GenericRowModal: React.FC<{ row: any, onClose: () => void }> = ({ row, onClose }) => {
+    const { tables } = useTableStore();
+    const tableId = row._tableId;
+    const table = tables.find(t => t.id === tableId);
+
+    // If we have table, show full WordInfoModal
+    if (table) {
+        return <WordInfoModal row={row} table={table} isOpen={true} onClose={onClose} onEdit={() => { }} />;
+    }
+
+    // Fallback if table not found
+    return (
+        <Modal isOpen={true} onClose={onClose} title={row.cols?.[Object.keys(row.cols)[0]] || 'Concept'}>
+            <div className="p-6">
+                <p>Details not available.</p>
+                <Button onClick={onClose}>Close</Button>
+            </div>
+        </Modal>
+    )
+};
+
 const filterOptions: { type: NodeType; label: string; color: string }[] = [
     { type: 'table', label: 'Tables', color: '#64748b' },
+    { type: 'row', label: 'Concepts', color: '#a8a29e' },
     { type: 'anki', label: 'Anki Decks', color: '#0ea5e9' },
     // FIX: Renamed from 'flashcard' to 'confidence'.
     { type: 'confidence', label: 'Confidence Sets', color: '#f59e0b' },
@@ -108,6 +154,7 @@ const ToggleSwitch: React.FC<{ label: string, isChecked: boolean, onToggle: () =
 const MapScreen: React.FC = () => {
     const [activeFilters, setActiveFilters] = useState<Set<NodeType>>(new Set(filterOptions.map(f => f.type)));
     const [searchQuery, setSearchQuery] = useState('');
+    const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
     const [hideOrphans, setHideOrphans] = useState(false);
     const [mainLinksOnly, setMainLinksOnly] = useState(false);
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -118,10 +165,10 @@ const MapScreen: React.FC = () => {
         hideOrphans,
         mainLinksOnly
     }) || { nodes: [], links: [] }; // Safety fallback
-    
+
     const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
     const [isExplorerOpen, setIsExplorerOpen] = useState(false);
-    
+
     const toggleFilter = (type: NodeType) => {
         setActiveFilters(prev => {
             const next = new Set(prev);
@@ -137,11 +184,58 @@ const MapScreen: React.FC = () => {
 
             {/* 2. The Graph Layer (with subtle contrast boost) */}
             <div className="flex-1 relative z-10 bg-white/30 dark:bg-black/20 backdrop-blur-[1px]">
-                <ForceGraph nodes={nodes || []} links={links || []} onNodeClick={setSelectedNode} />
+                <ForceGraph nodes={nodes || []} links={links || []} onNodeClick={setSelectedNode} focusNodeId={focusedNodeId} />
             </div>
-            
-             {/* 3. UI Overlays */}
-             <div className="absolute top-4 right-4 z-20">
+
+            {/* 3. UI Overlays */}
+            {/* QUICK SEARCH BAR */}
+            <div className="absolute top-4 left-4 z-20 w-80">
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Icon name="search" className="h-4 w-4 text-text-subtle group-focus-within:text-primary-500 transition-colors" />
+                    </div>
+                    <input
+                        type="text"
+                        className="block w-full pl-10 pr-3 py-2.5 bg-white/90 dark:bg-surface-900/90 backdrop-blur-md border border-secondary-200 dark:border-secondary-700 rounded-2xl text-sm shadow-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
+                        placeholder="Search your mind..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            if (!e.target.value) setFocusedNodeId(null);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && nodes && nodes.length > 0) {
+                                // Find best match (highest opacity)
+                                const bestMatch = nodes.find(n => n.label.toLowerCase().includes(searchQuery.toLowerCase()));
+                                if (bestMatch) {
+                                    setFocusedNodeId(bestMatch.id);
+                                    // Optionally select it too? No, just zoom.
+                                }
+                            }
+                        }}
+                    />
+                    {/* Search Results Dropdown (Only show when searching) */}
+                    {searchQuery && nodes.filter(n => n.opacity === 1).length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 dark:bg-surface-900/95 backdrop-blur-xl rounded-xl shadow-xl border border-secondary-200 dark:border-secondary-700 max-h-60 overflow-y-auto no-scrollbar p-1">
+                            {nodes.filter(n => n.opacity === 1).slice(0, 10).map(node => (
+                                <button
+                                    key={node.id}
+                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 flex items-center gap-2 transition-colors"
+                                    onClick={() => {
+                                        setFocusedNodeId(node.id);
+                                        // Clear query? No, keep context.
+                                    }}
+                                >
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: node.color }}></span>
+                                    <span className="text-sm truncate text-text-main">{node.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="absolute top-4 right-4 z-20">
                 <Popover
                     isOpen={isExplorerOpen}
                     setIsOpen={setIsExplorerOpen}
@@ -155,37 +249,30 @@ const MapScreen: React.FC = () => {
                 >
                     <div className="space-y-4">
                         <div className="relative">
-                            <Icon name="search" className="w-4 h-4 text-text-subtle absolute left-3 top-1/2 -translate-y-1/2"/>
-                            <Input 
-                                type="text"
-                                placeholder="Search nodes..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 h-9"
-                            />
+                            <h4 className="text-xs font-bold text-text-subtle uppercase mb-2">Filters</h4>
                         </div>
 
                         <div>
                             <h4 className="text-xs font-bold text-text-subtle uppercase mb-1">Node Types</h4>
                             {filterOptions.map(opt => (
-                                <ToggleSwitch 
-                                    key={opt.type} 
-                                    label={opt.label} 
-                                    isChecked={activeFilters.has(opt.type)} 
-                                    onToggle={() => toggleFilter(opt.type)} 
+                                <ToggleSwitch
+                                    key={opt.type}
+                                    label={opt.label}
+                                    isChecked={activeFilters.has(opt.type)}
+                                    onToggle={() => toggleFilter(opt.type)}
                                 />
                             ))}
                         </div>
 
                         <div>
-                             <h4 className="text-xs font-bold text-text-subtle uppercase mb-1">Structural Filters</h4>
-                             <ToggleSwitch 
-                                label="Hide Orphans" 
+                            <h4 className="text-xs font-bold text-text-subtle uppercase mb-1">Structural Filters</h4>
+                            <ToggleSwitch
+                                label="Hide Orphans"
                                 isChecked={hideOrphans}
                                 onToggle={() => setHideOrphans(prev => !prev)}
-                             />
-                             <ToggleSwitch 
-                                label="Main Links Only" 
+                            />
+                            <ToggleSwitch
+                                label="Main Links Only"
                                 isChecked={mainLinksOnly}
                                 onToggle={() => setMainLinksOnly(prev => !prev)}
                             />
