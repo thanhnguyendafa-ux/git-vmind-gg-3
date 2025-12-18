@@ -1,0 +1,318 @@
+
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Icon from '../../components/ui/Icon';
+import { useSessionStore } from '../../stores/useSessionStore';
+import { useNoteStore } from '../../stores/useNoteStore';
+import { useUIStore } from '../../stores/useUIStore';
+import { useUserStore } from '../../stores/useUserStore';
+import { loadYouTubeAPI } from '../../utils/youtubeUtils';
+import { extractVideoID } from '../../utils/youtubeUtils';
+import { useTableStore } from '../../stores/useTableStore';
+import { StudyMode } from '../../types';
+
+const normalizeText = (s: string) => s.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"").replace(/\s{2,}/g," ").trim();
+
+interface LinkedSnippet {
+    endSegmentIndex: number;
+    audioDuration: number;
+    fullText: string;
+}
+
+const DictationSessionScreen: React.FC = () => {
+    const { activeDictationSession, handleFinishDictationSession } = useSessionStore();
+    const { handleSaveToJournal } = useNoteStore();
+    const { showToast } = useUIStore();
+    const { tables } = useTableStore();
+    if (!activeDictationSession) return null;
+
+    const { note, startTime } = activeDictationSession;
+    const transcript = note.transcript || [];
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [userInputs, setUserInputs] = useState<Record<number, string>>({});
+    const [results, setResults] = useState<Record<number, 'correct' | 'incorrect' | 'untouched'>>(
+        Object.fromEntries(transcript.map((_, i) => [i, 'untouched']))
+    );
+    const [showAnswer, setShowAnswer] = useState(false);
+    const [isTranscriptVisible, setIsTranscriptVisible] = useState(true);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const [isJournaled, setIsJournaled] = useState(false);
+    const [loopCount, setLoopCount] = useState<number>(1);
+    const [playbackRate, setPlaybackRate] = useState<number>(1);
+    const [practiceMode, setPracticeMode] = useState<'individual' | 'linked'>('individual');
+    const [playerError, setPlayerError] = useState<string | null>(null);
+
+    const playerRef = useRef<any>(null);
+    const segmentTimeoutRef = useRef<number | null>(null);
+    const loopCounterRef = useRef(0);
+    
+    const videoId = extractVideoID(note.youtubeUrl);
+    const currentEntry = transcript[activeIndex];
+
+    const linkedSnippetsMap = useMemo(() => {
+        const map = new Map<number, LinkedSnippet>();
+        if (practiceMode !== 'linked') return map;
+
+        for (const table of tables) {
+            for (const relation of table.relations) {
+                if (relation.dictationConfig && relation.dictationConfig.dictationNoteId === note.id) {
+                    const { startSegmentIndex, endSegmentIndex } = relation.dictationConfig;
+                    const segments = transcript.slice(startSegmentIndex, endSegmentIndex + 1);
+                    if (segments.length > 0) {
+                        const audioDuration = segments.reduce((sum, s) => sum + s.duration, 0);
+                        const fullText = segments.map(s => s.text).join(' ');
+                        map.set(startSegmentIndex, { endSegmentIndex, audioDuration, fullText });
+                    }
+                }
+            }
+        }
+        return map;
+    }, [practiceMode, tables, note.id, transcript]);
+
+    const activeSnippet = practiceMode === 'linked' ? linkedSnippetsMap.get(activeIndex) : undefined;
+
+
+    useEffect(() => {
+        if (videoId) {
+            loadYouTubeAPI().then(() => {
+                if (!playerRef.current) {
+                    playerRef.current = new window.YT.Player('yt-player-session', {
+                        height: '0', // Hide player visuals
+                        width: '0',
+                        videoId: videoId,
+                        host: 'https://www.youtube.com', // Explicit host often helps
+                        playerVars: { 
+                            'playsinline': 1,
+                            'origin': window.location.origin, // Critical for embedded permissions
+                            'enablejsapi': 1,
+                            'rel': 0
+                        },
+                        events: {
+                            'onReady': (event: any) => { event.target.setVolume(100); },
+                            'onError': (event: any) => {
+                                const code = event.data;
+                                let msg = "Video error.";
+                                if (code === 150 || code === 101 || code === 153) {
+                                    msg = "Error 153: Video owner has blocked playback in apps. Please try a different video.";
+                                } else if (code === 2) {
+                                    msg = "Invalid Video ID.";
+                                } else if (code === 5) {
+                                    msg = "HTML5 Player Error.";
+                                } else if (code === 100) {
+                                    msg = "Video not found or private.";
+                                }
+                                setPlayerError(msg);
+                                showToast(msg, "error");
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        const timer = setInterval(() => {
+            setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+        }, 1000);
+        return () => {
+            clearInterval(timer);
+            if (segmentTimeoutRef.current) clearTimeout(segmentTimeoutRef.current);
+            try {
+                playerRef.current?.destroy();
+            } catch(e) { /* ignore destruction errors */ }
+        };
+    }, [videoId, startTime, showToast]);
+
+    const playCurrentSegment = () => {
+        if (playerError) {
+            showToast(playerError, "error");
+            return;
+        }
+
+        if (!playerRef.current || !currentEntry || !playerRef.current.seekTo) {
+             showToast("Video player is loading...", "info");
+            return;
+        }
+
+        if (segmentTimeoutRef.current) {
+            clearTimeout(segmentTimeoutRef.current);
+        }
+        
+        const duration = activeSnippet ? activeSnippet.audioDuration : currentEntry.duration;
+
+        loopCounterRef.current = 1;
+        // Ensure playback rate is set
+        if(playerRef.current.setPlaybackRate) {
+             playerRef.current.setPlaybackRate(playbackRate);
+        }
+
+        const executePlay = () => {
+            try {
+                playerRef.current.seekTo(currentEntry.start, true);
+                playerRef.current.playVideo();
+    
+                segmentTimeoutRef.current = window.setTimeout(() => {
+                    if (loopCount === -1 || loopCounterRef.current < loopCount) {
+                        loopCounterRef.current++;
+                        executePlay();
+                    } else {
+                        playerRef.current?.pauseVideo();
+                    }
+                }, (duration * 1000) / playbackRate);
+            } catch (e) {
+                console.error("Playback failed", e);
+                showToast("Playback failed. Try refreshing.", "error");
+            }
+        };
+        
+        executePlay();
+    };
+    
+    const handleCheck = () => {
+        const userAnswer = userInputs[activeIndex] || '';
+        const correctText = activeSnippet ? activeSnippet.fullText : currentEntry.text;
+        const isCorrect = normalizeText(userAnswer) === normalizeText(correctText);
+        setResults(prev => ({...prev, [activeIndex]: isCorrect ? 'correct' : 'incorrect'}));
+    };
+    
+    const handleFinish = () => {
+        const correctCount = Object.values(results).filter(r => r === 'correct').length;
+        handleFinishDictationSession(activeDictationSession, { correct: correctCount, total: transcript.length });
+    };
+
+    const navigate = (newIndex: number) => {
+        if (newIndex >= 0 && newIndex < transcript.length) {
+            setActiveIndex(newIndex);
+            setShowAnswer(false);
+            setIsJournaled(false);
+        }
+    };
+    
+    const handleNext = () => {
+        if (activeSnippet) {
+            navigate(activeSnippet.endSegmentIndex + 1);
+        } else {
+            navigate(activeIndex + 1);
+        }
+    };
+
+    const handleSaveJournalClick = () => {
+        const textToSave = activeSnippet ? activeSnippet.fullText : currentEntry.text;
+        handleSaveToJournal(`Dictation: ${note.title}`, `> ${textToSave}`);
+        setIsJournaled(true);
+    };
+
+    const hasChecked = results[activeIndex] !== 'untouched';
+    const resultStyle = results[activeIndex] === 'correct' ? 'border-success-500' : (results[activeIndex] === 'incorrect' ? 'border-error-500' : 'border-secondary-300 dark:border-secondary-600');
+    
+    return (
+        <div className="flex flex-col md:flex-row h-screen bg-background dark:bg-secondary-900">
+            <div id="yt-player-session" className="absolute w-0 h-0"></div>
+            <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto">
+                <header className="flex-shrink-0 flex justify-between items-center mb-4">
+                    <div>
+                        <h1 className="text-xl font-bold text-text-main dark:text-secondary-100 truncate">{note.title}</h1>
+                        <p className="text-sm text-text-subtle">Entry {activeIndex + 1} of {transcript.length}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-text-subtle">Mode:</span>
+                            <div className="flex rounded-full bg-secondary-200 dark:bg-secondary-700 p-1 text-xs font-semibold">
+                                <button onClick={() => setPracticeMode('individual')} className={`px-2 py-1 rounded-full ${practiceMode === 'individual' ? 'bg-white dark:bg-secondary-600 shadow' : ''}`}>Individual</button>
+                                <button onClick={() => setPracticeMode('linked')} className={`px-2 py-1 rounded-full ${practiceMode === 'linked' ? 'bg-white dark:bg-secondary-600 shadow' : ''}`}>Linked</button>
+                            </div>
+                        </div>
+                        <span className="font-mono text-sm text-text-subtle">{new Date(elapsedSeconds * 1000).toISOString().substr(14, 5)}</span>
+                        <button onClick={handleFinish} className="bg-primary-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-primary-700">Finish</button>
+                    </div>
+                </header>
+                
+                {playerError && (
+                     <div className="mb-4 p-3 bg-error-100 border border-error-200 text-error-700 rounded-md text-sm flex items-center gap-2">
+                        <Icon name="error-circle" className="w-5 h-5" />
+                        {playerError}
+                    </div>
+                )}
+
+                <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="w-full max-w-2xl bg-surface dark:bg-secondary-800 border border-secondary-200/80 dark:border-secondary-700/50 rounded-xl shadow-lg p-6">
+                        <button onClick={playCurrentSegment} className={`w-40 h-40 mx-auto flex items-center justify-center rounded-full mb-6 shadow-lg transition-transform hover:scale-105 ${playerError ? 'bg-secondary-400 cursor-not-allowed' : 'bg-primary-500 hover:bg-primary-600'}`}>
+                            {activeSnippet && <Icon name="link" className="w-8 h-8 absolute top-4 right-4 text-white/50" />}
+                            <Icon name={playerError ? 'error-circle' : 'play'} className="w-16 h-16 text-white"/>
+                        </button>
+
+                        <div className="flex items-center justify-center gap-6 mb-4">
+                             <div>
+                                <label htmlFor="loop-select-session" className="block text-xs font-medium text-secondary-600 dark:text-secondary-400 mb-1 text-center">Loop</label>
+                                <select id="loop-select-session" value={loopCount} onChange={e => setLoopCount(Number(e.target.value))} className="bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md px-2 py-1.5 text-sm">
+                                    <option value="1">1x</option>
+                                    <option value="3">3x</option>
+                                    <option value="5">5x</option>
+                                    <option value="-1">∞</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label htmlFor="speed-select-session" className="block text-xs font-medium text-secondary-600 dark:text-secondary-400 mb-1 text-center">Speed</label>
+                                <select id="speed-select-session" value={playbackRate} onChange={e => setPlaybackRate(Number(e.target.value))} className="bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md px-2 py-1.5 text-sm">
+                                    <option value="0.5">0.5x</option>
+                                    <option value="0.75">0.75x</option>
+                                    <option value="1">1x (Normal)</option>
+                                    <option value="1.5">1.5x</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <textarea
+                            value={userInputs[activeIndex] || ''}
+                            onChange={(e) => setUserInputs(prev => ({...prev, [activeIndex]: e.target.value}))}
+                            disabled={hasChecked}
+                            placeholder="Type what you hear..."
+                            rows={activeSnippet ? 5 : 3}
+                            className={`w-full bg-secondary-100 dark:bg-secondary-700 border-2 rounded-lg px-4 py-3 text-lg transition-all duration-300 ${resultStyle}`}
+                        />
+                        {!hasChecked ? (
+                            <button onClick={handleCheck} disabled={!userInputs[activeIndex]} className="mt-2 w-full bg-primary-600 text-white font-bold py-3 rounded-lg hover:bg-primary-700 disabled:opacity-50">Check Answer</button>
+                        ) : (
+                            <div className="mt-2 space-y-2 animate-fadeIn">
+                                {showAnswer && <div className="p-3 bg-secondary-100 dark:bg-secondary-700/50 rounded-md text-sm text-secondary-600 dark:text-secondary-300">{activeSnippet ? activeSnippet.fullText : currentEntry.text}</div>}
+                                <div className="flex items-center justify-center gap-4 text-sm font-semibold">
+                                    <button onClick={() => setShowAnswer(!showAnswer)} className="text-primary-600 hover:underline">{showAnswer ? 'Hide' : 'Show'} Answer</button>
+                                    <button onClick={() => showToast('AI Explain feature is coming soon!', 'info')} className="text-primary-600 hover:underline flex items-center gap-1"><Icon name="sparkles" className="w-4 h-4" /> Explain</button>
+                                    <button onClick={handleSaveJournalClick} disabled={isJournaled} className="text-primary-600 hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <Icon name="book" className="w-4 h-4" /> {isJournaled ? 'Saved' : 'Save'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                         <div className="flex justify-between items-center mt-4">
+                            <button onClick={() => navigate(activeIndex - 1)} disabled={activeIndex === 0} className="p-2 rounded-full disabled:opacity-30 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700"><Icon name="arrowLeft" className="w-8 h-8"/></button>
+                            <span className="font-semibold text-secondary-600 dark:text-secondary-300">{activeIndex + 1} / {transcript.length}</span>
+                            <button onClick={handleNext} disabled={activeIndex >= transcript.length - 1} className="p-2 rounded-full disabled:opacity-30 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700"><Icon name="arrowRight" className="w-8 h-8"/></button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <aside className="w-full md:w-80 flex-shrink-0 bg-surface dark:bg-secondary-800 border-t md:border-t-0 md:border-l border-secondary-200 dark:border-secondary-700 flex flex-col">
+                <div className="p-3 border-b border-secondary-200 dark:border-secondary-700 flex justify-between items-center">
+                    <h3 className="font-semibold text-sm">Transcript Index</h3>
+                    <button onClick={() => setIsTranscriptVisible(!isTranscriptVisible)} title="Toggle transcript visibility" className="p-1 text-text-subtle"><Icon name={isTranscriptVisible ? 'eye-off' : 'eye'} className="w-5 h-5"/></button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                    {transcript.map((entry, index) => {
+                        const isLinkedStart = practiceMode === 'linked' && linkedSnippetsMap.has(index);
+                        return (
+                        <div key={index} onClick={() => navigate(index)} className={`p-3 cursor-pointer border-l-4 flex items-start gap-2 ${activeIndex === index ? 'bg-secondary-100 dark:bg-secondary-900/50 border-primary-500' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}>
+                            {isLinkedStart && <Icon name="link" className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" title="Linked Snippet" />}
+                            <div className="flex-grow">
+                                <div className="flex items-center gap-2 text-xs font-mono text-text-subtle">
+                                    <Icon name={results[index] === 'correct' ? 'check-circle' : (results[index] === 'incorrect' ? 'error-circle' : 'circle-outline')} className={`w-4 h-4 ${results[index] === 'correct' ? 'text-success-500' : (results[index] === 'incorrect' ? 'text-error-500' : 'text-secondary-400')}`}/>
+                                    <span>{new Date(entry.start * 1000).toISOString().substr(14, 5)}</span>
+                                </div>
+                                {isTranscriptVisible && <p className="text-xs text-secondary-600 dark:text-secondary-300 mt-1 pl-6">{entry.text}</p>}
+                            </div>
+                        </div>
+                    )})}
+                </div>
+            </aside>
+        </div>
+    );
+};
+
+export default DictationSessionScreen;

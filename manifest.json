@@ -1,0 +1,21 @@
+{
+  "short_name": "Vmind",
+  "name": "Vmind Vocabulary Learning",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#F4F7F5",
+  "background_color": "#F4F7F5",
+  "orientation": "portrait"
+}

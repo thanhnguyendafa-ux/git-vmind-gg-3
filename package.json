@@ -1,0 +1,32 @@
+{
+  "name": "of-copy-215---2-lam-gon-interface-batch-delete",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@google/genai": "^1.28.0",
+    "react-dom": "^19.2.0",
+    "react": "^19.2.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "zustand": "^4.5.4",
+    "@tanstack/react-query": "^5.51.1",
+    "@tanstack/react-virtual": "^3.2.0",
+    "@testing-library/react": "^16.3.0",
+    "vitest": "^4.0.8",
+    "@testing-library/user-event": "^14.6.1",
+    "d3": "^7.9.0",
+    "hanzi-writer": "3.5.0",
+    "xlsx": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

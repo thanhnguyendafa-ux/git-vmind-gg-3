@@ -1,0 +1,201 @@
+import * as React from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { Table, Screen, StudyMode } from '../../types';
+import { useTableStore } from '../../stores/useTableStore';
+import { useUIStore } from '../../stores/useUIStore';
+import { useUserStore } from '../../stores/useUserStore';
+import { useSessionStore } from '../../stores/useSessionStore';
+import { useSessionDataStore } from '../../stores/useSessionDataStore';
+import Icon from '../../components/ui/Icon';
+import TableScreenHeader from './components/TableScreenHeader';
+import { TableScreenProvider, useTableScreen } from './contexts/TableScreenContext';
+import { useTableTransaction } from './hooks/useTableTransaction';
+import { useTableOperations } from './hooks/useTableOperations';
+import TableContentArea from './components/screen/TableContentArea';
+import { TableModalsContainer } from './components/screen/TableModalsContainer';
+import { TableViewProvider } from './contexts/TableViewContext';
+
+const sortableStats = [
+    { key: 'stat:priorityScore', label: 'Priority Score' },
+    { key: 'stat:rankPoint', label: 'Rank Point' },
+    { key: 'stat:level', label: 'Level' },
+    { key: 'stat:failed', label: 'Failed' },
+    { key: 'stat:totalAttempts', label: 'Total Attempts' },
+    { key: 'stat:lastPracticeDate', label: 'Last Practiced' },
+    { key: 'stat:wasQuit', label: 'Was Quit' },
+    { key: 'stat:inQueueCount', label: 'In Queue' },
+    { key: 'stat:successRate', label: 'Success %' }, 
+    { key: 'stat:encounters', label: 'Encounters' }, 
+    { key: 'stat:lastStudied', label: 'Last Studied' },
+    { key: 'stat:ankiRepetitions', label: 'Anki Reps' },
+    { key: 'stat:ankiEaseFactor', label: 'Anki EF' },
+    { key: 'stat:ankiInterval', label: 'Anki Interval' },
+    { key: 'stat:ankiDueDate', label: 'Anki Due' },
+    { key: 'stat:confiViewed', label: 'Confi. Viewed' },
+];
+
+const InnerTableScreen: React.FC<{ onBack: () => void; backLabel?: string }> = ({ onBack, backLabel }) => {
+    const { table, activeTab, setActiveTab, setIsPublishModalOpen } = useTableScreen();
+    const { isGuest, settings } = useUserStore();
+    const { setCurrentScreen } = useUIStore();
+    const { setStudySetupSourceTableId, ankiDeckFilter, clearAnkiDeckFilter, confidenceProgressFilter, clearConfidenceProgressFilter } = useSessionStore();
+    const { ankiProgresses, confidenceProgresses } = useSessionDataStore();
+    
+    const { handleUpdateTable } = useTableOperations(table);
+    const { pendingChangeCount, handleManualSave } = useTableTransaction(table.id);
+    
+    // --- Data Loading ---
+    const loadingTableIds = useTableStore(state => state.loadingTableIds);
+    const fetchTablePayload = useTableStore(state => state.fetchTablePayload);
+    
+    React.useEffect(() => {
+        if (!isGuest) {
+             fetchTablePayload(table.id);
+        }
+    }, [table.id, isGuest]);
+
+    const isLoadingPayload = loadingTableIds.has(table.id);
+
+    // --- Filter Logic ---
+    const tableNames = useTableStore(useShallow(state => state.tables.map(t => ({ id: t.id, name: t.name }))));
+    
+    const isAnkiFilterActive = ankiDeckFilter && ankiDeckFilter.tableId === table.id;
+    const { preFilteredRowIds: ankiPreFilteredRowIds, ankiDeckName } = React.useMemo(() => {
+        if (!isAnkiFilterActive) return { preFilteredRowIds: null, ankiDeckName: undefined };
+        const progress = ankiProgresses.find(p => p.id === ankiDeckFilter.progressId);
+        if (!progress) return { preFilteredRowIds: null, ankiDeckName: undefined };
+        const progressTags = new Set(progress.tagIds);
+        const filteredRows = table.rows.filter(row => {
+            if (progressTags.size === 0) return true;
+            if (!row.tagIds || row.tagIds.length === 0) return false;
+            return row.tagIds.some(tagId => progressTags.has(tagId));
+        });
+        return {
+            preFilteredRowIds: new Set(filteredRows.map(r => r.id)),
+            ankiDeckName: progress.name,
+        };
+    }, [isAnkiFilterActive, ankiDeckFilter, ankiProgresses, table.rows]);
+
+    const isConfidenceFilterActive = confidenceProgressFilter && confidenceProgressFilter.tableId === table.id;
+    const { preFilteredRowIds: fcPreFilteredRowIds, progressName: fcProgressName, initialTagFilter } = React.useMemo(() => {
+        if (!isConfidenceFilterActive) return { preFilteredRowIds: null, progressName: undefined, initialTagFilter: null };
+        
+        const progress = confidenceProgresses.find(p => p.id === confidenceProgressFilter.progressId);
+        if (!progress) return { preFilteredRowIds: null, progressName: undefined, initialTagFilter: null };
+
+        const preFilteredRowIds = new Set<string>(progress.queue);
+
+        const sourceTableNames = tableNames
+            .filter(t => progress.tableIds.includes(t.id))
+            .map(t => t.name.replace(/\s/g, '_'));
+        const autoGeneratedTags = new Set(sourceTableNames.map(name => `FC+${name}`));
+
+        const userFilterTags = new Set<string>(
+            (progress.tagIds || []).filter(tagId => !autoGeneratedTags.has(tagId))
+        );
+
+        return {
+            preFilteredRowIds,
+            progressName: progress.name,
+            initialTagFilter: userFilterTags.size > 0 ? userFilterTags : null,
+        };
+    }, [isConfidenceFilterActive, confidenceProgressFilter, confidenceProgresses, tableNames]);
+
+    const finalPreFilteredIds = ankiPreFilteredRowIds || fcPreFilteredRowIds;
+    const activeProgressName = ankiDeckName || fcProgressName;
+    const onClearFilter = isAnkiFilterActive ? clearAnkiDeckFilter : (isConfidenceFilterActive ? clearConfidenceProgressFilter : undefined);
+
+    const defaultVisibleStats = React.useMemo(() => {
+        if (isAnkiFilterActive) {
+            return new Set(['stat:ankiDueDate', 'stat:ankiInterval', 'stat:ankiEaseFactor']);
+        }
+        if (isConfidenceFilterActive) {
+            return new Set(['stat:flashcardStatus']);
+        }
+        return undefined;
+    }, [isAnkiFilterActive, isConfidenceFilterActive]);
+
+    const handleStudyNavigation = (mode: 'StudySession' | 'Confidence' | 'Theater') => {
+        setStudySetupSourceTableId(table.id);
+        switch (mode) {
+            case 'StudySession': setCurrentScreen(Screen.StudySetup); break;
+            case 'Confidence': setCurrentScreen(Screen.Confidence); break;
+            case 'Theater': setCurrentScreen(Screen.TheaterSetup); break;
+        }
+    };
+    
+    const fillablePrompts = React.useMemo(() => {
+        return (table.aiPrompts || []).map(prompt => ({ prompt, fillableCells: [] as any[] })); // Placeholder, logic moved to ModalsContainer or computed there
+    }, [table.aiPrompts]);
+
+
+    return (
+        <TableViewProvider columns={table.columns} defaultVisibleStats={defaultVisibleStats}>
+            <div className="flex flex-col h-full overflow-hidden relative">
+                <div className="flex-shrink-0 z-10 bg-surface/60 dark:bg-secondary-900/60 backdrop-blur-md border-b border-white/20 dark:border-white/10">
+                    <div className="px-4 py-2">
+                        <TableScreenHeader
+                            tableId={table.id}
+                            tableName={table.name}
+                            shortCode={table.shortCode}
+                            isGuest={isGuest}
+                            isPublic={table.isPublic}
+                            onBack={onBack}
+                            backLabel={backLabel}
+                            onUpdateName={(name) => handleUpdateTable({ name })}
+                            onPublishClick={() => setIsPublishModalOpen(true)}
+                            onStudyClick={handleStudyNavigation}
+                            tagIds={table.tagIds || []}
+                            onUpdateTagIds={(tagIds) => handleUpdateTable({ tagIds })}
+                            tagColors={settings.tagColors || {}}
+                            activeTab={activeTab}
+                            onTabChange={setActiveTab}
+                            pendingChanges={pendingChangeCount}
+                            onManualSave={handleManualSave}
+                        />
+                    </div>
+                </div>
+                
+                <div className="flex-1 relative overflow-hidden">
+                    <TableContentArea 
+                        table={table}
+                        isLoadingPayload={isLoadingPayload}
+                        sortableStats={sortableStats}
+                        fillablePrompts={fillablePrompts} // Will be re-calc inside if needed, passing placeholder
+                        finalPreFilteredIds={finalPreFilteredIds}
+                        activeProgressName={activeProgressName}
+                        initialTagFilter={initialTagFilter}
+                        onClearFilter={onClearFilter}
+                    />
+                </div>
+                
+                <TableModalsContainer />
+            </div>
+        </TableViewProvider>
+    );
+};
+
+const TableScreen: React.FC<{ tableId: string; onBack?: () => void; backLabel?: string }> = ({ tableId, onBack, backLabel }) => {
+    const table = useTableStore(useShallow(state => state.tables.find(t => t.id === tableId)));
+    const { attemptNavigation } = useUIStore();
+    const handleBack = onBack || (() => attemptNavigation(Screen.Tables));
+
+    if (!table) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-text-subtle">
+                 <Icon name="error-circle" className="w-12 h-12 text-secondary-300 dark:text-secondary-600 mb-2"/>
+                 <p className="text-lg font-semibold">Table not found.</p>
+                 <p className="text-sm">It may have been deleted.</p>
+                 <button onClick={handleBack} className="mt-4 text-primary-500 hover:underline">Go Back</button>
+            </div>
+        );
+    }
+
+    return (
+        <TableScreenProvider table={table}>
+            <InnerTableScreen onBack={handleBack} backLabel={backLabel} />
+        </TableScreenProvider>
+    );
+};
+
+export default TableScreen;
