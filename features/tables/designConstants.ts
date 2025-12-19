@@ -5,34 +5,34 @@ import { RelationDesign, TypographyDesign, Relation, CardFaceDesign } from '../.
 
 // Using CSS variables for adaptive colors
 export const DEFAULT_TYPOGRAPHY: TypographyDesign = {
-  color: 'var(--color-text-main)',
-  fontSize: '0.875rem',
-  fontFamily: 'Lora, serif', // Updated to Serif for Academic feel
-  textAlign: 'center',
-  fontWeight: 'bold',
+    color: 'var(--color-text-main)',
+    fontSize: '0.875rem',
+    fontFamily: 'Lora, serif', // Updated to Serif for Academic feel
+    textAlign: 'center',
+    fontWeight: 'bold',
 };
 
 export const DARK_MODE_DEFAULT_TYPOGRAPHY: TypographyDesign = { ...DEFAULT_TYPOGRAPHY };
 
 export const DEFAULT_RELATION_DESIGN: RelationDesign = {
-  front: { backgroundType: 'solid', backgroundValue: 'var(--color-surface)', gradientAngle: 135, typography: {}, layout: 'vertical' },
-  back: { backgroundType: 'solid', backgroundValue: 'var(--color-secondary-50)', gradientAngle: 135, typography: {}, layout: 'vertical' },
-  designLinked: true,
-  isRandom: true, // Default to true for new relations
+    front: { backgroundType: 'solid', backgroundValue: 'var(--color-surface)', gradientAngle: 135, typography: {}, layout: 'vertical' },
+    back: { backgroundType: 'solid', backgroundValue: 'var(--color-secondary-50)', gradientAngle: 135, typography: {}, layout: 'vertical' },
+    designLinked: true,
+    isRandom: true, // Default to true for new relations
 };
 
 export interface ThemeButtonStyle {
-  background: string;
-  border: string;
-  text: string;
-  radius: string;
-  shadow: string;
-  hover: string;
-  active: string;
-  success: string;
-  error: string;
-  font?: string;
-  backdrop?: string;
+    background: string;
+    border: string;
+    text: string;
+    radius: string;
+    shadow: string;
+    hover: string;
+    active: string;
+    success: string;
+    error: string;
+    font?: string;
+    backdrop?: string;
 }
 
 export interface UnifiedTheme {
@@ -242,27 +242,27 @@ export const UNIFIED_THEMES: UnifiedTheme[] = [
         }
     },
     {
-        id: 'lavender-haze',
-        name: 'Lavender Haze',
-        previewColor: '#F3E8FF',
-        background: { type: 'solid', value: '#F3E8FF' },
+        id: 'azure-breeze',
+        name: 'Azure Breeze',
+        previewColor: '#0EA5E9',
+        background: { type: 'solid', value: '#F0F9FF' },
         typography: {
-            primary: '#581C87',
-            secondary: '#7E22CE',
-            fontFamily: 'Nunito Sans, sans-serif'
+            primary: '#075985',
+            secondary: '#0EA5E9',
+            fontFamily: 'Inter, sans-serif'
         },
         interaction: {
-            background: 'bg-white',
-            backdrop: '',
-            border: 'border border-purple-200',
-            text: 'text-[#581C87]',
+            background: 'bg-white/70',
+            backdrop: 'backdrop-blur-md',
+            border: 'border border-sky-200',
+            text: 'text-sky-900',
             radius: 'rounded-2xl',
             shadow: 'shadow-sm',
-            hover: 'hover:bg-purple-50 hover:border-purple-300',
+            hover: 'hover:bg-sky-50 hover:border-sky-400 hover:scale-[1.02] hover:shadow-md',
             active: 'active:scale-95',
-            success: 'bg-purple-100 border-purple-500 text-purple-900',
-            error: 'bg-red-100 border-red-400 text-red-900',
-            font: 'font-nunitosans'
+            success: 'bg-emerald-100 border-emerald-500 text-emerald-900',
+            error: 'bg-rose-100 border-rose-500 text-rose-900',
+            font: 'font-sans'
         }
     },
     {
@@ -359,30 +359,6 @@ export const UNIFIED_THEMES: UnifiedTheme[] = [
             success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
             error: 'bg-rose-50 border-rose-200 text-rose-800',
             font: 'font-sans'
-        }
-    },
-    {
-        id: 'edu-candy',
-        name: 'Edu-Candy',
-        previewColor: '#FFEDD5',
-        background: { type: 'gradient', value: '#FFEDD5,#FCE7F3', gradientAngle: 135 },
-        typography: {
-            primary: '#9D174D',
-            secondary: '#DB2777',
-            fontFamily: 'Quicksand, sans-serif'
-        },
-        interaction: {
-            background: 'bg-white',
-            backdrop: '',
-            border: 'border-4 border-orange-100', // thick rounded
-            text: 'text-[#9D174D]',
-            radius: 'rounded-full',
-            shadow: 'shadow-[0_4px_0_0_#fed7aa]', // drop shadow downward
-            hover: 'hover:translate-y-1 hover:shadow-none',
-            active: 'active:scale-95',
-            success: 'bg-green-100 border-green-400 text-green-700',
-            error: 'bg-red-100 border-red-400 text-red-700',
-            font: 'font-quicksand'
         }
     },
     {
@@ -612,7 +588,7 @@ export const applyThemeToRelation = (relation: Relation, theme: UnifiedTheme): R
         face.backgroundType = theme.background.type;
         face.backgroundValue = theme.background.value;
         if (theme.background.gradientAngle !== undefined) {
-             face.gradientAngle = theme.background.gradientAngle;
+            face.gradientAngle = theme.background.gradientAngle;
         }
         if (face.typography) {
             Object.keys(face.typography).forEach(key => {
@@ -635,7 +611,7 @@ export const applyThemeToRelation = (relation: Relation, theme: UnifiedTheme): R
 };
 
 // Keeping legacy templates for backward compatibility if needed, but UI will use UNIFIED_THEMES
-export const DESIGN_TEMPLATES: {name: string, design: RelationDesign, frontTypography: TypographyDesign, backTypography: TypographyDesign}[] = [
+export const DESIGN_TEMPLATES: { name: string, design: RelationDesign, frontTypography: TypographyDesign, backTypography: TypographyDesign }[] = [
     {
         name: 'Graphite & Gold',
         frontTypography: { color: '#cda434', fontSize: '0.875rem', fontFamily: 'Poppins, sans-serif', textAlign: 'center', fontWeight: 'bold' },

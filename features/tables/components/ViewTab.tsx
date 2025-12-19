@@ -1,5 +1,6 @@
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Table, VocabRow, Column, AIPrompt, Filter, Sort } from '../../../types';
 import Icon from '../../../components/ui/Icon';
 import TableIcon from '../../../components/ui/TableIcon';
@@ -27,7 +28,7 @@ interface ViewTabProps {
     onAddNewRow: () => void;
     onViewRow: (row: VocabRow) => void;
     onEditRow: (row: VocabRow) => void;
-    onDeleteRow: (rowId: string) => void; 
+    onDeleteRow: (rowId: string) => void;
     onPreviewRow: (row: VocabRow) => void; // New prop
     onConfigureAI: (column: Column) => void;
     onConfigureLink: (column: Column) => void;
@@ -48,9 +49,9 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
 
     // Use useLocalStorage for persistent view mode
     const [viewMode, setViewMode] = useLocalStorage<'table' | 'gallery'>(`vmind-view-mode-${table.id}`, 'table');
-    
+
     const { processedRows, groupedRows } = useProcessedTableData({ rows: table.rows, table, preFilteredRowIds, initialTagFilter });
-    
+
     const fillableCellsSet = React.useMemo(() => {
         const cellSet = new Set<string>();
         fillablePrompts.forEach(({ fillableCells }) => {
@@ -72,7 +73,7 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
         }
         return false;
     }, [selectedRows, fillableCellsSet, visibleColumns]);
-    
+
     // Find selected row data for single-row actions
     const singleSelectedRow = React.useMemo(() => {
         if (selectedRows.size === 1) {
@@ -93,9 +94,9 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
         // Initialization Priority:
         // 1. Cloud Config (table.viewConfig) - The single source of truth for persistent settings.
         // 2. Local Storage (Legacy/Fallback) - Used if cloud config is missing or for local-only prefs.
-        
+
         let initialSettings: any = {};
-        
+
         try {
             const savedSettings = localStorage.getItem(viewSettingsKey);
             if (savedSettings) {
@@ -135,32 +136,32 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
         };
         localStorage.setItem(viewSettingsKey, JSON.stringify(settingsToSave));
     }, [
-        state.columnWidths, state.rowHeight, state.isTextWrapEnabled, state.isBandedRows, state.fontSize, state.visibleColumns, 
+        state.columnWidths, state.rowHeight, state.isTextWrapEnabled, state.isBandedRows, state.fontSize, state.visibleColumns,
         state.columnOrder, state.frozenColumnCount,
         viewSettingsKey
     ]);
-    
+
     // Access updateTable via hook
     const updateTable = useTableStore(state => state.updateTable);
 
     // Re-implement the sync effect correctly
     React.useEffect(() => {
         const currentConfig = table.viewConfig || {};
-        
+
         const isWrapChanged = state.isTextWrapEnabled !== currentConfig.isTextWrapEnabled;
         const isBandedChanged = state.isBandedRows !== currentConfig.isBandedRows;
         const isHeightChanged = state.rowHeight !== currentConfig.rowHeight;
         const isFrozenChanged = state.frozenColumnCount !== currentConfig.frozenColumnCount;
-        
+
         // Deep compare array
         const currentVisCols = (currentConfig.visibleColumns || []).slice().sort();
         const newVisCols = Array.from(state.visibleColumns).slice().sort();
         const isVisColsChanged = JSON.stringify(currentVisCols) !== JSON.stringify(newVisCols);
-        
+
         const isOrderChanged = JSON.stringify(currentConfig.columnOrder || []) !== JSON.stringify(state.columnOrder);
 
         if (isWrapChanged || isBandedChanged || isHeightChanged || isVisColsChanged || isOrderChanged || isFrozenChanged) {
-             const newViewConfig = {
+            const newViewConfig = {
                 ...currentConfig,
                 isTextWrapEnabled: state.isTextWrapEnabled,
                 isBandedRows: state.isBandedRows,
@@ -168,12 +169,12 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
                 visibleColumns: Array.from(state.visibleColumns),
                 columnOrder: state.columnOrder,
                 frozenColumnCount: state.frozenColumnCount
-             };
-             
-             updateTable({ ...table, viewConfig: newViewConfig });
+            };
+
+            updateTable({ ...table, viewConfig: newViewConfig });
         }
     }, [
-        state.isTextWrapEnabled, state.isBandedRows, state.rowHeight, state.visibleColumns, 
+        state.isTextWrapEnabled, state.isBandedRows, state.rowHeight, state.visibleColumns,
         state.columnOrder, state.frozenColumnCount,
         table, updateTable
     ]);
@@ -185,9 +186,9 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
             if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) {
                 return;
             }
-            
+
             e.preventDefault();
-            
+
             if (e.clipboardData) {
                 const parsed = parseSmartClipboard(e.clipboardData);
                 if (parsed.rows.length > 0) {
@@ -236,7 +237,7 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
                         <Button variant="ghost" size="sm" onClick={onClearFilter}>Clear Filter</Button>
                     </div>
                 )}
-                <TableViewControls 
+                <TableViewControls
                     {...props}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
@@ -246,7 +247,7 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
                     batchFillCount={batchFillCount}
                 />
             </div>
-            
+
             <div className="flex-1 min-w-0 overflow-hidden relative">
                 {processedRows.length === 0 ? (
                     <div className="text-center py-16 bg-surface dark:bg-secondary-800/50 rounded-lg shadow-lg border border-border dark:border-secondary-700 mt-4">
@@ -256,7 +257,7 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
                     </div>
                 ) : (
                     viewMode === 'table' ? (
-                        <TableView 
+                        <TableView
                             table={table}
                             rows={processedRows}
                             groupedRows={groupedRows}
@@ -271,7 +272,7 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
                             onManageColumns={props.onManageColumns}
                         />
                     ) : (
-                        <GalleryView 
+                        <GalleryView
                             table={table}
                             rows={processedRows}
                             groupedRows={groupedRows}
@@ -284,42 +285,42 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
                     )
                 )}
             </div>
-            
-            {selectedRows.size > 0 && (
-                <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[60] w-auto animate-slideInUp max-w-[90vw]">
-                    {/* ... (Existing toolbar code) ... */}
+
+            {selectedRows.size > 0 && createPortal(
+                <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[100] w-auto animate-slideInUp max-w-[calc(100vw-108px)]">
                     <div className="hidden md:flex bg-slate-800 text-white rounded-lg shadow-xl border border-slate-700 items-center gap-2 px-3 py-2">
                         <span className="text-sm font-semibold mr-2 whitespace-nowrap">{selectedRows.size} selected</span>
                         {singleSelectedRow && (
                             <>
-                                <button onClick={() => onViewRow(singleSelectedRow)} className="flex items-center gap-1.5 text-sm text-primary-300 hover:text-white font-semibold px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="eye" className="w-4 h-4"/>Open</button>
-                                <button onClick={() => onPreviewRow(singleSelectedRow)} className="flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 font-semibold px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="play" className="w-4 h-4"/>Preview</button>
+                                <button onClick={() => onViewRow(singleSelectedRow)} className="flex items-center gap-1.5 text-sm text-primary-300 hover:text-white font-semibold px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="eye" className="w-4 h-4" />Open</button>
+                                <button onClick={() => onPreviewRow(singleSelectedRow)} className="flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 font-semibold px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="play" className="w-4 h-4" />Preview</button>
                             </>
                         )}
                         <div className="w-px h-4 bg-slate-600 mx-1"></div>
                         {hasFillableSelected && (
-                            <button onClick={onConfirmBatchGenerate} className="flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 font-semibold animate-ai-glow px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="sparkles" className="w-4 h-4"/>AI Fill</button>
+                            <button onClick={onConfirmBatchGenerate} className="flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 font-semibold animate-ai-glow px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="sparkles" className="w-4 h-4" />AI Fill</button>
                         )}
-                        <button onClick={onBatchDelete} className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-semibold px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="trash" className="w-4 h-4"/>Delete</button>
+                        <button onClick={onBatchDelete} className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-semibold px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="trash" className="w-4 h-4" />Delete</button>
                         <div className="w-px h-4 bg-slate-600 mx-1"></div>
-                        <button onClick={() => dispatch({type: 'SET_SELECTED_ROWS', payload: new Set()})} className="p-1 text-slate-400 hover:text-white rounded-full hover:bg-slate-700"><Icon name="x" className="w-4 h-4"/></button>
+                        <button onClick={() => dispatch({ type: 'SET_SELECTED_ROWS', payload: new Set() })} className="p-1 text-slate-400 hover:text-white rounded-full hover:bg-slate-700"><Icon name="x" className="w-4 h-4" /></button>
                     </div>
 
                     <div className="flex md:hidden bg-slate-800 text-white rounded-full shadow-xl shadow-primary-500/20 border border-slate-700 items-center pl-5 pr-2 py-2 gap-2">
                         <span className="text-sm font-bold whitespace-nowrap mr-auto">{selectedRows.size} selected</span>
-                        {singleSelectedRow && (<button onClick={() => onViewRow(singleSelectedRow)} className="p-2 rounded-full hover:bg-slate-700 text-primary-300 transition-colors" title="Open"><Icon name="eye" className="w-5 h-5"/></button>)}
+                        {singleSelectedRow && (<button onClick={() => onViewRow(singleSelectedRow)} className="p-2 rounded-full hover:bg-slate-700 text-primary-300 transition-colors" title="Open"><Icon name="eye" className="w-5 h-5" /></button>)}
                         <Popover isOpen={isSelectionMenuOpen} setIsOpen={setIsSelectionMenuOpen} breakpoint={768} trigger={<button className="p-2 rounded-full hover:bg-slate-700 text-white transition-colors"><Icon name="dots-horizontal" className="w-5 h-5" /></button>} contentClassName="w-56 mb-2 rounded-xl overflow-hidden">
                             <div className="p-1 space-y-1">
                                 <div className="px-3 py-2 text-xs font-bold text-text-subtle uppercase border-b border-secondary-200 dark:border-secondary-700 mb-1">{selectedRows.size} items selected</div>
-                                {singleSelectedRow && ( <button onClick={() => { onPreviewRow(singleSelectedRow); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-3 text-text-main dark:text-secondary-100"> <Icon name="play" className="w-5 h-5 text-emerald-500" /> Preview Card </button>)}
-                                {hasFillableSelected && ( <button onClick={() => { onConfirmBatchGenerate(); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-3 text-text-main dark:text-secondary-100"> <Icon name="sparkles" className="w-5 h-5 text-cyan-500" /> AI Fill Empty Cells </button>)}
+                                {singleSelectedRow && (<button onClick={() => { onPreviewRow(singleSelectedRow); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-3 text-text-main dark:text-secondary-100"> <Icon name="play" className="w-5 h-5 text-emerald-500" /> Preview Card </button>)}
+                                {hasFillableSelected && (<button onClick={() => { onConfirmBatchGenerate(); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-3 text-text-main dark:text-secondary-100"> <Icon name="sparkles" className="w-5 h-5 text-cyan-500" /> AI Fill Empty Cells </button>)}
                                 <button onClick={() => { onBatchDelete(); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-error-50 dark:hover:bg-error-900/20 rounded-md flex items-center gap-3 text-error-600 dark:text-error-400"> <Icon name="trash" className="w-5 h-5" /> Delete Selected </button>
                             </div>
                         </Popover>
                         <div className="w-px h-6 bg-slate-600 mx-1"></div>
-                        <button onClick={() => dispatch({type: 'SET_SELECTED_ROWS', payload: new Set()})} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-700 transition-colors"> <Icon name="x" className="w-5 h-5"/> </button>
+                        <button onClick={() => dispatch({ type: 'SET_SELECTED_ROWS', payload: new Set() })} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-700 transition-colors"> <Icon name="x" className="w-5 h-5" /> </button>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

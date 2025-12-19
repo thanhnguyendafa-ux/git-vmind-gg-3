@@ -6,7 +6,6 @@ import { useUIStore } from '../../stores/useUIStore';
 import ActivityHeatmap from './components/ActivityHeatmap';
 import TimeSpentBarChart from './components/TimeSpentBarChart';
 import { formatShortDuration, formatDuration, getLocalDateString } from '../../utils/timeUtils';
-import { Card, CardContent } from '../../components/ui/Card';
 import { NotificationCard } from './components/NotificationCard';
 import Modal from '../../components/ui/Modal';
 import { NeedsAttentionList } from '../../components/ui/NeedsAttentionList';
@@ -20,6 +19,7 @@ import ActivityPulseWidget from './components/ActivityPulseWidget';
 import { Screen } from '../../types';
 import { useTableStats } from '../tables/hooks/useTableStats';
 import AuroraBackground from '../../components/ui/AuroraBackground';
+import { OrganicCard } from '../../components/ui/OrganicCard';
 
 const PushPullControls: React.FC = () => {
     const { syncQueue, syncStatus, pullData, isPulling, setIsPulling, setIsSyncModalOpen, showToast, isPullDisabled, setIsPullDisabled } = useUIStore(useShallow(state => ({
@@ -53,7 +53,7 @@ const PushPullControls: React.FC = () => {
                     console.error("Initial pull failed:", e);
                 } finally {
                     setIsPulling(false);
-                    setIsPullDisabled(true); 
+                    setIsPullDisabled(true);
                 }
             }
         };
@@ -61,7 +61,7 @@ const PushPullControls: React.FC = () => {
         if (!hasInitialPulled) {
             performInitialPull();
         } else {
-            setIsPullDisabled(true); 
+            setIsPullDisabled(true);
         }
     }, [pullData, setIsPulling, showToast, setIsPullDisabled]);
 
@@ -88,17 +88,16 @@ const PushPullControls: React.FC = () => {
 
     return (
         <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={handlePull} disabled={isPulling || isPushing || isPullDisabled} className="px-2 sm:px-3">
-                {isPulling ? <Icon name="spinner" className="animate-spin w-4 h-4 sm:mr-2" /> : <Icon name="arrow-down-tray" className="w-4 h-4 sm:mr-2" />}
-                <span className="hidden sm:inline">Pull</span>
+            <Button variant="ghost" size="sm" onClick={handlePull} disabled={isPulling || isPushing || isPullDisabled} className="px-2 backdrop-blur-md bg-white/5 border border-white/10 hover:bg-white/10">
+                {isPulling ? <Icon name="spinner" className="animate-spin w-4 h-4" /> : <Icon name="arrow-down-tray" className="w-4 h-4" />}
+                <span className="hidden sm:inline ml-2">Pull</span>
             </Button>
-            <div className="flex rounded-md shadow-sm">
-                <Button variant="secondary" size="sm" onClick={handlePush} disabled={pendingCount === 0 || isPushing || isPulling} className="rounded-r-none px-2 sm:px-3">
-                    {isPushing ? <Icon name="spinner" className="animate-spin w-4 h-4 sm:mr-2" /> : <Icon name="arrow-up-tray" className="w-4 h-4 sm:mr-2" />}
-                    <span className="hidden sm:inline">Push {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
-                    <span className="inline sm:hidden">{pendingCount > 0 ? `(${pendingCount})` : ''}</span>
+            <div className="flex rounded-full overflow-hidden shadow-sm backdrop-blur-md bg-white/5 border border-white/10">
+                <Button variant="ghost" size="sm" onClick={handlePush} disabled={pendingCount === 0 || isPushing || isPulling} className="rounded-none px-3 hover:bg-white/10 border-r border-white/10">
+                    {isPushing ? <Icon name="spinner" className="animate-spin w-4 h-4" /> : <Icon name="arrow-up-tray" className="w-4 h-4" />}
+                    <span className="ml-2 font-bold">{pendingCount > 0 ? pendingCount : ''}</span>
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => setIsSyncModalOpen(true)} disabled={pendingCount === 0} className="rounded-l-none -ml-px px-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsSyncModalOpen(true)} disabled={pendingCount === 0} className="rounded-none px-2 hover:bg-white/10">
                     {hasFailedItems ? <Icon name="error-circle" className="w-4 h-4 text-error-500" /> : <Icon name="list-bullet" className="w-4 h-4" />}
                 </Button>
             </div>
@@ -106,183 +105,215 @@ const PushPullControls: React.FC = () => {
     );
 };
 
-const QuickStatPill: React.FC<{ icon: string; label: string; value: string | number; onClick?: () => void }> = ({ icon, label, value, onClick }) => (
-    <div 
+const GardenerStatPill: React.FC<{ icon: string; label: string; value: string | number; delay?: number; onClick?: () => void }> = ({ icon, label, value, delay = 0, onClick }) => (
+    <div
         onClick={onClick}
+        style={{ animation: 'fadeIn 0.8s ease-out backwards', animationDelay: `${delay}ms` }}
         className={`
-            flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-xl 
-            bg-surface/80 dark:bg-secondary-800/80 backdrop-blur-md
-            border border-secondary-200 dark:border-secondary-700 
-            w-full shadow-sm transition-all
-            ${onClick ? 'cursor-pointer hover:bg-secondary-50 dark:hover:bg-secondary-700 hover:border-primary-200 dark:hover:border-primary-800 hover:-translate-y-0.5' : ''}
+            flex items-center gap-3 px-5 py-4 rounded-[2rem]
+            bg-white/40 dark:bg-black/20 backdrop-blur-xl
+            border border-white/60 dark:border-white/5
+            w-full transition-all group active:scale-95
+            ${onClick ? 'cursor-pointer hover:bg-white/60 dark:hover:bg-black/30' : ''}
         `}
     >
-        <div className="p-1.5 sm:p-2 rounded-full bg-primary-50 dark:bg-primary-900/20 text-primary-500 flex-shrink-0">
-            <Icon name={icon} className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+            <Icon name={icon} className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-subtle truncate">{label}</p>
-            <p className="text-base sm:text-lg font-bold text-text-main dark:text-secondary-100 leading-none mt-0.5 truncate">{value}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-800/50 dark:text-emerald-400/50">{label}</p>
+            <p className="text-xl font-serif font-bold text-slate-800 dark:text-emerald-50 leading-none mt-1 truncate">{value}</p>
         </div>
     </div>
 );
 
-// Wrapper for ActivityHeatmap to be a first-class Dashboard Widget
-// Updated to support Glassmorphism
-const HeatmapCard: React.FC<{ activity: any }> = ({ activity }) => {
-    return (
-        <Card className="flex flex-col bg-surface/80 dark:bg-secondary-800/80 backdrop-blur-md border border-secondary-200/50 dark:border-secondary-700/50">
-            <CardContent className="p-4 flex-1 flex flex-col justify-center">
-                <ActivityHeatmap activity={activity} />
-            </CardContent>
-        </Card>
-    );
-};
-
 const HomeScreen: React.FC = () => {
-  const { stats, isGuest, handleLogout, session } = useUserStore();
-  const { wordsMastered, totalWords } = useTableStats();
-  const { theme, toggleTheme, isSyncModalOpen, setIsSyncModalOpen, setCurrentScreen, triggerGlobalAction } = useUIStore();
-  
-  const greeting = React.useMemo(() => {
-      const hour = new Date().getHours();
-      let timeGreeting = "Good Evening";
-      if (hour < 5) timeGreeting = "Burning the Midnight Oil?";
-      else if (hour < 12) timeGreeting = "Good Morning";
-      else if (hour < 18) timeGreeting = "Good Afternoon";
-      
-      const userName = !isGuest && session?.user?.email ? session.user.email.split('@')[0] : 'Scholar';
-      const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
-      
-      return `${timeGreeting}, ${formattedName}!`;
-  }, [isGuest, session]);
+    const { stats, isGuest, handleLogout, session } = useUserStore();
+    const { wordsMastered, totalWords } = useTableStats();
+    const { theme, toggleTheme, isSyncModalOpen, setIsSyncModalOpen, setCurrentScreen, triggerGlobalAction, timeOfDay, updateTimeOfDay } = useUIStore();
 
-  const activityData = React.useMemo(() => {
-    const activity = stats.activity || {};
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const thisWeekStart = new Date(today);
-    thisWeekStart.setDate(today.getDate() - today.getDay());
+    React.useEffect(() => {
+        updateTimeOfDay();
+        const interval = setInterval(updateTimeOfDay, 60000 * 30); // Check every 30 mins
+        return () => clearInterval(interval);
+    }, [updateTimeOfDay]);
 
-    let thisWeek = 0;
+    const greeting = React.useMemo(() => {
+        const hour = new Date().getHours();
+        let intro = "Good Evening";
+        if (hour < 5) intro = "Still awake,";
+        else if (hour < 12) intro = "Rise and shine,";
+        else if (hour < 18) intro = "The light is perfect,";
 
-    for (const dateStr in activity) {
-        const [year, month, day] = dateStr.split('-');
-        const date = new Date(Number(year), Number(month) - 1, Number(day));
-        
-        if (date >= thisWeekStart) {
-            const activityValue = activity[dateStr];
-            thisWeek += typeof activityValue === 'number' ? activityValue : activityValue.total;
+        const userName = !isGuest && session?.user?.email ? session.user.email.split('@')[0] : 'Scholar';
+        const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
+
+        return { intro, name: formattedName };
+    }, [isGuest, session]);
+
+    const activityData = React.useMemo(() => {
+        const activity = stats.activity || {};
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const thisWeekStart = new Date(today);
+        thisWeekStart.setDate(today.getDate() - today.getDay());
+
+        let thisWeek = 0;
+
+        for (const dateStr in activity) {
+            const [year, month, day] = dateStr.split('-');
+            const date = new Date(Number(year), Number(month) - 1, Number(day));
+
+            if (date >= thisWeekStart) {
+                const activityValue = activity[dateStr];
+                thisWeek += typeof activityValue === 'number' ? activityValue : activityValue.total;
+            }
         }
-    }
-    
-    const todayActivityValue = activity[getLocalDateString(today)];
 
-    return {
-        today: typeof todayActivityValue === 'number' ? todayActivityValue : todayActivityValue?.total || 0,
-        thisWeek,
+        const todayActivityValue = activity[getLocalDateString(today)];
+
+        return {
+            today: typeof todayActivityValue === 'number' ? todayActivityValue : todayActivityValue?.total || 0,
+            thisWeek,
+        };
+    }, [stats.activity]);
+
+    const isAwake = isGardenAwake(stats.lastSessionDate);
+
+    // Guarded Logout
+    const handleGuardedLogout = () => {
+        triggerGlobalAction(() => handleLogout());
     };
-  }, [stats.activity]);
 
-  const isAwake = isGardenAwake(stats.lastSessionDate);
+    return (
+        <div className={`relative h-[100dvh] w-full overflow-hidden transition-colors duration-1000 ${timeOfDay === 'night' ? 'bg-[#051A14]' :
+            timeOfDay === 'dawn' ? 'bg-[#0F2A24]' :
+                timeOfDay === 'twilight' ? 'bg-[#1A1005]' : 'bg-[#F8FAF9]'
+            }`}>
+            {/* 1. The Atmosphere */}
+            <AuroraBackground />
 
-  // Guarded Logout
-  const handleGuardedLogout = () => {
-    triggerGlobalAction(() => handleLogout());
-  };
+            {/* Organic Noise Texture Overlay */}
+            <div className="absolute inset-0 z-0 opacity-[0.04] pointer-events-none bg-noise mix-blend-overlay"></div>
 
-  return (
-    <div className="relative h-full w-full overflow-hidden">
-      {/* 1. The Atmosphere */}
-      <AuroraBackground />
+            {/* 2. The Content Layer */}
+            <div className="relative z-10 h-full w-full overflow-y-auto overflow-x-hidden p-6 sm:p-10 pb-32">
 
-      {/* 2. The Content Layer */}
-      <div className="relative z-10 h-full w-full overflow-y-auto overflow-x-hidden p-4 sm:p-6 animate-fadeIn pb-32">
-        <header className="mb-6 flex flex-wrap justify-between items-center gap-4">
-            <div className="flex-1 min-w-[200px]">
-            <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-400 truncate">{greeting}</h1>
-            <p className="text-sm text-text-subtle">Your personal vocabulary space.</p>
-            </div>
-            <div className='flex items-center gap-2'>
-                {!isGuest && <PushPullControls />}
-                <button onClick={toggleTheme} className="p-2 rounded-full text-text-subtle hover:bg-secondary-200/50 dark:hover:bg-secondary-700/50 transition-colors backdrop-blur-sm">
-                <Icon name={theme === 'dark' ? 'sun' : 'moon'} className="w-6 h-6" />
-                </button>
-                {!isGuest && (
-                    <button onClick={handleGuardedLogout} title="Logout" className="p-2 rounded-full text-text-subtle hover:bg-secondary-200/50 dark:hover:bg-secondary-700/50 transition-colors backdrop-blur-sm">
-                        <Icon name="logout" className="w-6 h-6" />
-                    </button>
-                )}
-            </div>
-        </header>
-
-        {/* --- DASHBOARD GRID --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 sm:mb-8">
-            
-            {/* ROW 1: Hero Section */}
-            {/* Garden: Centerpiece */}
-            <div className="md:col-span-2 lg:col-span-3 h-64 sm:h-80 lg:h-auto min-h-[300px] transition-transform hover:scale-[1.005] duration-500 ease-out">
-                <RestorationGarden isAwake={isAwake} className="h-full w-full shadow-xl bg-surface/40 backdrop-blur-sm" />
-            </div>
-            
-            {/* Side Stack: Streak & Notifications */}
-            <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-6 h-full justify-between">
-                <div className="flex-1 transition-transform hover:-translate-y-1 duration-300 min-h-[100px]">
-                    <StreakCard />
-                </div>
-                <div className="flex-1 transition-transform hover:-translate-y-1 duration-300">
-                    <NotificationCard />
-                </div>
-            </div>
-
-            {/* ROW 2: Quick Stats */}
-            {/* Spans full width, uses its own internal grid */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                    <QuickStatPill icon="sun" label="Today" value={formatShortDuration(activityData.today)} />
-                    <QuickStatPill icon="calendar" label="Week" value={formatShortDuration(activityData.thisWeek)} />
-                    <QuickStatPill icon="star" label="Mastered" value={wordsMastered} />
-                    <QuickStatPill icon="list-bullet" label="Total Words" value={totalWords.toLocaleString()} />
-                    <div className="col-span-2 md:col-span-1 lg:col-span-1">
-                        <QuickStatPill icon="clock" label="Total Focus" value={formatDuration(stats.totalStudyTime)} onClick={() => setCurrentScreen(Screen.Stats)} />
+                {/* Header: Poetic & Tactical */}
+                <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-fadeIn">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2 opacity-60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] dark:text-emerald-300">Sanctuary v3.0</span>
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight text-slate-900 dark:text-white">
+                            <span className="opacity-50">{greeting.intro}</span> <br className="sm:hidden" />
+                            <span className="italic">{greeting.name}.</span>
+                        </h1>
                     </div>
+
+                    <div className="flex items-center gap-3">
+                        {!isGuest && <PushPullControls />}
+                        <div className="h-8 w-px bg-slate-200 dark:bg-white/10 mx-2" />
+                        <button onClick={toggleTheme} className="p-3 rounded-full hover:bg-white/10 transition-colors backdrop-blur-md bg-white/5 border border-white/10">
+                            <Icon name={theme === 'dark' ? 'sun' : 'moon'} className="w-6 h-6 dark:text-emerald-300" />
+                        </button>
+                        {!isGuest && (
+                            <button onClick={handleGuardedLogout} className="p-3 rounded-full hover:bg-red-500/10 transition-colors backdrop-blur-md bg-white/5 border border-white/10 group">
+                                <Icon name="logout" className="w-6 h-6 text-slate-400 group-hover:text-red-400" />
+                            </button>
+                        )}
+                    </div>
+                </header>
+
+                {/* --- THE SANCTUARY GRID --- */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                    {/* LEFT COLUMN: The Focus (8 cols) */}
+                    <div className="lg:col-span-8 space-y-8">
+
+                        {/* THE GARDEN: Absolute Hero */}
+                        <div className="relative group">
+                            <div className="absolute -inset-4 bg-emerald-500/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                            <OrganicCard className="h-[400px] sm:h-[500px] border-none !bg-transparent !shadow-none overflow-visible" hoverScale={false}>
+                                <RestorationGarden isAwake={isAwake} className="h-full w-full" />
+                            </OrganicCard>
+                        </div>
+
+                        {/* GARDENER'S LEDGER (Grid inside Column) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <GardenerStatPill icon="droplets" label="Rainwater (Today)" value={formatShortDuration(activityData.today)} delay={100} />
+                            <GardenerStatPill icon="sun" label="Sunlight (Week)" value={formatShortDuration(activityData.thisWeek)} delay={200} />
+                            <GardenerStatPill icon="sparkles" label="Fully Bloomed" value={wordsMastered} delay={300} />
+                            <GardenerStatPill icon="tree" label="Total Seeds" value={totalWords.toLocaleString()} delay={400} />
+                        </div>
+
+                        {/* ACTIONABLE WIDGETS */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <OrganicCard className="p-6 md:p-8" delay={500}>
+                                <RecentStudiesCard />
+                            </OrganicCard>
+                            <OrganicCard className="p-6 md:p-8" delay={600}>
+                                <ActivityPulseWidget />
+                            </OrganicCard>
+                        </div>
+                    </div>
+
+                    {/* RIGHT COLUMN: The Pulse (4 cols) */}
+                    <div className="lg:col-span-4 space-y-8">
+
+                        <OrganicCard className="p-8" delay={200}>
+                            <StreakCard />
+                        </OrganicCard>
+
+                        <OrganicCard className="p-8" delay={300}>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-6 flex items-center gap-2">
+                                <Icon name="chart-bar" className="w-4 h-4" />
+                                Growth Pattern
+                            </h3>
+                            <TimeSpentBarChart />
+                        </OrganicCard>
+
+                        <OrganicCard className="p-8" delay={400}>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-6 flex items-center gap-2">
+                                <Icon name="bell" className="w-4 h-4" />
+                                Notifications
+                            </h3>
+                            <NotificationCard />
+                        </OrganicCard>
+                    </div>
+
                 </div>
-            </div>
 
-            {/* ROW 3: Data Visualization */}
-            
-            {/* Heatmap Widget - Fits Content height-wise, full width */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-2 h-auto self-start">
-                <HeatmapCard activity={stats.activity} />
-            </div>
+                {/* --- FULL WIDTH SECTION: THE SEASON MAP --- */}
+                <div className="mt-8 animate-fadeIn" style={{ animationDelay: '500ms' }}>
+                    <OrganicCard className="p-8 md:p-10" delay={500}>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-8 flex items-center gap-2">
+                            <Icon name="calendar" className="w-4 h-4" />
+                            Season Map
+                        </h3>
+                        <div className="px-2">
+                            <ActivityHeatmap activity={stats.activity} />
+                        </div>
+                    </OrganicCard>
+                </div>
 
-            {/* Focus Time Widget */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-2 min-h-[250px]">
-                <TimeSpentBarChart />
-            </div>
+                {/* Footer Quote */}
+                <footer className="mt-20 py-10 text-center opacity-30 select-none pointer-events-none">
+                    <p className="font-serif italic text-lg dark:text-emerald-100">"Patience is the gardener's greatest tool."</p>
+                </footer>
 
-            {/* ROW 4: Actionable Widgets (Split 2-2) */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-2 min-h-[250px]">
-                <RecentStudiesCard />
-            </div>
+                <Modal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Seed Storage Sync">
+                    <div className="p-8 dark:bg-emerald-950/20 backdrop-blur-2xl">
+                        <p className="text-sm dark:text-emerald-100/60 mb-6 leading-relaxed">Your latest growth data is being carefully gathered. If a seed fails to plant, you can retry here.</p>
+                        <NeedsAttentionList />
+                    </div>
+                </Modal>
 
-            <div className="col-span-1 md:col-span-2 lg:col-span-2 min-h-[250px]">
-                <ActivityPulseWidget />
             </div>
-
         </div>
-
-        <Modal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Sync Queue">
-                <div className="p-6">
-                    <p className="text-sm text-text-subtle mb-4">Items in the queue are waiting to be synced to the cloud. If items fail, you can retry them here.</p>
-                    <NeedsAttentionList />
-                </div>
-        </Modal>
-
-      </div>
-    </div>
-  );
+    );
 };
 
 export default HomeScreen;

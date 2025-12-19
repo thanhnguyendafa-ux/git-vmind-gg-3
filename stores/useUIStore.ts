@@ -36,18 +36,22 @@ interface UIState {
   isDesktopSidebarOpen: boolean; // New: Desktop collapsible sidebar state
   isImmersive: boolean;
   backgroundSettings: BackgroundSettings;
-  
+
   // Library Module
   isLibraryMode: boolean;
 
   // Global Navigation Guard
   pendingAction: (() => void) | null;
   isBlockingOverlayVisible: boolean;
-  
+
+  // Dynamic Atmosphere
+  timeOfDay: 'dawn' | 'noon' | 'twilight' | 'night';
+  updateTimeOfDay: () => void;
+
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   setCurrentScreen: (screen: Screen) => void;
-  
+
   // New Navigation Guard Actions
   attemptNavigation: (screen: Screen) => void;
   triggerGlobalAction: (action: () => void) => void;
@@ -98,151 +102,162 @@ const loadBgSettings = (): BackgroundSettings => {
 };
 
 export const useUIStore = create<UIState>()(
-    (set, get) => ({
-      theme: 'light',
-      currentScreen: Screen.Home,
-      syncStatus: 'idle',
-      syncQueue: [],
-      syncLogs: [],
-      toast: null,
-      unlockedBadgeNotification: null,
-      galleryViewData: null,
-      lastMutatedTableId: null,
-      isSearchOpen: false,
-      isChatbotOpen: false,
-      isApiKeyModalOpen: false,
-      isSyncModalOpen: false,
-      realtimeStatus: 'idle',
-      realtimeTimeoutId: null,
-      isPulling: false,
-      pullData: null,
-      isPullDisabled: false,
-      isConfidenceAutoplayEnabled: false,
-      isTablesSidebarOpen: false,
-      // Load initial state from local storage, default true
-      isDesktopSidebarOpen: localStorage.getItem('vmind-sidebar-open') !== 'false',
-      isImmersive: false,
-      backgroundSettings: loadBgSettings(),
-      isLibraryMode: false,
+  (set, get) => ({
+    theme: 'light',
+    currentScreen: Screen.Home,
+    syncStatus: 'idle',
+    syncQueue: [],
+    syncLogs: [],
+    toast: null,
+    unlockedBadgeNotification: null,
+    galleryViewData: null,
+    lastMutatedTableId: null,
+    isSearchOpen: false,
+    isChatbotOpen: false,
+    isApiKeyModalOpen: false,
+    isSyncModalOpen: false,
+    realtimeStatus: 'idle',
+    realtimeTimeoutId: null,
+    isPulling: false,
+    pullData: null,
+    isPullDisabled: false,
+    isConfidenceAutoplayEnabled: false,
+    isTablesSidebarOpen: false,
+    // Load initial state from local storage, default true
+    isDesktopSidebarOpen: localStorage.getItem('vmind-sidebar-open') !== 'false',
+    isImmersive: false,
+    backgroundSettings: loadBgSettings(),
+    isLibraryMode: false,
 
-      // Navigation Guard State
-      pendingAction: null,
-      isBlockingOverlayVisible: false,
+    // Navigation Guard State
+    pendingAction: null,
+    isBlockingOverlayVisible: false,
 
-      toggleTheme: () => set(state => {
-        const modes: Theme[] = ['light', 'dark', 'pastel'];
-        const nextIndex = (modes.indexOf(state.theme) + 1) % modes.length;
-        const newTheme = modes[nextIndex];
+    timeOfDay: 'noon', // Default
+    updateTimeOfDay: () => {
+      const hour = new Date().getHours();
+      let time: 'dawn' | 'noon' | 'twilight' | 'night' = 'noon';
+      if (hour >= 5 && hour < 9) time = 'dawn';
+      else if (hour >= 9 && hour < 17) time = 'noon';
+      else if (hour >= 17 && hour < 20) time = 'twilight';
+      else time = 'night';
+      set({ timeOfDay: time });
+    },
 
-        // Sync theme change to user settings if logged in
-        const { isGuest, settings, setSettings } = useUserStore.getState();
-        if (!isGuest) {
-            setSettings({ ...settings, theme: newTheme });
-        }
-        return { theme: newTheme };
-      }),
-      setTheme: (theme) => set({ theme }),
-      
-      setCurrentScreen: (screen) => set({ currentScreen: screen }),
+    toggleTheme: () => set(state => {
+      const modes: Theme[] = ['light', 'dark', 'blue'];
+      const nextIndex = (modes.indexOf(state.theme) + 1) % modes.length;
+      const newTheme = modes[nextIndex];
 
-      // Global Navigation Guard Implementation
-      attemptNavigation: (screen) => {
-        get().triggerGlobalAction(() => set({ currentScreen: screen }));
-      },
+      // Sync theme change to user settings if logged in
+      const { isGuest, settings, setSettings } = useUserStore.getState();
+      if (!isGuest) {
+        setSettings({ ...settings, theme: newTheme });
+      }
+      return { theme: newTheme };
+    }),
+    setTheme: (theme) => set({ theme }),
 
-      triggerGlobalAction: (action) => {
-          const { syncQueue } = get();
-          // Check if there are pending items in the queue
-          if (syncQueue.length > 0) {
-              // Block navigation, show overlay, and flush batch
-              set({ 
-                  pendingAction: action, 
-                  isBlockingOverlayVisible: true 
-              });
-              
-              // Force sync engine to flush any batched changes immediately
-              VmindSyncEngine.getInstance().endBatchMode();
-          } else {
-              // Safe to proceed immediately
-              action();
-          }
-      },
+    setCurrentScreen: (screen) => set({ currentScreen: screen }),
 
-      resolveGlobalAction: () => {
-          const { pendingAction } = get();
-          if (pendingAction) {
-              pendingAction();
-          }
-          set({ 
-              pendingAction: null, 
-              isBlockingOverlayVisible: false 
-          });
-      },
+    // Global Navigation Guard Implementation
+    attemptNavigation: (screen) => {
+      get().triggerGlobalAction(() => set({ currentScreen: screen }));
+    },
 
-      cancelGlobalAction: () => {
-          set({ 
-              pendingAction: null, 
-              isBlockingOverlayVisible: false 
-          });
-      },
+    triggerGlobalAction: (action) => {
+      const { syncQueue } = get();
+      // Check if there are pending items in the queue
+      if (syncQueue.length > 0) {
+        // Block navigation, show overlay, and flush batch
+        set({
+          pendingAction: action,
+          isBlockingOverlayVisible: true
+        });
 
-      setSyncStatus: (status) => set({ syncStatus: status }),
-      setSyncQueue: (queue) => set({ syncQueue: queue }),
-      addSyncLog: (log) => set(state => ({ syncLogs: [log, ...state.syncLogs].slice(0, 50) })), // Keep last 50 logs
-      showToast: (message, type = 'success', actionText, onAction) => set({ toast: { message, type, actionText, onAction } }),
-      setToast: (toast) => set({ toast }),
-      setUnlockedBadgeNotification: (badge) => set({ unlockedBadgeNotification: badge }),
-      setGalleryViewData: (data) => set({ galleryViewData: data }),
-      setLastMutatedTableId: (id) => set({ lastMutatedTableId: id }),
-      setIsSearchOpen: (isOpen) => set({ isSearchOpen: isOpen }),
-      setIsChatbotOpen: (isOpen) => set({ isChatbotOpen: isOpen }),
-      setIsApiKeyModalOpen: (isOpen) => set({ isApiKeyModalOpen: isOpen }),
-      setIsSyncModalOpen: (isOpen) => set({ isSyncModalOpen: isOpen }),
-      setIsPulling: (isPulling) => set({ isPulling }),
-      setPullData: (fn) => set({ pullData: fn }),
-      setIsPullDisabled: (isPullDisabled) => set({ isPullDisabled }),
-      handleNavigation: (screen) => {
-        const screenEnum = Screen[screen];
-        if (screenEnum !== undefined) {
-          set({ currentScreen: screenEnum });
-        }
-      },
-      reportRealtimeUpdate: () => {
-        const { realtimeTimeoutId } = get();
-        if (realtimeTimeoutId) {
-          clearTimeout(realtimeTimeoutId);
-        }
+        // Force sync engine to flush any batched changes immediately
+        VmindSyncEngine.getInstance().endBatchMode();
+      } else {
+        // Safe to proceed immediately
+        action();
+      }
+    },
 
-        set({ realtimeStatus: 'updating' });
+    resolveGlobalAction: () => {
+      const { pendingAction } = get();
+      if (pendingAction) {
+        pendingAction();
+      }
+      set({
+        pendingAction: null,
+        isBlockingOverlayVisible: false
+      });
+    },
 
-        const newTimeoutId = window.setTimeout(() => {
-          set({ realtimeStatus: 'updated' });
-          const nestedTimeoutId = window.setTimeout(() => {
-            set({ realtimeStatus: 'idle' });
-          }, 1500);
-          // We only need to manage the outer timeout for debouncing
-        }, 2000);
+    cancelGlobalAction: () => {
+      set({
+        pendingAction: null,
+        isBlockingOverlayVisible: false
+      });
+    },
 
-        set({ realtimeTimeoutId: newTimeoutId });
-      },
-      toggleConfidenceAutoplay: () => set(state => ({ isConfidenceAutoplayEnabled: !state.isConfidenceAutoplayEnabled })),
-      setIsTablesSidebarOpen: (isOpen) => set({ isTablesSidebarOpen: isOpen }),
-      toggleDesktopSidebar: () => set(state => {
-        const next = !state.isDesktopSidebarOpen;
-        localStorage.setItem('vmind-sidebar-open', String(next));
-        return { isDesktopSidebarOpen: next };
-      }),
-      setDesktopSidebarOpen: (isOpen) => {
-        localStorage.setItem('vmind-sidebar-open', String(isOpen));
-        set({ isDesktopSidebarOpen: isOpen });
-      },
-      toggleImmersiveMode: () => set(state => ({ isImmersive: !state.isImmersive })),
-      setIsImmersive: (isImmersive) => set({ isImmersive }),
-      setBackgroundSettings: (newSettings) => set(state => {
-        const updated = { ...state.backgroundSettings, ...newSettings };
-        localStorage.setItem('vmind-bg-settings', JSON.stringify(updated));
-        return { backgroundSettings: updated };
-      }),
-      setIsLibraryMode: (isLibrary) => set({ isLibraryMode: isLibrary }),
-    })
+    setSyncStatus: (status) => set({ syncStatus: status }),
+    setSyncQueue: (queue) => set({ syncQueue: queue }),
+    addSyncLog: (log) => set(state => ({ syncLogs: [log, ...state.syncLogs].slice(0, 50) })), // Keep last 50 logs
+    showToast: (message, type = 'success', actionText, onAction) => set({ toast: { message, type, actionText, onAction } }),
+    setToast: (toast) => set({ toast }),
+    setUnlockedBadgeNotification: (badge) => set({ unlockedBadgeNotification: badge }),
+    setGalleryViewData: (data) => set({ galleryViewData: data }),
+    setLastMutatedTableId: (id) => set({ lastMutatedTableId: id }),
+    setIsSearchOpen: (isOpen) => set({ isSearchOpen: isOpen }),
+    setIsChatbotOpen: (isOpen) => set({ isChatbotOpen: isOpen }),
+    setIsApiKeyModalOpen: (isOpen) => set({ isApiKeyModalOpen: isOpen }),
+    setIsSyncModalOpen: (isOpen) => set({ isSyncModalOpen: isOpen }),
+    setIsPulling: (isPulling) => set({ isPulling }),
+    setPullData: (fn) => set({ pullData: fn }),
+    setIsPullDisabled: (isPullDisabled) => set({ isPullDisabled }),
+    handleNavigation: (screen) => {
+      const screenEnum = Screen[screen];
+      if (screenEnum !== undefined) {
+        set({ currentScreen: screenEnum });
+      }
+    },
+    reportRealtimeUpdate: () => {
+      const { realtimeTimeoutId } = get();
+      if (realtimeTimeoutId) {
+        clearTimeout(realtimeTimeoutId);
+      }
+
+      set({ realtimeStatus: 'updating' });
+
+      const newTimeoutId = window.setTimeout(() => {
+        set({ realtimeStatus: 'updated' });
+        const nestedTimeoutId = window.setTimeout(() => {
+          set({ realtimeStatus: 'idle' });
+        }, 1500);
+        // We only need to manage the outer timeout for debouncing
+      }, 2000);
+
+      set({ realtimeTimeoutId: newTimeoutId });
+    },
+    toggleConfidenceAutoplay: () => set(state => ({ isConfidenceAutoplayEnabled: !state.isConfidenceAutoplayEnabled })),
+    setIsTablesSidebarOpen: (isOpen) => set({ isTablesSidebarOpen: isOpen }),
+    toggleDesktopSidebar: () => set(state => {
+      const next = !state.isDesktopSidebarOpen;
+      localStorage.setItem('vmind-sidebar-open', String(next));
+      return { isDesktopSidebarOpen: next };
+    }),
+    setDesktopSidebarOpen: (isOpen) => {
+      localStorage.setItem('vmind-sidebar-open', String(isOpen));
+      set({ isDesktopSidebarOpen: isOpen });
+    },
+    toggleImmersiveMode: () => set(state => ({ isImmersive: !state.isImmersive })),
+    setIsImmersive: (isImmersive) => set({ isImmersive }),
+    setBackgroundSettings: (newSettings) => set(state => {
+      const updated = { ...state.backgroundSettings, ...newSettings };
+      localStorage.setItem('vmind-bg-settings', JSON.stringify(updated));
+      return { backgroundSettings: updated };
+    }),
+    setIsLibraryMode: (isLibrary) => set({ isLibraryMode: isLibrary }),
+  })
 );

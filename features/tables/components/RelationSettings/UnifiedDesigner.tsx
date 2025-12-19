@@ -86,8 +86,10 @@ const UnifiedDesigner: React.FC<UnifiedDesignerProps> = ({
     const sampleRow = React.useMemo(() => {
         if (table.rows.length > 0) return table.rows[0];
         const mock = JSON.parse(JSON.stringify(MOCK_ROW));
-        table.columns.forEach((col, i) => {
-            mock.cols[col.id] = i % 2 === 0 ? "Sample Data" : "Example Content";
+        table.columns.forEach((col) => {
+            // Use the column name itself as the sample data to make it obvious which column is being displayed
+            // and add multiple words to ensure scramble modes work correctly
+            mock.cols[col.id] = `Sample ${col.name} data for preview`;
         });
 
         // Ensure cloze source has brackets for preview if needed

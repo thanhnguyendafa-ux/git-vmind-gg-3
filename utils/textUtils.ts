@@ -76,7 +76,7 @@ export function findContextSentences(
   // Split by sentence-ending punctuation followed by a space or end of string.
   // The capturing group `([.?!])` keeps the delimiter.
   const sentences = fullText.split(/(?<=[.?!])\s+/);
-  
+
   let charCount = 0;
   let selectionSentenceIndex = -1;
 
@@ -96,20 +96,20 @@ export function findContextSentences(
     // Fallback if selection spans sentences or logic fails
     return { contextBefore: '', contextAfter: '', fullContext: `[...` };
   }
-  
+
   const start = Math.max(0, selectionSentenceIndex - sentencesBefore);
   const end = Math.min(sentences.length, selectionSentenceIndex + sentencesAfter + 1);
-  
+
   const contextSentences = sentences.slice(start, end);
 
   // Reconstruct the context and find the relative start of the selection
   const tempFullContext = contextSentences.join(' ');
   const selectionSentence = sentences[selectionSentenceIndex];
   const relativeSelectionStart = selectionStartIndex - (fullText.indexOf(selectionSentence));
-  
+
   const contextStartIndexInFull = fullText.indexOf(contextSentences[0]);
   const selectionGlobalStartIndexInContext = selectionStartIndex - contextStartIndexInFull;
-  
+
   const contextBefore = tempFullContext.substring(0, selectionGlobalStartIndexInContext);
   const contextAfter = tempFullContext.substring(selectionGlobalStartIndexInContext + selectionLength);
   const fullContext = tempFullContext;
@@ -125,16 +125,26 @@ export function findContextSentences(
  * @returns The interpolated string.
  */
 export function resolveVariables(text: string, row: VocabRow | null | undefined, columns: Column[] | undefined): string {
-  if (!text || !row || !columns) return text;
+  if (!text) return '';
+  if (!row || !columns) return text;
 
   // Replace {Column Name} with the actual value from the row
   return text.replace(/{([^}]+)}/g, (match, colName) => {
+    const trimmedColName = colName.trim().toLowerCase();
+
     // Case-insensitive matching for robustness
-    const column = columns.find(c => c.name.toLowerCase() === colName.trim().toLowerCase());
+    const column = columns.find(c => c.name.trim().toLowerCase() === trimmedColName);
+
     if (column) {
-      return row.cols[column.id] || '';
+      const value = row.cols[column.id];
+      // If the column exists but the value is null/undefined, treat as empty
+      if (value === undefined || value === null) return '';
+      return String(value);
     }
-    return match; // Return original placeholder if column not found
+
+    // If no column found, return a placeholder that prevents logic breakage 
+    // instead of the raw curly braces which can break scanners.
+    return `[Missing: ${colName.trim()}]`;
   });
 }
 
@@ -146,16 +156,16 @@ export function resolveVariables(text: string, row: VocabRow | null | undefined,
  * @returns The interpolated, URL-safe string.
  */
 export function resolveUrlTemplate(template: string, row: VocabRow | null | undefined, columns: Column[] | undefined): string {
-    if (!template || !row || !columns) return template;
+  if (!template || !row || !columns) return template;
 
-    return template.replace(/{([^}]+)}/g, (match, colName) => {
-        const column = columns.find(c => c.name.toLowerCase() === colName.trim().toLowerCase());
-        if (column) {
-            const value = row.cols[column.id] || '';
-            return encodeURIComponent(value);
-        }
-        return match;
-    });
+  return template.replace(/{([^}]+)}/g, (match, colName) => {
+    const column = columns.find(c => c.name.toLowerCase() === colName.trim().toLowerCase());
+    if (column) {
+      const value = row.cols[column.id] || '';
+      return encodeURIComponent(value);
+    }
+    return match;
+  });
 }
 
 /**
@@ -167,13 +177,13 @@ export function resolveUrlTemplate(template: string, row: VocabRow | null | unde
  * @returns The resolved answer string.
  */
 export function evaluateFormula(formula: string, row: VocabRow, columns: Column[]): string {
-    if (!formula) return '';
-    
-    // Use the same variable resolution logic as display text
-    const resolved = resolveVariables(formula, row, columns);
-    
-    // Clean up any leftover or empty formatting (optional but good for UX)
-    // e.g., if formula is "{Word} ({Phonetic})" and phonetic is empty, we might get "Apple ()"
-    // Simple cleanup for empty parens:
-    return resolved.replace(/\(\s*\)/g, '').trim();
+  if (!formula) return '';
+
+  // Use the same variable resolution logic as display text
+  const resolved = resolveVariables(formula, row, columns);
+
+  // Clean up any leftover or empty formatting (optional but good for UX)
+  // e.g., if formula is "{Word} ({Phonetic})" and phonetic is empty, we might get "Apple ()"
+  // Simple cleanup for empty parens:
+  return resolved.replace(/\(\s*\)/g, '').trim();
 }

@@ -37,7 +37,7 @@ export enum Screen {
   ScrambleSession, // New
 }
 
-export type Theme = 'light' | 'dark' | 'pastel';
+export type Theme = 'light' | 'dark' | 'blue';
 
 export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline' | 'paused';
 

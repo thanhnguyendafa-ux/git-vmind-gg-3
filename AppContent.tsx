@@ -126,11 +126,11 @@ const normalizeServerTable = (serverObj: any): Table => {
 
 const fetchUserData = async (userId: string) => {
     const [
-        profileRes, 
-        tablesRes, 
-        foldersRes, 
+        profileRes,
+        tablesRes,
+        foldersRes,
         // METADATA FIRST: Switch to Views
-        notesRes, 
+        notesRes,
         dictationNotesRes,
         contextLinksRes,
         studySetsRes,
@@ -152,12 +152,12 @@ const fetchUserData = async (userId: string) => {
     if (dictationNotesRes.error) throw dictationNotesRes.error;
     if (contextLinksRes.error) throw contextLinksRes.error;
     if (studySetsRes.error) throw studySetsRes.error;
-    
+
     // --- MIGRATION TRIGGER ---
     // If study_sets is empty but profile has data, trigger migration
     const hasOldData = profileRes.data?.user_profile?.confidenceProgresses?.length > 0;
     const hasNewData = studySetsRes.data && studySetsRes.data.length > 0;
-    
+
     if (hasOldData && !hasNewData) {
         await migrateUserData(userId, profileRes.data?.user_profile);
         // Re-fetch study sets after migration
@@ -204,7 +204,7 @@ export const AppContent: React.FC = () => {
         syncStatus,
         syncQueue
     } = useUIStore();
-    
+
     const { loading, settings, session, isGuest, setLoading, setStats, setSettings } = useUserStore();
     const { setInitialData: setTableData } = useTableStore();
     const { setNotes } = useNoteStore();
@@ -220,7 +220,7 @@ export const AppContent: React.FC = () => {
         if (pendingAction && isBlockingOverlayVisible) {
             const isQueueEmpty = syncQueue.length === 0;
             const isIdle = syncStatus === 'idle' || syncStatus === 'saved';
-            
+
             if (isQueueEmpty && isIdle) {
                 resolveGlobalAction();
             }
@@ -237,17 +237,17 @@ export const AppContent: React.FC = () => {
         if (theme === 'dark') {
             root.classList.add('dark');
             root.setAttribute('data-theme', 'forest');
-        } else if (theme === 'pastel') {
-            root.setAttribute('data-theme', 'pastel');
+        } else if (theme === 'blue') {
+            root.setAttribute('data-theme', 'blue');
         }
         // 'light' is default, requires no class or attribute in this system
 
         localStorage.setItem('vmind-theme-preference', theme);
     }, [theme]);
 
-     React.useEffect(() => {
+    React.useEffect(() => {
         const savedTheme = localStorage.getItem('vmind-theme-preference');
-        if (savedTheme && ['light', 'dark', 'pastel'].includes(savedTheme)) {
+        if (savedTheme && ['light', 'dark', 'blue'].includes(savedTheme)) {
             if (useUIStore.getState().theme !== savedTheme) {
                 setTheme(savedTheme as Theme);
             }
@@ -285,30 +285,30 @@ export const AppContent: React.FC = () => {
                 setStats(userProfile.stats || defaultStats);
                 setSettings(userProfile.settings || defaultSettings);
                 setTags(userProfile.tags || defaultState.tags || []);
-                
+
                 // Hydrate Garden State from Cloud
                 if (userProfile.garden) {
-                     useGardenStore.getState().setTotalDrops(userProfile.garden.totalDrops || 0);
+                    useGardenStore.getState().setTotalDrops(userProfile.garden.totalDrops || 0);
                 }
 
                 // Sync Theme from Cloud
                 if (userProfile.settings?.theme) {
-                     const currentTheme = useUIStore.getState().theme;
-                     if (userProfile.settings.theme !== currentTheme) {
-                         useUIStore.getState().setTheme(userProfile.settings.theme);
-                     }
+                    const currentTheme = useUIStore.getState().theme;
+                    if (userProfile.settings.theme !== currentTheme) {
+                        useUIStore.getState().setTheme(userProfile.settings.theme);
+                    }
                 }
 
                 // Sync Music Config from Cloud
                 if (userProfile.music) {
-                     useMusicStore.getState().hydrate(userProfile.music);
+                    useMusicStore.getState().hydrate(userProfile.music);
                 }
             } else {
                 setStats(defaultStats);
                 setSettings(defaultSettings);
                 setTags(defaultState.tags || []);
             }
-            
+
             // Map study_sets from DB to Store Types
             const dbSets = data.studySets || [];
             const confidenceProgresses: ConfidenceProgress[] = dbSets
@@ -322,14 +322,14 @@ export const AppContent: React.FC = () => {
                     createdAt: new Date(s.created_at).getTime(),
                     // Initial Queue: Try to load from settings snapshot first (Metadata First)
                     // If empty, the session will fetch from payload later.
-                    queue: s.settings.queue || [], 
+                    queue: s.settings.queue || [],
                     currentIndex: s.settings.currentIndex || 0,
                     intervalConfig: s.settings.intervalConfig,
                     newWordCount: s.settings.newWordCount,
                     cardStates: s.settings.cardStates || {},
                 }));
 
-             const ankiProgresses: AnkiProgress[] = dbSets
+            const ankiProgresses: AnkiProgress[] = dbSets
                 .filter((s: any) => s.type === 'anki')
                 .map((s: any) => ({
                     id: s.id,
@@ -340,8 +340,8 @@ export const AppContent: React.FC = () => {
                     ankiConfig: s.settings.ankiConfig,
                     createdAt: new Date(s.created_at).getTime(),
                 }));
-                
-             const studyProgresses: StudyProgress[] = dbSets
+
+            const studyProgresses: StudyProgress[] = dbSets
                 .filter((s: any) => s.type === 'queue')
                 .map((s: any) => ({
                     id: s.id,
@@ -359,15 +359,15 @@ export const AppContent: React.FC = () => {
             });
 
             const tablesData = data.tables.map(normalizeServerTable);
-            const foldersData = data.folders.map((f: any) => ({...f, tableIds: f.table_ids, createdAt: new Date(f.created_at).getTime()}));
+            const foldersData = data.folders.map((f: any) => ({ ...f, tableIds: f.table_ids, createdAt: new Date(f.created_at).getTime() }));
             setTableData({ tables: tablesData, folders: foldersData });
 
-            setNotes(data.notes.map((n: any) => ({...n, createdAt: new Date(n.created_at).getTime()})));
-            setDictationNotes(data.dictationNotes.map((d: any) => ({...d, youtubeUrl: d.youtube_url, practiceHistory: d.practice_history || []})));
-            setContextLinks(data.contextLinks.map((l: any) => ({...l, rowId: l.row_id, sourceType: l.source_type, sourceId: l.source_id, createdAt: new Date(l.created_at).getTime()})));
-            
+            setNotes(data.notes.map((n: any) => ({ ...n, createdAt: new Date(n.created_at).getTime() })));
+            setDictationNotes(data.dictationNotes.map((d: any) => ({ ...d, youtubeUrl: d.youtube_url, practiceHistory: d.practice_history || [] })));
+            setContextLinks(data.contextLinks.map((l: any) => ({ ...l, rowId: l.row_id, sourceType: l.source_type, sourceId: l.source_id, createdAt: new Date(l.created_at).getTime() })));
+
             if (loading) {
-                 setLoading(false);
+                setLoading(false);
             }
         }
     }, [isSuccess, data, setStats, setSettings, setSessionData, setTags, setTableData, setNotes, setDictationNotes, setContextLinks, setLoading, loading]);
@@ -388,51 +388,51 @@ export const AppContent: React.FC = () => {
         editingDictationNote,
         activeTableId
     } = useSessionStore();
-    
+
     // Keyboard shortcuts
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
             if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) return;
-            
+
             // Search Shortcut
             const searchShortcut = settings.searchShortcut || 'Ctrl+K';
             const checkShortcut = (shortcut: string, event: KeyboardEvent) => {
-                 const key = shortcut.split('+').pop()?.toLowerCase();
-                 if (!key) return false;
-                 
-                 const hasCtrl = shortcut.toLowerCase().includes('ctrl');
-                 const hasMeta = shortcut.toLowerCase().includes('cmd') || shortcut.toLowerCase().includes('meta');
-                 const hasAlt = shortcut.toLowerCase().includes('alt');
-                 const hasShift = shortcut.toLowerCase().includes('shift');
-                 
-                 return (
-                     event.key.toLowerCase() === key &&
-                     (hasCtrl ? (event.ctrlKey || event.metaKey) : !event.ctrlKey && !event.metaKey) && 
-                     (hasAlt ? event.altKey : !event.altKey) &&
-                     (hasShift ? event.shiftKey : !event.shiftKey)
-                 );
+                const key = shortcut.split('+').pop()?.toLowerCase();
+                if (!key) return false;
+
+                const hasCtrl = shortcut.toLowerCase().includes('ctrl');
+                const hasMeta = shortcut.toLowerCase().includes('cmd') || shortcut.toLowerCase().includes('meta');
+                const hasAlt = shortcut.toLowerCase().includes('alt');
+                const hasShift = shortcut.toLowerCase().includes('shift');
+
+                return (
+                    event.key.toLowerCase() === key &&
+                    (hasCtrl ? (event.ctrlKey || event.metaKey) : !event.ctrlKey && !event.metaKey) &&
+                    (hasAlt ? event.altKey : !event.altKey) &&
+                    (hasShift ? event.shiftKey : !event.shiftKey)
+                );
             };
 
             if (checkShortcut(searchShortcut, e)) {
                 e.preventDefault();
                 setIsSearchOpen(true);
             }
-            
+
             // Music Toggle Shortcut (Global)
             const musicShortcut = settings.musicShortcut || 'Ctrl+M';
             if (checkShortcut(musicShortcut, e)) {
                 e.preventDefault();
                 const { isPlaying, currentTrack, customTracks, togglePlay } = useMusicStore.getState();
-                
+
                 // Safety check: Don't try to play if playlist is empty (Clean Slate)
                 const hasTracks = customTracks.length > 0;
-                
+
                 if (!currentTrack && !hasTracks) {
                     showToast("Please add a track first to play music.", "info");
                     return;
                 }
-                
+
                 const wasPlaying = isPlaying;
                 togglePlay();
                 showToast(wasPlaying ? "Music Paused" : "Music Playing", "info");
@@ -453,7 +453,7 @@ export const AppContent: React.FC = () => {
         if (!session && !isGuest) {
             return <AuthScreen />;
         }
-        
+
         if (activeAnkiSession) return <AnkiSessionScreen />;
         if (activeDictationSession) return <DictationSessionScreen />;
         if (activeTheaterSession) return <TheaterSessionScreen />;
@@ -493,11 +493,11 @@ export const AppContent: React.FC = () => {
     const isSessionActive = !!(activeSession || activeConfidenceSession || activeTheaterSession || activeDictationSession || activeAnkiSession);
     const hasSession = !!session || isGuest;
     const showNavBar = hasSession && currentScreen !== Screen.Auth && !isSessionActive && !isImmersive;
-    
+
     // Background Logic
     const hasCustomBg = !!backgroundSettings.url;
     // Use 100dvh for the outer container to fix mobile Safari issues
-    const containerClasses = hasCustomBg 
+    const containerClasses = hasCustomBg
         ? "h-[100dvh] w-screen flex flex-col overflow-hidden bg-transparent text-text-main dark:text-secondary-100 transition-colors duration-300"
         : "h-[100dvh] w-screen flex flex-col overflow-hidden bg-background dark:bg-secondary-900 text-text-main dark:text-secondary-100 transition-colors duration-300";
 
@@ -509,7 +509,7 @@ export const AppContent: React.FC = () => {
             {hasCustomBg && (
                 <>
                     {/* Image Layer - Fixed to z-0 so it sits on top of body bg but below content */}
-                    <div 
+                    <div
                         className="fixed inset-0 z-0 w-full h-full"
                         style={{
                             backgroundImage: `url(${backgroundSettings.url})`,
@@ -520,7 +520,7 @@ export const AppContent: React.FC = () => {
                         }}
                     />
                     {/* Overlay Layer - Also z-0, rendered after image to sit on top */}
-                    <div 
+                    <div
                         className="fixed inset-0 z-0 w-full h-full transition-colors duration-300"
                         style={{
                             backgroundColor: `rgba(${overlayColor}, ${backgroundSettings.overlayOpacity / 100})`
@@ -536,7 +536,7 @@ export const AppContent: React.FC = () => {
                     <ReminderManager />
                     <NotificationGenerator />
                 </React.Suspense>
-                
+
                 {/* Global Blocking Overlay */}
                 <BlockingSaveOverlay
                     isVisible={isBlockingOverlayVisible}
@@ -544,7 +544,7 @@ export const AppContent: React.FC = () => {
                     pendingCount={syncQueue.length}
                     onForceExit={() => {
                         // Allow user to break out if stuck (Offline/Error)
-                        resolveGlobalAction(); 
+                        resolveGlobalAction();
                     }}
                 />
 
