@@ -651,13 +651,12 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
         // Anki Mode: Interaction count is history length
         useUserStore.getState().updateStatsFromSession(durationSeconds, xpGained, 0, 'Anki', droplets, interactions);
         useGardenStore.getState().addDrops(droplets);
-
         // Activity Tracking: Increment counter for the Anki deck
         useCounterStore.getState().increment(session.progressId);
 
         set({ activeAnkiSession: null });
         useUIStore.getState().setCurrentScreen(Screen.AnkiSetup);
-        useUIStore.getState().showToast(`Anki session complete! Studied for ${minutes} min.`, 'success');
+        useUIStore.getState().showToast(`Anki session complete! Studied for ${minutes} min. Progress saved and synced across all sets.`, 'success');
     },
 
     handleStartTemporaryFlashcardSession: (options) => {

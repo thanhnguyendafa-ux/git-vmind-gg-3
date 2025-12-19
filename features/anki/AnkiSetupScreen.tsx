@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Screen, AnkiProgress } from '../../types';
 import Icon from '../../components/ui/Icon';
@@ -16,13 +16,15 @@ const DeckCard: React.FC<{
     progress: AnkiProgress,
     onSettingsClick: () => void,
     onDeleteClick: () => void,
-}> = ({ progress, onSettingsClick, onDeleteClick }) => {
+    isLoadingMetadata?: boolean,
+    isSharedWithOtherSets?: boolean,
+}> = ({ progress, onSettingsClick, onDeleteClick, isLoadingMetadata = false, isSharedWithOtherSets = false }) => {
     const { handleStartAnkiSession, setAnkiStatsProgressId, handleViewAnkiDeckContents } = useSessionStore();
     const { setCurrentScreen } = useUIStore();
-    
+
     // Optimization: Select ONLY the tables relevant to this deck.
     // This prevents the card from re-rendering if a table NOT in this deck is updated.
-    const tables = useTableStore(useShallow(state => 
+    const tables = useTableStore(useShallow(state =>
         state.tables.filter(t => progress.tableIds.includes(t.id))
     ));
 
@@ -37,14 +39,14 @@ const DeckCard: React.FC<{
             toggleTracking(progress.id);
         }
     };
-    
+
     const { dueCount, newCount } = React.useMemo(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayTimestamp = today.getTime();
         let due = 0;
         let newCards = 0;
-        
+
         const rows = tables.flatMap(t => t.rows);
 
         rows.forEach(row => {
@@ -61,7 +63,7 @@ const DeckCard: React.FC<{
     const config = progress.ankiConfig;
     const newLimit = config?.newCardsPerDay ?? 20;
     const reviewLimit = config?.maxReviewsPerDay ?? 200;
-    
+
     const cardsToStudy = Math.min(newLimit, newCount) + Math.min(reviewLimit, dueCount);
 
     const handleStatsClick = () => {
@@ -72,10 +74,27 @@ const DeckCard: React.FC<{
     return (
         <div className="bg-surface dark:bg-secondary-800 rounded-xl shadow-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex-grow">
-                <h3 className="font-bold text-text-main dark:text-secondary-100">{progress.name}</h3>
-                <div className="flex items-center gap-4 text-sm mt-2">
-                    <span className="font-semibold text-blue-500">{newCount} New</span>
-                    <span className="font-semibold text-green-500">{dueCount} Due</span>
+                <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-text-main dark:text-secondary-100">{progress.name}</h3>
+                    {isSharedWithOtherSets && (
+                        <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[10px] font-medium rounded-md"
+                            title="This set shares card statistics with other sets using the same table"
+                        >
+                            <Icon name="link" className="w-3 h-3" />
+                            Shared Progress
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-4 text-sm mt-1">
+                    {isLoadingMetadata ? (
+                        <span className="text-text-subtle animate-pulse">Loading metadata...</span>
+                    ) : (
+                        <>
+                            <span className="font-semibold text-blue-500">{newCount} New</span>
+                            <span className="font-semibold text-green-500">{dueCount} Due</span>
+                        </>
+                    )}
                 </div>
             </div>
             <div className="flex items-center gap-2 self-end sm:self-center">
@@ -85,8 +104,12 @@ const DeckCard: React.FC<{
                 <Button variant="secondary" size="sm" onClick={() => handleViewAnkiDeckContents(progress.id)} title="View Deck Cards"><Icon name="table-cells" className="w-4 h-4" /></Button>
                 <Button variant="secondary" size="sm" onClick={handleStatsClick} title="View Statistics"><Icon name="chart-bar" className="w-4 h-4" /></Button>
                 <Button variant="secondary" size="sm" onClick={onSettingsClick}><Icon name="cog" className="w-4 h-4" /></Button>
-                 <Button variant="secondary" size="sm" onClick={onDeleteClick} className="text-error-500 hover:bg-error-500/10"><Icon name="trash" className="w-4 h-4" /></Button>
-                <Button onClick={() => handleStartAnkiSession(progress.id)} disabled={cardsToStudy === 0}>
+                <Button variant="secondary" size="sm" onClick={onDeleteClick} className="text-error-500 hover:bg-error-500/10"><Icon name="trash" className="w-4 h-4" /></Button>
+                <Button
+                    onClick={() => handleStartAnkiSession(progress.id)}
+                    disabled={cardsToStudy === 0}
+                    title={isSharedWithOtherSets ? "Progress is saved to the table and synced across all sets using this table" : "Start studying"}
+                >
                     Study Now
                 </Button>
             </div>
@@ -102,9 +125,72 @@ const AnkiSetupScreen: React.FC = () => {
         deleteAnkiProgress: state.deleteAnkiProgress,
     })));
     const { setCurrentScreen } = useUIStore();
+    const { tables, fetchTablePayload, loadingTableIds } = useTableStore(useShallow(state => ({
+        tables: state.tables,
+        fetchTablePayload: state.fetchTablePayload,
+        loadingTableIds: state.loadingTableIds
+    })));
     const [settingsForProgress, setSettingsForProgress] = useState<AnkiProgress | null>(null);
     const [progressToDelete, setProgressToDelete] = useState<AnkiProgress | null>(null);
+    const [showInfoBanner, setShowInfoBanner] = useState(() => {
+        const dismissed = localStorage.getItem('anki-shared-stats-info-dismissed');
+        return dismissed !== 'true';
+    });
 
+    const handleDismissInfo = () => {
+        localStorage.setItem('anki-shared-stats-info-dismissed', 'true');
+        setShowInfoBanner(false);
+    };
+
+    // Proactive Metadata Loading: Ensure table rows are loaded for accurate counts
+    useEffect(() => {
+        if (ankiProgresses.length === 0) return;
+
+        const tablesToLoad = new Set<string>();
+
+        // Collect all unique table IDs from Anki progresses that need loading
+        ankiProgresses.forEach(progress => {
+            progress.tableIds.forEach(tableId => {
+                const table = tables.find(t => t.id === tableId);
+                // Load if: table exists, has no rows in memory, but has rowCount > 0 (metadata exists)
+                if (table && table.rows.length === 0 && (table.rowCount || 0) > 0 && !loadingTableIds.has(tableId)) {
+                    tablesToLoad.add(tableId);
+                }
+            });
+        });
+
+        // Fire-and-forget background fetch (cache will prevent redundant loads)
+        tablesToLoad.forEach(tableId => {
+            fetchTablePayload(tableId).catch(err =>
+                console.warn(`Background metadata fetch failed for ${tableId}:`, err)
+            );
+        });
+    }, [ankiProgresses, tables, fetchTablePayload, loadingTableIds]);
+
+    // Detect which progresses share tables with other progresses
+    const sharedTableInfo = useMemo(() => {
+        const tableUsageMap = new Map<string, string[]>();
+
+        // Build map of which progresses use which tables
+        ankiProgresses.forEach(progress => {
+            progress.tableIds.forEach(tableId => {
+                const existing = tableUsageMap.get(tableId) || [];
+                existing.push(progress.id);
+                tableUsageMap.set(tableId, existing);
+            });
+        });
+
+        // Map each progress ID to whether it has shared tables
+        const result = new Map<string, boolean>();
+        ankiProgresses.forEach(progress => {
+            const hasShared = progress.tableIds.some(tid =>
+                (tableUsageMap.get(tid)?.length || 0) > 1
+            );
+            result.set(progress.id, hasShared);
+        });
+
+        return result;
+    }, [ankiProgresses]);
 
     const handleSaveSettings = (progressId: string, newConfig: AnkiProgress['ankiConfig']) => {
         const progress = ankiProgresses.find(p => p.id === progressId);
@@ -113,7 +199,7 @@ const AnkiSetupScreen: React.FC = () => {
         }
         setSettingsForProgress(null);
     };
-    
+
     const handleDelete = () => {
         if (progressToDelete) {
             deleteAnkiProgress(progressToDelete.id);
@@ -124,6 +210,32 @@ const AnkiSetupScreen: React.FC = () => {
 
     return (
         <div className="p-4 sm:p-6 mx-auto animate-fadeIn">
+            {/* Informational Banner */}
+            {showInfoBanner && ankiProgresses.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-4 animate-fadeIn">
+                    <div className="flex items-start gap-3">
+                        <Icon name="information-circle" className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
+                                Shared Learning Progress
+                            </h3>
+                            <p className="text-blue-800 dark:text-blue-200 text-xs mt-1 leading-relaxed">
+                                Your card statistics (due dates, intervals, etc.) are stored at the <strong>table level</strong>.
+                                This means studying a card in one set will update its progress across <strong>all sets</strong>
+                                using the same table. This is the standard Anki behavior.
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleDismissInfo}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
+                            title="Dismiss"
+                        >
+                            <Icon name="x" className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <header className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                     <button onClick={() => setCurrentScreen(Screen.Vmind)} className="p-2 rounded-full hover:bg-secondary-200 dark:hover:bg-secondary-700 text-text-subtle">
@@ -142,13 +254,20 @@ const AnkiSetupScreen: React.FC = () => {
 
             <main className="space-y-4">
                 {ankiProgresses.length > 0 ? (
-                    ankiProgresses.map(progress => 
-                        <DeckCard 
-                            key={progress.id} 
-                            progress={progress}
-                            onSettingsClick={() => setSettingsForProgress(progress)}
-                            onDeleteClick={() => setProgressToDelete(progress)}
-                        />)
+                    ankiProgresses.map(progress => {
+                        const isLoadingMetadata = progress.tableIds.some(tid => loadingTableIds.has(tid));
+                        const isSharedWithOtherSets = sharedTableInfo.get(progress.id) || false;
+                        return (
+                            <DeckCard
+                                key={progress.id}
+                                progress={progress}
+                                onSettingsClick={() => setSettingsForProgress(progress)}
+                                onDeleteClick={() => setProgressToDelete(progress)}
+                                isLoadingMetadata={isLoadingMetadata}
+                                isSharedWithOtherSets={isSharedWithOtherSets}
+                            />
+                        );
+                    })
                 ) : (
                     <div className="text-center py-16 bg-surface dark:bg-secondary-800/50 rounded-lg">
                         <Icon name="stack-of-cards" className="w-16 h-16 text-secondary-300 dark:text-secondary-700 mx-auto mb-4" />
@@ -157,7 +276,7 @@ const AnkiSetupScreen: React.FC = () => {
                     </div>
                 )}
             </main>
-            
+
             {settingsForProgress && (
                 <AnkiSettingsModal
                     progress={settingsForProgress}
@@ -165,7 +284,7 @@ const AnkiSetupScreen: React.FC = () => {
                     onSave={handleSaveSettings}
                 />
             )}
-            
+
             <ConfirmationModal
                 isOpen={!!progressToDelete}
                 onClose={() => setProgressToDelete(null)}
