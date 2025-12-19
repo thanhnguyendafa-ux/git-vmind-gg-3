@@ -19,3 +19,4 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Krrf_ip_fY14ImggtkSAnT
 3. Run the app:
    `npm run dev`
 "# vmind-focus" 
+"# vmind-focus" 
