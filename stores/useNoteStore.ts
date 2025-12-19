@@ -1,3 +1,4 @@
+import { generateUUID } from '../utils/uuidUtils';
 
 import { create } from 'zustand';
 import { Note, Bookmark, Screen } from '../types';
@@ -73,7 +74,7 @@ export const useNoteStore = create<NoteState>()(
       createNote: async (initialNote) => {
         const { session, isGuest } = useUserStore.getState();
         const newNote: Note = { 
-            id: crypto.randomUUID(), 
+            id: generateUUID(), 
             title: 'New Note', 
             content: 'Start writing...', 
             tagIds: [],
@@ -147,7 +148,7 @@ export const useNoteStore = create<NoteState>()(
         if (!note) return;
         
         const newBookmark: Bookmark = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             noteId,
             createdAt: Date.now(),
             ...bookmarkData

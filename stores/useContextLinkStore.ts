@@ -1,3 +1,4 @@
+import { generateUUID } from '../utils/uuidUtils';
 import { create } from 'zustand';
 import { ContextLink } from '../types';
 import { useUserStore } from './useUserStore';
@@ -26,7 +27,7 @@ export const useContextLinkStore = create<ContextLinkState>()(
         addContextLink: async (linkData) => {
             const { session, isGuest } = useUserStore.getState();
             const newLink: ContextLink = {
-                id: crypto.randomUUID(),
+                id: generateUUID(),
                 ...linkData,
                 // Default to 'context' if not specified (backward compatibility)
                 linkType: linkData.linkType || 'context',

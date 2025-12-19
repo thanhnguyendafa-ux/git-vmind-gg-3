@@ -31,23 +31,23 @@ import { useTagStore } from '../../stores/useTagStore';
 import RelationSettingsModal from '../tables/components/RelationSettingsModal';
 
 const statusConfig: { [key in FlashcardStatus]: { label: string; color: string; hex: string; interval: number } } = {
-  [FlashcardStatus.New]: { label: 'New', color: 'gray', hex: '#9ca3af', interval: 0 }, // gray-400
-  [FlashcardStatus.Again]: { label: 'Again (Fail)', color: 'bg-error-500 hover:bg-error-600', hex: '#ef4444', interval: 3 }, // red-500
-  [FlashcardStatus.Hard]: { label: 'Hard', color: 'bg-orange-500 hover:bg-orange-600', hex: '#f97316', interval: 5 }, // orange-500
-  [FlashcardStatus.Good]: { label: 'Good', color: 'bg-warning-500 hover:bg-warning-600', hex: '#eab308', interval: 8 }, // yellow-500
-  [FlashcardStatus.Easy]: { label: 'Easy', color: 'bg-success-500 hover:bg-success-600', hex: '#22c55e', interval: 13 }, // green-500
-  [FlashcardStatus.Perfect]: { label: 'Perfect', color: 'bg-info-500 hover:bg-info-600', hex: '#06b6d4', interval: 21 }, // cyan-500
-  [FlashcardStatus.Superb]: { label: 'Superb', color: 'bg-purple-500 hover:bg-purple-600', hex: '#a855f7', interval: 34 }, // purple-500
+    [FlashcardStatus.New]: { label: 'New', color: 'gray', hex: '#9ca3af', interval: 0 }, // gray-400
+    [FlashcardStatus.Again]: { label: 'Again (Fail)', color: 'bg-error-500 hover:bg-error-600', hex: '#ef4444', interval: 3 }, // red-500
+    [FlashcardStatus.Hard]: { label: 'Hard', color: 'bg-orange-500 hover:bg-orange-600', hex: '#f97316', interval: 5 }, // orange-500
+    [FlashcardStatus.Good]: { label: 'Good', color: 'bg-warning-500 hover:bg-warning-600', hex: '#eab308', interval: 8 }, // yellow-500
+    [FlashcardStatus.Easy]: { label: 'Easy', color: 'bg-success-500 hover:bg-success-600', hex: '#22c55e', interval: 13 }, // green-500
+    [FlashcardStatus.Perfect]: { label: 'Perfect', color: 'bg-info-500 hover:bg-info-600', hex: '#06b6d4', interval: 21 }, // cyan-500
+    [FlashcardStatus.Superb]: { label: 'Superb', color: 'bg-purple-500 hover:bg-purple-600', hex: '#a855f7', interval: 34 }, // purple-500
 };
 
 const DEFAULT_INTERVALS = {
-  [FlashcardStatus.Again]: 3,
-  [FlashcardStatus.Hard]: 5,
-  [FlashcardStatus.Good]: 8,
-  [FlashcardStatus.Easy]: 13,
-  [FlashcardStatus.Perfect]: 21,
-  [FlashcardStatus.Superb]: 34,
-  [FlashcardStatus.New]: 0,
+    [FlashcardStatus.Again]: 3,
+    [FlashcardStatus.Hard]: 5,
+    [FlashcardStatus.Good]: 8,
+    [FlashcardStatus.Easy]: 13,
+    [FlashcardStatus.Perfect]: 21,
+    [FlashcardStatus.Superb]: 34,
+    [FlashcardStatus.New]: 0,
 };
 
 const SessionSummaryOverlay: React.FC<{
@@ -63,7 +63,7 @@ const SessionSummaryOverlay: React.FC<{
                         <Icon name="check-circle" className="w-16 h-16 text-success-500" variant="filled" />
                     </div>
                     <h2 className="text-2xl font-bold text-text-main dark:text-secondary-100 mb-6">Session Complete!</h2>
-                    
+
                     <div className="grid grid-cols-2 gap-4 w-full mb-8">
                         <div className="bg-secondary-50 dark:bg-secondary-900/50 rounded-xl p-4 flex flex-col items-center justify-center gap-1 border border-secondary-100 dark:border-secondary-700/50">
                             <Icon name="clock" className="w-6 h-6 text-text-subtle mb-1" />
@@ -76,9 +76,9 @@ const SessionSummaryOverlay: React.FC<{
                             <span className="text-xs text-text-subtle font-medium uppercase tracking-wider">Droplets</span>
                         </div>
                     </div>
-                    
+
                     <p className="text-text-subtle text-sm mb-6">Great job reviewing today!</p>
-                    
+
                     <Button onClick={onClose} className="w-full py-3 text-base" size="lg">
                         Return to Menu
                     </Button>
@@ -97,17 +97,17 @@ const ConfidenceSessionScreen: React.FC = () => {
     const { upsertRow, deleteRows, updateTable } = useTableStore(useShallow(state => ({ upsertRow: state.upsertRow, deleteRows: state.deleteRows, updateTable: state.updateTable })));
     const { tags: allTags } = useTagStore();
 
-    const { tables, loadingTableIds, fetchTablePayload } = useTableStore(useShallow(state => ({ 
+    const { tables, loadingTableIds, fetchTablePayload } = useTableStore(useShallow(state => ({
         tables: state.tables,
         loadingTableIds: state.loadingTableIds,
-        fetchTablePayload: state.fetchTablePayload 
+        fetchTablePayload: state.fetchTablePayload
     })));
-    const { 
-        showToast, 
-        isConfidenceAutoplayEnabled, 
-        toggleConfidenceAutoplay, 
+    const {
+        showToast,
+        isConfidenceAutoplayEnabled,
+        toggleConfidenceAutoplay,
         setCurrentScreen,
-        triggerGlobalAction 
+        triggerGlobalAction
     } = useUIStore(useShallow(state => ({
         showToast: state.showToast,
         isConfidenceAutoplayEnabled: state.isConfidenceAutoplayEnabled,
@@ -115,13 +115,13 @@ const ConfidenceSessionScreen: React.FC = () => {
         setCurrentScreen: state.setCurrentScreen,
         triggerGlobalAction: state.triggerGlobalAction
     })));
-    
+
     // Extracted audio store actions for use in effects
     const { playQueue, stopQueue } = useAudioStore(useShallow(state => ({
         playQueue: state.playQueue,
         stopQueue: state.stopQueue
     })));
-    
+
     if (!activeSession) return null;
 
     const [session, setSession] = useState(activeSession);
@@ -135,7 +135,7 @@ const ConfidenceSessionScreen: React.FC = () => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    
+
     const [showSummary, setShowSummary] = useState(false);
     const [summaryStats, setSummaryStats] = useState<{ duration: number, droplets: number } | null>(null);
 
@@ -156,18 +156,18 @@ const ConfidenceSessionScreen: React.FC = () => {
     const [rowForDetailModal, setRowForDetailModal] = useState<VocabRow | null>(null);
     const [rowForInfoModal, setRowForInfoModal] = useState<VocabRow | null>(null);
     const [relationToEdit, setRelationToEdit] = useState<Relation | null>(null);
-    
+
     // State for delete confirmation
     const [rowToDelete, setRowToDelete] = useState<string | null>(null);
 
     const lastPreFetchIndex = useRef<number | null>(null);
 
     const currentRowId = session.queue[session.currentIndex];
-    
+
     useEffect(() => {
         if (showSummary || relationToEdit) return; // Stop timer when summary or modal is active
         const timer = setInterval(() => {
-          setElapsedSeconds(Math.floor((Date.now() - session.startTime) / 1000));
+            setElapsedSeconds(Math.floor((Date.now() - session.startTime) / 1000));
         }, 1000);
         return () => clearInterval(timer);
     }, [session.startTime, showSummary, relationToEdit]);
@@ -185,7 +185,7 @@ const ConfidenceSessionScreen: React.FC = () => {
 
     const sessionTables = useMemo(() => tables.filter(t => session.tableIds.includes(t.id)), [tables, session.tableIds]);
     const allRows = useMemo(() => sessionTables.flatMap(t => t.rows), [sessionTables]);
-    
+
     const { table: currentTable, row: currentRow, relation: currentRelation } = useMemo(() => {
         for (const table of sessionTables) {
             const row = table.rows.find(r => r.id === currentRowId);
@@ -211,7 +211,7 @@ const ConfidenceSessionScreen: React.FC = () => {
         }
         return success;
     };
-    
+
     const handleDeleteRowInSession = async (rowId: string) => {
         if (!currentTable) return;
 
@@ -222,7 +222,7 @@ const ConfidenceSessionScreen: React.FC = () => {
         const newQueue = session.queue.filter(id => id !== rowId);
         const newCardStates = { ...(session.cardStates || {}) };
         delete newCardStates[rowId];
-        
+
         // Adjust Index: If we delete the current item, the next item slides into the current index.
         // If we deleted the last item in the queue, index must wrap to 0.
         let newIndex = session.currentIndex;
@@ -233,7 +233,7 @@ const ConfidenceSessionScreen: React.FC = () => {
         // 3. Persist Healing
         const { confidenceProgresses } = useSessionDataStore.getState();
         const originalProgress = confidenceProgresses.find(p => p.id === session.progressId);
-        
+
         if (originalProgress) {
             const updatedProgress: ConfidenceProgress = {
                 ...originalProgress,
@@ -261,30 +261,30 @@ const ConfidenceSessionScreen: React.FC = () => {
         setIsAnswered(false);
         setFeedback(null);
         setSimulationData(null);
-        
+
         // 6. Handle Empty Queue
         if (newQueue.length === 0) {
             const duration = Math.floor((Date.now() - session.startTime) / 1000);
             const droplets = Math.floor(duration / 60);
-            
+
             // Ensure sync completes before showing summary for empty set
             triggerGlobalAction(() => {
                 setSummaryStats({ duration, droplets });
                 setShowSummary(true);
             });
         } else {
-             showToast("Row deleted successfully.", "success");
+            showToast("Row deleted successfully.", "success");
         }
     };
 
     // --- In-Session Relation Editing Logic ---
     const handleSaveRelation = async (updatedRel: Relation) => {
         if (!currentTable) return;
-        
+
         // 1. Update the table locally and persist
         const updatedRelations = currentTable.relations.map(r => r.id === updatedRel.id ? updatedRel : r);
         const success = await updateTable({ ...currentTable, relations: updatedRelations });
-        
+
         if (success) {
             // 2. The useTableStore update will automatically trigger a re-render of useShallow(tables)
             // 3. The useMemo for currentRelation will re-run
@@ -298,17 +298,17 @@ const ConfidenceSessionScreen: React.FC = () => {
 
     useEffect(() => {
         const currentIndex = session.currentIndex;
-        
+
         if (currentIndex % 3 === 0) {
             if (lastPreFetchIndex.current === currentIndex) return;
-            
-            const LOOKAHEAD_START_OFFSET = 20; 
+
+            const LOOKAHEAD_START_OFFSET = 20;
             const LOOKAHEAD_RANGE = 30;
-            
+
             const start = currentIndex + LOOKAHEAD_START_OFFSET;
             const end = start + LOOKAHEAD_RANGE;
             const nextBatchIds = session.queue.slice(start, end);
-            
+
             if (nextBatchIds.length === 0) return;
 
             const allLoadedRowIds = new Set(tables.flatMap(t => t.rows.map(r => r.id)));
@@ -316,12 +316,12 @@ const ConfidenceSessionScreen: React.FC = () => {
 
             if (missingCount > 0) {
                 lastPreFetchIndex.current = currentIndex;
-                
+
                 const unloadedTableIds = session.tableIds.filter(tid => {
                     const t = tables.find(tbl => tbl.id === tid);
                     return !t || t.rows.length === 0;
                 });
-                
+
                 unloadedTableIds.forEach(tid => {
                     if (!loadingTableIds.has(tid)) {
                         fetchTablePayload(tid).catch(e => console.warn(`Background fetch failed for ${tid}`, e));
@@ -359,7 +359,7 @@ const ConfidenceSessionScreen: React.FC = () => {
 
         return `linear-gradient(to right, ${stops.join(', ')})`;
     }, [session.queue, session.cardStates]);
-    
+
     const learnedCount = useMemo(() => {
         return session.queue.reduce((count, rowId) => {
             const status = sessionStatusMap.get(rowId) || FlashcardStatus.New;
@@ -376,7 +376,7 @@ const ConfidenceSessionScreen: React.FC = () => {
 
     const question = useMemo(() => {
         if (!currentRow || !currentRelation || !currentTable) return null;
-        
+
         let modesToUse = currentRelation.interactionModes || [];
         if (modesToUse.length === 0) {
             modesToUse = currentRelation.compatibleModes || [StudyMode.Flashcards];
@@ -417,21 +417,21 @@ const ConfidenceSessionScreen: React.FC = () => {
         const restOfQueue = originalQueue.filter((_, idx) => idx !== currentIndex);
 
         let nextIndex = currentIndex;
-        
+
         const insertIndex = Math.min(currentIndex + interval, restOfQueue.length);
         const newQueue = [...restOfQueue.slice(0, insertIndex), cardId, ...restOfQueue.slice(insertIndex)];
 
         const newHistory = [...session.history, { rowId: currentRowId, status, timestamp: Date.now() }];
-        
+
         // 1. Atomic Variable Creation (Complete State)
         const updatedCardStates = { ...(session.cardStates || {}), [currentRowId]: status };
-        
+
         let cycleReset = false;
         if (nextIndex >= newQueue.length) {
             nextIndex = 0;
             cycleReset = true;
         }
-        
+
         // --- New: Update Confi-Viewed Global Stat ---
         if (currentRow && currentTable) {
             const currentCount = currentRow.stats.confiViewed || 0;
@@ -459,8 +459,8 @@ const ConfidenceSessionScreen: React.FC = () => {
             };
             saveConfidenceProgress(updatedProgress);
         } else {
-             console.error("Could not find original progress to save!");
-             showToast("Error saving progress.", "error");
+            console.error("Could not find original progress to save!");
+            showToast("Error saving progress.", "error");
         }
 
         // 3. Update the local session state for the UI to advance.
@@ -474,13 +474,13 @@ const ConfidenceSessionScreen: React.FC = () => {
         setSession(updatedSession);
         // FIX: Update global store state for synchronization
         updateActiveConfidenceSession(updatedSession);
-        
+
         setIsAnswered(false);
         setFeedback(null);
-        
+
         setSimulationData(null);
         setPreviewTargetIndex(null);
-        
+
         if (cycleReset) {
             // Automatic completion flow
             const duration = Math.floor((Date.now() - session.startTime) / 1000);
@@ -515,7 +515,7 @@ const ConfidenceSessionScreen: React.FC = () => {
         }
         executeMove(status);
     };
-    
+
     const handleResetSession = async () => {
         setIsResetConfirmOpen(false);
         const newSessionState = {
@@ -526,20 +526,20 @@ const ConfidenceSessionScreen: React.FC = () => {
         };
         setSession(newSessionState);
         updateActiveConfidenceSession(newSessionState); // Sync Global
-        
+
         // 1. Atomic Persistence for Reset
         const { confidenceProgresses } = useSessionDataStore.getState();
         const originalProgress = confidenceProgresses.find(p => p.id === session.progressId);
-        
+
         if (originalProgress) {
-             const progressToUpdate = {
-                 ...originalProgress,
-                 currentIndex: 0, 
-                 cardStates: {} // Clear states explicitly
-             };
-             await saveConfidenceProgress(progressToUpdate);
+            const progressToUpdate = {
+                ...originalProgress,
+                currentIndex: 0,
+                cardStates: {} // Clear states explicitly
+            };
+            await saveConfidenceProgress(progressToUpdate);
         }
-        
+
         showToast("Session progress reset.", "success");
     };
 
@@ -553,17 +553,17 @@ const ConfidenceSessionScreen: React.FC = () => {
         // We explicitly use the local 'session' state variables to ensure no stale data
         const { confidenceProgresses } = useSessionDataStore.getState();
         const originalProgress = confidenceProgresses.find(p => p.id === session.progressId);
-        
+
         if (originalProgress) {
-             const updatedProgress: ConfidenceProgress = {
+            const updatedProgress: ConfidenceProgress = {
                 ...originalProgress,
                 queue: session.queue, // Snapshot from active session
                 currentIndex: session.currentIndex, // Snapshot from active session
                 cardStates: session.cardStates || {}, // Snapshot from active session
                 intervalConfig: sessionIntervals,
-             };
-             // Push to sync queue immediately. Await to ensure queue is populated before trigger.
-             await saveConfidenceProgress(updatedProgress);
+            };
+            // Push to sync queue immediately. Await to ensure queue is populated before trigger.
+            await saveConfidenceProgress(updatedProgress);
         }
 
         // 2. Update Stats & Garden
@@ -576,8 +576,8 @@ const ConfidenceSessionScreen: React.FC = () => {
         // activates the blocking overlay, flushes the queue, and only runs the callback
         // when sync is complete (or safely offline-queued).
         triggerGlobalAction(() => {
-             setSummaryStats({ duration, droplets });
-             setShowSummary(true);
+            setSummaryStats({ duration, droplets });
+            setShowSummary(true);
         });
     };
 
@@ -609,7 +609,7 @@ const ConfidenceSessionScreen: React.FC = () => {
         }
         setIsAnswered(true);
     };
-    
+
     const handleMouseEnterBtn = (status: FlashcardStatus) => {
         const { insertIndex } = calculateMove(status);
         setPreviewTargetIndex({ idx: insertIndex, color: statusConfig[status].hex });
@@ -622,16 +622,16 @@ const ConfidenceSessionScreen: React.FC = () => {
     const handleSkipMissingCard = () => {
         const newQueue = session.queue.filter((_, i) => i !== session.currentIndex);
         const nextIndex = Math.min(session.currentIndex, newQueue.length - 1);
-        
-        const updatedSession = { 
-            ...session, 
-            queue: newQueue, 
-            currentIndex: nextIndex 
+
+        const updatedSession = {
+            ...session,
+            queue: newQueue,
+            currentIndex: nextIndex
         };
-        
+
         setSession(updatedSession);
         updateActiveConfidenceSession(updatedSession);
-        
+
         // Persist
         const { confidenceProgresses } = useSessionDataStore.getState();
         const originalProgress = confidenceProgresses.find(p => p.id === session.progressId);
@@ -646,30 +646,30 @@ const ConfidenceSessionScreen: React.FC = () => {
         setIsDataMissing(false);
         showToast("Card skipped and removed from queue.", "info");
     };
-    
+
     const handleManualJump = (interval: number) => {
         setIsJumpModalOpen(false);
         const status = FlashcardStatus.Good;
-        
+
         const originalQueue = session.queue;
         const currentIndex = session.currentIndex;
         const cardId = originalQueue[currentIndex];
-    
+
         const restOfQueue = originalQueue.filter((_, idx) => idx !== currentIndex);
-        
+
         const insertIndex = Math.min(interval, restOfQueue.length);
-        
+
         const newQueue = [...restOfQueue.slice(0, insertIndex), cardId, ...restOfQueue.slice(insertIndex)];
-        
+
         const newHistory = [...session.history, { rowId: cardId, status, timestamp: Date.now() }];
-        
+
         // 1. Atomic Variable Creation
         const updatedCardStates = { ...(session.cardStates || {}), [cardId]: status };
-        
+
         // 2. Persistence
         const { confidenceProgresses, saveConfidenceProgress } = useSessionDataStore.getState();
         const originalProgress = confidenceProgresses.find(p => p.id === session.progressId);
-    
+
         if (originalProgress) {
             const updatedProgress: ConfidenceProgress = {
                 ...originalProgress,
@@ -679,7 +679,7 @@ const ConfidenceSessionScreen: React.FC = () => {
             };
             saveConfidenceProgress(updatedProgress);
         }
-    
+
         // 3. UI Update
         const updatedSession = {
             ...session,
@@ -690,12 +690,12 @@ const ConfidenceSessionScreen: React.FC = () => {
         };
         setSession(updatedSession);
         updateActiveConfidenceSession(updatedSession);
-        
+
         setIsAnswered(false);
         setFeedback(null);
         setSimulationData(null);
         setPreviewTargetIndex(null);
-        
+
         showToast(`Card jumped +${interval} spots.`, "success");
     };
 
@@ -721,10 +721,10 @@ const ConfidenceSessionScreen: React.FC = () => {
             // 1. Retrieve full progress definition
             const { confidenceProgresses } = useSessionDataStore.getState();
             const progressDef = confidenceProgresses.find(p => p.id === session.progressId);
-            
+
             if (!progressDef) {
-                 showToast("Session definition not found.", "error");
-                 return;
+                showToast("Session definition not found.", "error");
+                return;
             }
 
             // 2. Identify Source Rows
@@ -745,10 +745,10 @@ const ConfidenceSessionScreen: React.FC = () => {
                     const rowTagNames = (row.tagIds || [])
                         .map(id => allTags.find(t => t.id === id)?.name)
                         .filter(Boolean) as string[];
-                    
+
                     matches = rowTagNames.some(name => filterTagNames.includes(name));
                 }
-                
+
                 if (matches) {
                     validRowIds.add(row.id);
                 }
@@ -766,7 +766,7 @@ const ConfidenceSessionScreen: React.FC = () => {
 
             // 6. Apply Updates (Atomic)
             const newQueue = [
-                ...session.queue.filter(id => !toRemove.includes(id)), 
+                ...session.queue.filter(id => !toRemove.includes(id)),
                 ...toAdd
             ];
 
@@ -798,11 +798,11 @@ const ConfidenceSessionScreen: React.FC = () => {
             };
             setSession(updatedSession);
             updateActiveConfidenceSession(updatedSession);
-            
+
             const addedMsg = toAdd.length > 0 ? `+${toAdd.length} added` : '';
             const removedMsg = toRemove.length > 0 ? `-${toRemove.length} removed` : '';
             const msg = [addedMsg, removedMsg].filter(Boolean).join(', ');
-            
+
             showToast(`Synced: ${msg}. Changes added to push queue.`, "success");
 
         } catch (error) {
@@ -816,10 +816,10 @@ const ConfidenceSessionScreen: React.FC = () => {
 
     useEffect(() => {
         let timer: number;
-        
+
         if (!question || !currentRow) {
             const isTableLoading = session.tableIds.some(tid => loadingTableIds.has(tid));
-            
+
             if (isTableLoading) {
                 setIsSyncing(true);
                 setIsDataMissing(false);
@@ -827,24 +827,24 @@ const ConfidenceSessionScreen: React.FC = () => {
                 setIsSyncing(true);
                 session.tableIds.forEach(tid => fetchTablePayload(tid));
             }
-            
+
             timer = window.setTimeout(() => {
                 setIsDataMissing(true);
                 setIsSyncing(false);
             }, 8000);
-            
+
         } else {
             setIsDataMissing(false);
             setIsSyncing(false);
         }
         return () => clearTimeout(timer);
     }, [question, currentRow, session.tableIds, fetchTablePayload, loadingTableIds]);
-    
+
     if (!question || !currentRow || !currentRelation || !currentTable || !v3Card) {
-         if (isDataMissing) {
-             return (
+        if (isDataMissing) {
+            return (
                 <div className="fixed inset-0 bg-background dark:bg-secondary-900 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
-                    <Icon name="error-circle" className="w-12 h-12 text-error-500 mb-4"/>
+                    <Icon name="error-circle" className="w-12 h-12 text-error-500 mb-4" />
                     <h3 className="text-lg font-bold mb-2">Data is missing for this card</h3>
                     <p className="text-text-subtle mb-6">We couldn't load the content. This might happen if the card was deleted or sync is incomplete.</p>
                     <div className="flex gap-2 justify-center">
@@ -852,18 +852,18 @@ const ConfidenceSessionScreen: React.FC = () => {
                         <Button onClick={handleConcludeSession}>Return to Menu</Button>
                     </div>
                 </div>
-             )
-         }
-         return (
+            )
+        }
+        return (
             <div className="fixed inset-0 bg-background dark:bg-secondary-900 flex flex-col items-center justify-center gap-3">
-                <Icon name="spinner" className="w-10 h-10 text-primary-500 animate-spin"/>
+                <Icon name="spinner" className="w-10 h-10 text-primary-500 animate-spin" />
                 {isSyncing && (
                     <p className="text-sm font-medium text-text-subtle animate-pulse">Loading card data...</p>
                 )}
             </div>
-         );
+        );
     }
-    
+
     if (showSummary && summaryStats) {
         return (
             <SessionSummaryOverlay
@@ -882,7 +882,7 @@ const ConfidenceSessionScreen: React.FC = () => {
                         {/* Shortened label on mobile */}
                         <span className="font-semibold text-xs uppercase tracking-wider hidden sm:inline">Queue Distribution</span>
                         <span className="font-semibold text-xs uppercase tracking-wider sm:hidden">Queue</span>
-                        
+
                         {/* NEW BADGE: Confi-Viewed */}
                         <div className="flex items-center gap-1 px-2 py-1 bg-secondary-100 dark:bg-secondary-800 rounded-md text-xs font-mono text-text-subtle ml-2" title={`Total views: ${currentRow?.stats.confiViewed || 0}`}>
                             <Icon name="eye" className="w-3 h-3" />
@@ -890,18 +890,18 @@ const ConfidenceSessionScreen: React.FC = () => {
                         </div>
 
                         {/* Check Now / Sync Button */}
-                        <button 
+                        <button
                             onClick={handleManualSync}
                             className={`p-1 rounded-md text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors ${isSyncing ? 'animate-pulse' : ''}`}
                             title="Check Now (Sync with Tables and add new matching words)"
                             disabled={isSyncing}
                         >
-                            {isSyncing ? <Icon name="spinner" className="w-4 h-4 animate-spin"/> : <Icon name="arrow-down-tray" className="w-4 h-4" />}
+                            {isSyncing ? <Icon name="spinner" className="w-4 h-4 animate-spin" /> : <Icon name="arrow-down-tray" className="w-4 h-4" />}
                         </button>
-                        
+
                         {/* Desktop: Extended Controls */}
                         <div className="hidden md:flex items-center gap-2">
-                            <button 
+                            <button
                                 onClick={() => setRelationToEdit(currentRelation)}
                                 className="p-1 rounded-md text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
                                 title="Edit Card Design"
@@ -909,21 +909,21 @@ const ConfidenceSessionScreen: React.FC = () => {
                                 <Icon name="palette" className="w-4 h-4" />
                             </button>
 
-                            <button 
+                            <button
                                 onClick={() => setIsJumpModalOpen(true)}
                                 className="p-1 rounded-md text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
                                 title="Manual Jump"
                             >
                                 <Icon name="arrowRight" className="w-4 h-4" />
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setIsDebugMode(!isDebugMode)}
                                 className={`p-1 rounded-md transition-colors ${isDebugMode ? 'text-warning-500 bg-warning-500/10' : 'text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700'}`}
                                 title={isDebugMode ? "Disable Algorithm Debugger" : "Enable Algorithm Debugger"}
                             >
                                 <Icon name="cog" className="w-4 h-4" />
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setIsResetConfirmOpen(true)}
                                 className="p-1 rounded-md text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
                                 title="Reset Session Progress"
@@ -946,23 +946,23 @@ const ConfidenceSessionScreen: React.FC = () => {
                             >
                                 <div className="p-1 space-y-1">
                                     <button onClick={() => { setRelationToEdit(currentRelation); setIsMenuOpen(false); }} className="w-full text-left px-2 py-2 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-2 text-text-main dark:text-secondary-100">
-                                        <Icon name="palette" className="w-4 h-4 text-text-subtle"/> Edit Design
+                                        <Icon name="palette" className="w-4 h-4 text-text-subtle" /> Edit Design
                                     </button>
-                                     <button onClick={() => { setIsJumpModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-2 py-2 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-2 text-text-main dark:text-secondary-100">
-                                        <Icon name="arrowRight" className="w-4 h-4 text-text-subtle"/> Manual Jump
+                                    <button onClick={() => { setIsJumpModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-2 py-2 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-2 text-text-main dark:text-secondary-100">
+                                        <Icon name="arrowRight" className="w-4 h-4 text-text-subtle" /> Manual Jump
                                     </button>
-                                     <button onClick={() => { setIsDebugMode(!isDebugMode); setIsMenuOpen(false); }} className="w-full text-left px-2 py-2 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-2 text-text-main dark:text-secondary-100">
-                                        <Icon name="cog" className="w-4 h-4 text-text-subtle"/> {isDebugMode ? "Disable Debug" : "Enable Debug"}
+                                    <button onClick={() => { setIsDebugMode(!isDebugMode); setIsMenuOpen(false); }} className="w-full text-left px-2 py-2 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-2 text-text-main dark:text-secondary-100">
+                                        <Icon name="cog" className="w-4 h-4 text-text-subtle" /> {isDebugMode ? "Disable Debug" : "Enable Debug"}
                                     </button>
-                                     <button onClick={() => { setIsResetConfirmOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-2 py-2 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-2 text-warning-600">
-                                        <Icon name="repeat" className="w-4 h-4"/> Reset Progress
+                                    <button onClick={() => { setIsResetConfirmOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-2 py-2 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-2 text-warning-600">
+                                        <Icon name="repeat" className="w-4 h-4" /> Reset Progress
                                     </button>
                                 </div>
                             </Popover>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 md:gap-3">
-                        <button 
+                        <button
                             onClick={() => setIsFullscreen(!isFullscreen)}
                             className={`p-1 rounded-md transition-colors ${isFullscreen ? 'text-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700'}`}
                             title={isFullscreen ? "Exit Immersive Mode" : "Enter Immersive Mode"}
@@ -980,28 +980,28 @@ const ConfidenceSessionScreen: React.FC = () => {
                             <Icon name="volume-up" className={`w-5 h-5 transition-colors ${isConfidenceAutoplayEnabled ? 'text-primary-500' : 'text-text-subtle'}`} />
                         </button>
                         <button onClick={() => setIsEndSessionConfirmOpen(true)} className="text-xs hover:text-text-main dark:hover:text-secondary-100 transition-colors p-1 md:p-0" title="End Session">
-                             <span className="hidden md:inline">End Session</span>
-                             <Icon name="logout" className="md:hidden w-5 h-5" />
+                            <span className="hidden md:inline">End Session</span>
+                            <Icon name="logout" className="md:hidden w-5 h-5" />
                         </button>
                     </div>
                 </div>
-                
+
                 <div className="relative h-4 w-full rounded-full bg-secondary-200 dark:bg-secondary-800 overflow-visible mt-2">
-                    <div 
+                    <div
                         className="absolute inset-0 rounded-full transition-all duration-500 ease-out opacity-90"
                         style={{ background: queueGradient }}
                     />
-                    <div 
+                    <div
                         className="absolute top-1/2 -translate-y-1/2 w-1 h-6 bg-white dark:bg-white border-x border-black/20 shadow-lg z-20 transition-all duration-300 ease-out"
                         style={{ left: `${currentPositionPct}%` }}
                         title="Current Card"
                     >
                         <div className="absolute -top-2 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-transparent border-t-white dark:border-t-white"></div>
                     </div>
-                     {previewPositionPct !== null && (
-                        <div 
+                    {previewPositionPct !== null && (
+                        <div
                             className="absolute top-1/2 -translate-y-1/2 w-1.5 h-8 z-30 transition-all duration-200 ease-out animate-pulse"
-                            style={{ 
+                            style={{
                                 left: `${previewPositionPct}%`,
                                 backgroundColor: previewTargetIndex?.color,
                                 boxShadow: `0 0 8px 2px ${previewTargetIndex?.color}`,
@@ -1009,10 +1009,10 @@ const ConfidenceSessionScreen: React.FC = () => {
                             }}
                             title={`New Position: ${previewTargetIndex?.idx}`}
                         >
-                             <div 
+                            <div
                                 className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-b-4 border-transparent"
                                 style={{ borderBottomColor: previewTargetIndex?.color }}
-                             ></div>
+                            ></div>
                         </div>
                     )}
                 </div>
@@ -1021,11 +1021,12 @@ const ConfidenceSessionScreen: React.FC = () => {
                     <span>End</span>
                 </div>
             </header>
-            
+
             {/* Main content area - Using w-full and overflow-visible for the container to let card handle scroll */}
-            <main className={`flex-1 flex flex-col w-full relative overflow-y-auto hide-scrollbar ${isFullscreen ? 'pb-4' : 'pb-24'} px-0`}>
-                <UnifiedQuestionCard 
-                    key={v3Card.id} 
+            <main className={`flex-1 flex flex-col w-full relative overflow-y-auto hide-scrollbar ${isAnswered ? 'md:pb-[200px]' : isFullscreen ? 'pb-4' : 'pb-24'} px-0`}>
+
+                <UnifiedQuestionCard
+                    key={v3Card.id}
                     card={v3Card}
                     design={currentRelation.design?.front}
                     backDesign={currentRelation.design?.back}
@@ -1039,45 +1040,48 @@ const ConfidenceSessionScreen: React.FC = () => {
                     hideFlashcardButtons={true}
                     onRelationUpdate={handleSaveRelation}
                 />
-                
-                {/* Interaction Footer Area (Sticky within the scroll view or fixed via UnifiedQuestionCard's new structure) */}
-                <div className="w-full mt-6 min-h-[80px] flex flex-col justify-center mx-auto max-w-none px-4 md:px-6">
-                    {isAnswered && (
-                        <div className="animate-fadeIn w-full">
-                            {v3Card.type !== 'flashcard' && feedback && (
-                                <div className="mb-4">
-                                    <AnswerFeedbackPanel
-                                        feedback={feedback}
-                                        question={question}
-                                        row={currentRow}
-                                        relation={currentRelation}
-                                        table={currentTable} // Added table prop for formula support
-                                        onViewDetails={() => setRowForDetailModal(currentRow)} 
-                                        onViewCorrectCard={() => setRowForInfoModal(currentRow)} 
-                                    />
-                                </div>
-                            )}
 
-                            {/* Added Action Row for Flashcards (Reflection Phase) */}
-                             <div className="flex justify-between items-center mb-2 px-1">
-                                 <div className="flex gap-3">
-                                     <button onClick={() => setRowForDetailModal(currentRow)} className="text-xs font-semibold text-text-subtle hover:text-text-main flex items-center gap-1 transition-colors">
-                                         <Icon name="pencil" className="w-3.5 h-3.5" /> Edit
-                                     </button>
-                                     <button onClick={() => setRowForInfoModal(currentRow)} className="text-xs font-semibold text-text-subtle hover:text-text-main flex items-center gap-1 transition-colors">
-                                         <Icon name="file-text" className="w-3.5 h-3.5" /> Info
-                                     </button>
-                                 </div>
-                             </div>
+                {/* Feedback Panel (stays in scrollable area) */}
+                {isAnswered && v3Card.type !== 'flashcard' && feedback && (
+                    <div className="w-full mt-6 px-4 md:px-6 animate-fadeIn">
+                        <AnswerFeedbackPanel
+                            feedback={feedback}
+                            question={question}
+                            row={currentRow}
+                            relation={currentRelation}
+                            table={currentTable}
+                            onViewDetails={() => setRowForDetailModal(currentRow)}
+                            onViewCorrectCard={() => setRowForInfoModal(currentRow)}
+                        />
+                    </div>
+                )}
+            </main>
 
-                            <div className="flex items-center gap-2">
-                                <div className="grid grid-cols-6 gap-2 sm:gap-3 w-full flex-1">
-                                    {[FlashcardStatus.Again, FlashcardStatus.Hard, FlashcardStatus.Good, FlashcardStatus.Easy, FlashcardStatus.Perfect, FlashcardStatus.Superb].map(status => {
-                                        const effectiveInterval = sessionIntervals[status] ?? statusConfig[status].interval;
-                                        return (
-                                        <button 
-                                            key={status} 
-                                            onClick={() => handleRate(status)} 
+            {/* Sticky Button Footer (Desktop only) */}
+            {isAnswered && (
+                <div className="md:fixed md:bottom-0 md:left-0 md:right-0 md:z-50 bg-surface/95 dark:bg-secondary-800/95 md:border-t border-secondary-200 dark:border-secondary-700 md:shadow-[0_-5px_25px_rgba(0,0,0,0.1)] md:backdrop-blur-md animate-fadeIn">
+                    <div className="w-full max-w-4xl mx-auto px-4 md:px-6 py-4">
+                        {/* Action Row */}
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <div className="flex gap-3">
+                                <button onClick={() => setRowForDetailModal(currentRow)} className="text-xs font-semibold text-text-subtle hover:text-text-main flex items-center gap-1 transition-colors">
+                                    <Icon name="pencil" className="w-3.5 h-3.5" /> Edit
+                                </button>
+                                <button onClick={() => setRowForInfoModal(currentRow)} className="text-xs font-semibold text-text-subtle hover:text-text-main flex items-center gap-1 transition-colors">
+                                    <Icon name="file-text" className="w-3.5 h-3.5" /> Info
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Grading Buttons */}
+                        <div className="flex items-center gap-2">
+                            <div className="grid grid-cols-6 gap-2 sm:gap-3 w-full flex-1">
+                                {[FlashcardStatus.Again, FlashcardStatus.Hard, FlashcardStatus.Good, FlashcardStatus.Easy, FlashcardStatus.Perfect, FlashcardStatus.Superb].map(status => {
+                                    const effectiveInterval = sessionIntervals[status] ?? statusConfig[status].interval;
+                                    return (
+                                        <button
+                                            key={status}
+                                            onClick={() => handleRate(status)}
                                             onMouseEnter={() => handleMouseEnterBtn(status)}
                                             onMouseLeave={handleMouseLeaveBtn}
                                             className={`py-2 sm:py-3 rounded-xl text-white text-[10px] sm:text-xs font-bold transition-transform hover:scale-105 shadow-md flex flex-col items-center justify-center ${statusConfig[status].color}`}
@@ -1087,47 +1091,48 @@ const ConfidenceSessionScreen: React.FC = () => {
                                                 +{effectiveInterval}
                                             </span>
                                         </button>
-                                    )})}
-                                </div>
-                                <Popover
-                                    isOpen={isIntervalEditorOpen}
-                                    setIsOpen={setIsIntervalEditorOpen}
-                                    trigger={
-                                        <Button variant="ghost" onClick={() => setIsIntervalEditorOpen(true)} className="p-2 h-full">
-                                            <Icon name="cog" className="w-5 h-5 text-text-subtle" />
-                                        </Button>
-                                    }
-                                    contentClassName="w-72"
-                                >
-                                    <div className="p-4 space-y-3">
-                                        <h4 className="text-sm font-semibold">Edit Intervals</h4>
-                                        {(Object.keys(statusConfig) as (keyof typeof statusConfig)[]).map(status => (
-                                            <div key={status} className="flex items-center justify-between gap-2">
-                                                <label htmlFor={`interval-${status}`} className="text-sm font-medium flex items-center gap-2">
-                                                    <div className={`w-3 h-3 rounded-full ${statusConfig[status].color}`}></div>
-                                                    {statusConfig[status].label}
-                                                </label>
-                                                <Input
-                                                    id={`interval-${status}`}
-                                                    type="number"
-                                                    value={sessionIntervals[status]}
-                                                    onChange={e => handleIntervalChange(status, e.target.value)}
-                                                    className="w-20 h-8 text-right"
-                                                    min={1}
-                                                />
-                                                <span className="text-xs text-text-subtle w-8">spots</span>
-                                            </div>
-                                        ))}
-                                        <div className="flex justify-end pt-2">
-                                            <Button size="sm" onClick={handleSaveIntervals}>Save</Button>
-                                        </div>
-                                    </div>
-                                </Popover>
+                                    )
+                                })}
                             </div>
+                            <Popover
+                                isOpen={isIntervalEditorOpen}
+                                setIsOpen={setIsIntervalEditorOpen}
+                                trigger={
+                                    <Button variant="ghost" onClick={() => setIsIntervalEditorOpen(true)} className="p-2 h-full">
+                                        <Icon name="cog" className="w-5 h-5 text-text-subtle" />
+                                    </Button>
+                                }
+                                contentClassName="w-72"
+                            >
+                                <div className="p-4 space-y-3">
+                                    <h4 className="text-sm font-semibold">Edit Intervals</h4>
+                                    {(Object.keys(statusConfig) as (keyof typeof statusConfig)[]).map(status => (
+                                        <div key={status} className="flex items-center justify-between gap-2">
+                                            <label htmlFor={`interval-${status}`} className="text-sm font-medium flex items-center gap-2">
+                                                <div className={`w-3 h-3 rounded-full ${statusConfig[status].color}`}></div>
+                                                {statusConfig[status].label}
+                                            </label>
+                                            <Input
+                                                id={`interval-${status}`}
+                                                type="number"
+                                                value={sessionIntervals[status]}
+                                                onChange={e => handleIntervalChange(status, e.target.value)}
+                                                className="w-20 h-8 text-right"
+                                                min={1}
+                                            />
+                                            <span className="text-xs text-text-subtle w-8">spots</span>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-end pt-2">
+                                        <Button size="sm" onClick={handleSaveIntervals}>Save</Button>
+                                    </div>
+                                </div>
+                            </Popover>
                         </div>
-                    )}
+                    </div>
                 </div>
-            </main>
+            )}
+
 
             {simulationData && (
                 <Modal isOpen={true} onClose={() => setSimulationData(null)} title="Algorithm Check">
@@ -1137,19 +1142,19 @@ const ConfidenceSessionScreen: React.FC = () => {
                                 <span className="text-text-subtle">Status:</span>
                                 <span className={`font-bold`} style={{ color: statusConfig[simulationData.status].hex }}>{simulationData.status.toUpperCase()}</span>
                             </div>
-                             <div className="flex justify-between mb-2">
+                            <div className="flex justify-between mb-2">
                                 <span className="text-text-subtle">Jump Interval:</span>
                                 <span>+{simulationData.interval}</span>
                             </div>
-                             <div className="flex justify-between mb-2">
+                            <div className="flex justify-between mb-2">
                                 <span className="text-text-subtle">Current Position:</span>
                                 <span>{simulationData.currentIdx}</span>
                             </div>
-                             <div className="flex justify-between border-t border-secondary-300 dark:border-secondary-600 pt-2 mt-2">
+                            <div className="flex justify-between border-t border-secondary-300 dark:border-secondary-600 pt-2 mt-2">
                                 <span className="font-bold">Target Insertion:</span>
                                 <span className="font-bold text-primary-600 dark:text-primary-400">Index {simulationData.targetIdx}</span>
                             </div>
-                             <div className="text-xs text-text-subtle mt-3">
+                            <div className="text-xs text-text-subtle mt-3">
                                 * Logic: The card is removed from index {simulationData.currentIdx}, remaining queue length is {simulationData.queueLength - 1}. Target is min(Current + {simulationData.interval}, Length).
                             </div>
                         </div>
@@ -1160,14 +1165,14 @@ const ConfidenceSessionScreen: React.FC = () => {
                     </div>
                 </Modal>
             )}
-            
-            <ManualJumpModal 
-                isOpen={isJumpModalOpen} 
-                onClose={() => setIsJumpModalOpen(false)} 
-                onConfirm={handleManualJump} 
+
+            <ManualJumpModal
+                isOpen={isJumpModalOpen}
+                onClose={() => setIsJumpModalOpen(false)}
+                onConfirm={handleManualJump}
                 queueLength={session.queue.length}
             />
-            
+
             <ConfirmationModal
                 isOpen={isResetConfirmOpen}
                 onClose={() => setIsResetConfirmOpen(false)}
@@ -1187,7 +1192,7 @@ const ConfidenceSessionScreen: React.FC = () => {
                 confirmText="View Summary & Finish"
                 confirmVariant="primary"
             />
-            
+
             <ConfirmationModal
                 isOpen={!!rowToDelete}
                 onClose={() => setRowToDelete(null)}
@@ -1211,7 +1216,7 @@ const ConfidenceSessionScreen: React.FC = () => {
                     setRowForInfoModal(null);
                 }}
             />
-            
+
             <WordDetailModal
                 isOpen={!!rowForDetailModal}
                 row={rowForDetailModal}
@@ -1225,7 +1230,7 @@ const ConfidenceSessionScreen: React.FC = () => {
                 onDelete={(id) => setRowToDelete(id)}
                 onConfigureAI={() => { }}
             />
-            
+
             <RelationSettingsModal
                 isOpen={!!relationToEdit}
                 onClose={() => setRelationToEdit(null)}
@@ -1234,7 +1239,7 @@ const ConfidenceSessionScreen: React.FC = () => {
                 table={currentTable!} // Assuming table exists when button is clickable
                 initialTab="design"
             />
-            
+
             {/* Hide timer when summary is shown or editing relation */}
             {!showSummary && !relationToEdit && <FocusTimer displaySeconds={elapsedSeconds} />}
         </div>

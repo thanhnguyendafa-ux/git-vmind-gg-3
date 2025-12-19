@@ -1,3 +1,4 @@
+import { generateUUID } from '../utils/uuidUtils';
 
 import { create } from 'zustand';
 import { Table, Folder, Column, SessionWordResult, FlashcardStatus, VocabRow, StudyMode, Relation, RelationDesign, TypographyDesign, TextBox, AnkiConfig, Note, CardFaceDesign } from '../types';
@@ -264,11 +265,11 @@ export const useTableStore = create<TableState>()(
         const columnNames = columnsStr.split(',').map(s => s.trim()).filter(Boolean);
         if (columnNames.length === 0) return null;
 
-        const newColumns: Column[] = columnNames.map((colName) => ({ id: crypto.randomUUID(), name: colName }));
+        const newColumns: Column[] = columnNames.map((colName) => ({ id: generateUUID(), name: colName }));
         const shortCode = generateUniqueShortCode(name);
         
         const newTable: Table = { 
-            id: crypto.randomUUID(), 
+            id: generateUUID(), 
             name, 
             shortCode,
             columns: newColumns, 
@@ -296,8 +297,8 @@ export const useTableStore = create<TableState>()(
         const { findOrCreateTagsByName } = useTagStore.getState();
         const { generateUniqueShortCode } = get();
         
-        const frontCol: Column = { id: crypto.randomUUID(), name: 'Front' };
-        const backCol: Column = { id: crypto.randomUUID(), name: 'Back' };
+        const frontCol: Column = { id: generateUUID(), name: 'Front' };
+        const backCol: Column = { id: generateUUID(), name: 'Back' };
 
         const randomTemplate = DESIGN_TEMPLATES[Math.floor(Math.random() * DESIGN_TEMPLATES.length)];
 
@@ -317,11 +318,11 @@ export const useTableStore = create<TableState>()(
                 design.back.typography[id] = { ...randomTemplate.backTypography };
             });
             
-            const frontLabelBox: TextBox = { id: crypto.randomUUID(), text: 'Question:', typography: labelTypo };
+            const frontLabelBox: TextBox = { id: generateUUID(), text: 'Question:', typography: labelTypo };
             design.front.textBoxes = [frontLabelBox];
             design.front.elementOrder = [frontLabelBox.id, ...relation.questionColumnIds];
             
-            const backLabelBox: TextBox = { id: crypto.randomUUID(), text: 'Answer:', typography: labelTypo };
+            const backLabelBox: TextBox = { id: generateUUID(), text: 'Answer:', typography: labelTypo };
             design.back.textBoxes = [backLabelBox];
             design.back.elementOrder = [backLabelBox.id, ...relation.answerColumnIds];
 
@@ -330,7 +331,7 @@ export const useTableStore = create<TableState>()(
         };
 
         const relation1: Relation = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             name: 'Front -> Back',
             questionColumnIds: [frontCol.id],
             answerColumnIds: [backCol.id],
@@ -340,7 +341,7 @@ export const useTableStore = create<TableState>()(
         relation1.design = createDesignForRelation(relation1);
 
         const relation2: Relation = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             name: 'Back -> Front',
             questionColumnIds: [backCol.id],
             answerColumnIds: [frontCol.id],
@@ -354,7 +355,7 @@ export const useTableStore = create<TableState>()(
         const shortCode = generateUniqueShortCode(name);
 
         const newTable: Table = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             name,
             shortCode,
             columns: [frontCol, backCol],
@@ -718,7 +719,7 @@ export const useTableStore = create<TableState>()(
           } else {
             const existingIds = new Set(state.tables.map(t => t.id));
             const newTables = importedTables.map(t =>
-              existingIds.has(t.id) ? { ...t, id: crypto.randomUUID() } : t
+              existingIds.has(t.id) ? { ...t, id: generateUUID() } : t
             );
             
             // ID Assignment for New Tables
@@ -741,7 +742,7 @@ export const useTableStore = create<TableState>()(
       },
       createFolder: async (name) => {
         const { session, isGuest, settings, setSettings } = useUserStore.getState();
-        const newFolder: Folder = { id: crypto.randomUUID(), name, tableIds: [], noteIds: [], createdAt: Date.now() };
+        const newFolder: Folder = { id: generateUUID(), name, tableIds: [], noteIds: [], createdAt: Date.now() };
     
         set(state => ({ folders: [...state.folders, newFolder] }));
         const newOrder = [...(settings.folderOrder || []), newFolder.id];
@@ -947,12 +948,12 @@ export const useTableStore = create<TableState>()(
     
         let questionCol = updatedTable.columns.find((c: Column) => c.name === 'Cloze Question');
         if (!questionCol) {
-            questionCol = { id: crypto.randomUUID(), name: 'Cloze Question' };
+            questionCol = { id: generateUUID(), name: 'Cloze Question' };
             updatedTable.columns.push(questionCol);
         }
         let answerCol = updatedTable.columns.find((c: Column) => c.name === 'Cloze Answer');
         if (!answerCol) {
-            answerCol = { id: crypto.randomUUID(), name: 'Cloze Answer' };
+            answerCol = { id: generateUUID(), name: 'Cloze Answer' };
             updatedTable.columns.push(answerCol);
         }
         
@@ -963,7 +964,7 @@ export const useTableStore = create<TableState>()(
                 ['notes', 'extra', 'info', 'explanation'].includes(c.name.toLowerCase())
             );
             if (!infoCol) {
-                infoCol = { id: crypto.randomUUID(), name: 'Notes' };
+                infoCol = { id: generateUUID(), name: 'Notes' };
                 updatedTable.columns.push(infoCol);
             }
         }
@@ -974,7 +975,7 @@ export const useTableStore = create<TableState>()(
             r.tags?.includes('Cloze')
         );
 
-        const relationId = relation ? relation.id : crypto.randomUUID();
+        const relationId = relation ? relation.id : generateUUID();
 
         // Configure Design (V3 Requirement)
         // If creating new or updating, ensure design exists with elementOrder
@@ -1063,7 +1064,7 @@ export const useTableStore = create<TableState>()(
             );
             
             const fullSentence = contextData.fullContext;
-            const newRowId = crypto.randomUUID();
+            const newRowId = generateUUID();
             
             const newRow: VocabRow = {
                 id: newRowId,

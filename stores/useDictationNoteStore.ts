@@ -1,3 +1,4 @@
+import { generateUUID } from '../utils/uuidUtils';
 
 import { create } from 'zustand';
 import { DictationNote } from '../types';
@@ -58,7 +59,7 @@ export const useDictationNoteStore = create<DictationNoteState>()(
       createDictationNote: async (title) => {
         const { session, isGuest } = useUserStore.getState();
         const newNote: DictationNote = { 
-            id: crypto.randomUUID(), 
+            id: generateUUID(), 
             title, 
             youtubeUrl: '', 
             transcript: [], 

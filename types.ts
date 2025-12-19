@@ -192,9 +192,12 @@ export interface VocabRow {
     inQueueCount?: number;
 
     // Anki SRS Stats
+    ankiState?: AnkiState; // 'New', 'Learning', 'Review', 'Relearning'
+    ankiStep?: number;
     ankiRepetitions?: number;
     ankiEaseFactor?: number;
     ankiInterval?: number; // in days
+    ankiLapses?: number;
     ankiDueDate?: number | null; // timestamp
 
     // Global Confidence Metric
@@ -214,14 +217,14 @@ export interface VocabRow {
 
 export interface AnkiConfig {
   newCardsPerDay: number;
-  learningSteps: string; // e.g., "1 10" for 1m, 10m
+  learningSteps: number[]; // Changed from string to number array (minutes)
   graduatingInterval: number; // in days
   easyInterval: number; // in days
   maxReviewsPerDay: number;
-  easyBonus: number; // percentage, e.g., 1.3 for 130%
-  intervalModifier: number; // percentage, e.g., 1.0 for 100%
-  lapseSteps: string; // e.g., "10" for 10m
-  newIntervalPercent: number; // percentage, e.g., 0 for 0%
+  easyBonus: number; // multiplier, e.g., 1.3
+  intervalModifier: number; // multiplier, e.g., 1.0
+  lapseSteps: number[]; // Changed from string to number array (minutes)
+  newIntervalPercent: number; // multiplier, e.g., 0.0 for 0%
 }
 
 export interface Table {
@@ -662,11 +665,22 @@ export interface AnkiProgress {
   createdAt: number;
 }
 
+export type AnkiState = 'New' | 'Learning' | 'Review' | 'Relearning';
+
 export interface AnkiCard {
   rowId: string;
   tableId: string;
   relationId: string;
-  isNew: boolean;
+
+  // State Management
+  state: AnkiState;
+  step: number;     // Current step index in learningSteps/lapseSteps
+
+  // SRS Parameters
+  due: number;        // Timestamp (ms) when card is due
+  interval: number;   // Interval in days (for Review) or minutes assumption
+  easeFactor: number; // Ease factor (default 2.5)
+  lapses: number;     // Total times rated "Again" while in Review
 }
 
 export interface AnkiSessionData {

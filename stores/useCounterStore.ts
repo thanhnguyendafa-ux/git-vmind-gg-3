@@ -1,3 +1,4 @@
+import { generateUUID } from '../utils/uuidUtils';
 
 import { create } from 'zustand';
 import { Counter, CounterTargetType } from '../types';
@@ -59,7 +60,7 @@ export const useCounterStore = create<CounterState>()((set, get) => ({
     }
     
     const newCounter: Counter = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       targetId,
       targetType,
       name,
