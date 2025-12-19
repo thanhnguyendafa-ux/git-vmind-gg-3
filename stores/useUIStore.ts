@@ -32,6 +32,7 @@ interface UIState {
   pullData: (() => Promise<any>) | null;
   isPullDisabled: boolean;
   isConfidenceAutoplayEnabled: boolean;
+  isAnkiAutoplayEnabled: boolean;
   isTablesSidebarOpen: boolean;
   isDesktopSidebarOpen: boolean; // New: Desktop collapsible sidebar state
   isImmersive: boolean;
@@ -76,6 +77,7 @@ interface UIState {
   handleNavigation: (screen: keyof typeof Screen) => void;
   reportRealtimeUpdate: () => void;
   toggleConfidenceAutoplay: () => void;
+  toggleAnkiAutoplay: () => void;
   setIsTablesSidebarOpen: (isOpen: boolean) => void;
   toggleDesktopSidebar: () => void; // New action
   setDesktopSidebarOpen: (isOpen: boolean) => void; // New action
@@ -122,6 +124,7 @@ export const useUIStore = create<UIState>()(
     pullData: null,
     isPullDisabled: false,
     isConfidenceAutoplayEnabled: false,
+    isAnkiAutoplayEnabled: false,
     isTablesSidebarOpen: false,
     // Load initial state from local storage, default true
     isDesktopSidebarOpen: localStorage.getItem('vmind-sidebar-open') !== 'false',
@@ -241,6 +244,7 @@ export const useUIStore = create<UIState>()(
       set({ realtimeTimeoutId: newTimeoutId });
     },
     toggleConfidenceAutoplay: () => set(state => ({ isConfidenceAutoplayEnabled: !state.isConfidenceAutoplayEnabled })),
+    toggleAnkiAutoplay: () => set(state => ({ isAnkiAutoplayEnabled: !state.isAnkiAutoplayEnabled })),
     setIsTablesSidebarOpen: (isOpen) => set({ isTablesSidebarOpen: isOpen }),
     toggleDesktopSidebar: () => set(state => {
       const next = !state.isDesktopSidebarOpen;

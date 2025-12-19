@@ -5,6 +5,7 @@ import { AnkiCard, AnkiSessionData, StudyMode, VocabRow } from '../../types';
 import Icon from '../../components/ui/Icon';
 import { useSessionStore } from '../../stores/useSessionStore';
 import { useTableStore } from '../../stores/useTableStore';
+import { useUIStore } from '../../stores/useUIStore';
 import { calculateNextAnkiState, AnkiCalculationResult } from '../../utils/srs';
 import { formatAnkiInterval } from '../../utils/timeUtils';
 import { Button } from '../../components/ui/Button';
@@ -16,6 +17,8 @@ import FocusTimer from '../common/FocusTimer';
 import AnswerFeedbackPanel from '../study/components/AnswerFeedbackPanel';
 import WordDetailModal from '../tables/WordDetailModal';
 import WordInfoModal from '../tables/components/WordInfoModal';
+import RelationSettingsModal from '../tables/components/RelationSettingsModal';
+import { Relation } from '../../types';
 
 const ratingButtons: { label: string, quality: number, color: string, hotkey: string }[] = [
     { label: 'Again', quality: 1, color: 'bg-red-500 hover:bg-red-600', hotkey: '1' },
@@ -27,6 +30,10 @@ const ratingButtons: { label: string, quality: number, color: string, hotkey: st
 const AnkiSessionScreen: React.FC = () => {
     const activeAnkiSession = useSessionStore(useShallow(state => state.activeAnkiSession));
     const handleFinishAnkiSession = useSessionStore(state => state.handleFinishAnkiSession);
+    const { isAnkiAutoplayEnabled, toggleAnkiAutoplay } = useUIStore(useShallow(state => ({
+        isAnkiAutoplayEnabled: state.isAnkiAutoplayEnabled,
+        toggleAnkiAutoplay: state.toggleAnkiAutoplay
+    })));
     const upsertRow = useTableStore(state => state.upsertRow);
     const deleteRows = useTableStore(state => state.deleteRows);
 
@@ -35,6 +42,8 @@ const AnkiSessionScreen: React.FC = () => {
     const [lastResult, setLastResult] = useState<boolean | null>(null);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+
+    const [relationToEdit, setRelationToEdit] = useState<Relation | null>(null);
 
     // Modal State
     const [rowForDetailModal, setRowForDetailModal] = useState<VocabRow | null>(null);
@@ -47,7 +56,7 @@ const AnkiSessionScreen: React.FC = () => {
     const goodButtonRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
-        if (!sessionState) return;
+        if (!sessionState || relationToEdit) return; // Pause timer if editing design
         const timer = setInterval(() => {
             setElapsedSeconds(Math.floor((Date.now() - sessionState.startTime) / 1000));
             setTick(t => t + 1);
@@ -305,12 +314,28 @@ const AnkiSessionScreen: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-3">
+                        {currentRelation && (
+                            <button
+                                onClick={() => setRelationToEdit(currentRelation)}
+                                className="p-1 rounded-md text-text-subtle hover:text-text-main hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
+                                title="Edit Card Design"
+                            >
+                                <Icon name="pencil" className="w-4 h-4" />
+                            </button>
+                        )}
                         <button
                             onClick={() => setIsFullscreen(!isFullscreen)}
                             className={`p-1 rounded-md transition-colors ${isFullscreen ? 'text-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700'}`}
                             title={isFullscreen ? "Exit Immersive Mode" : "Enter Immersive Mode"}
                         >
                             <Icon name={isFullscreen ? "x" : "arrows-pointing-out"} className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={toggleAnkiAutoplay}
+                            className={`p-1 rounded-md transition-colors ${isAnkiAutoplayEnabled ? 'text-primary-500' : 'text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700'}`}
+                            title={isAnkiAutoplayEnabled ? "Disable Autoplay" : "Enable Autoplay"}
+                        >
+                            <Icon name="volume-up" className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleFinishAnkiSession(sessionState)} className="text-xs hover:text-text-main dark:hover:text-secondary-100 transition-colors p-1 md:p-0" title="End Session">
                             <span className="hidden md:inline">End Session</span>
@@ -430,6 +455,25 @@ const AnkiSessionScreen: React.FC = () => {
                 onDelete={() => { /* Anki deletion is complex, might need to call global delete, for now keep simple or add if needed */ }}
                 onConfigureAI={() => { }}
             />
+
+            {relationToEdit && currentTable && (
+                <RelationSettingsModal
+                    isOpen={!!relationToEdit}
+                    relation={relationToEdit}
+                    table={currentTable}
+                    onClose={() => setRelationToEdit(null)}
+                    onSave={async (updatedRel) => {
+                        if (!currentTable) return;
+                        const updatedRelations = currentTable.relations.map(r => r.id === updatedRel.id ? updatedRel : r);
+                        await upsertRow(currentTable.id, { ...currentRow } as any); // Trigger reactivity if needed, but actually we need updateTable
+                        // But wait, AnkiSessionScreen calls upsertRow/deleteRows directly from store.
+                        // We need updateTable from store to save relation changes.
+                        useTableStore.getState().updateTable({ ...currentTable, relations: updatedRelations });
+                        setRelationToEdit(null);
+                        useUIStore.getState().showToast("Card design updated.", "success");
+                    }}
+                />
+            )}
 
             <FocusTimer displaySeconds={elapsedSeconds} />
         </div>
