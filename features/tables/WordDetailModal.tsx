@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { getPriorityScore, getRankPoint, getLevel } from '../../utils/priorityScore';
 import ContextViewer from '../study/components/ContextViewer';
 import { useContextLinks } from '../../hooks/useContextLinks';
+import ConceptLevelSelector from '../concepts/ConceptLevelSelector';
 
 
 interface WordDetailModalProps {
@@ -347,6 +348,7 @@ const WordDetailModal: React.FC<WordDetailModalProps> = ({ row, table, columns, 
                                     )
                                 })}
                             </div>
+
                             {onAddColumn && (
                                 <>
                                     {!isAddingColumn ? (
@@ -374,6 +376,20 @@ const WordDetailModal: React.FC<WordDetailModalProps> = ({ row, table, columns, 
                                         </div>
                                     )}
                                 </>
+                            )}
+
+                            {/* Concept & Level Linker */}
+                            {!quickAddMode && (
+                                <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+                                    <h3 className="text-md font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                        <Icon name="hierarchy" className="w-4 h-4" />
+                                        Concept & Level
+                                    </h3>
+                                    <ConceptLevelSelector
+                                        selectedLevelId={editableRow.conceptLevelId}
+                                        onChange={(levelId) => setEditableRow({ ...editableRow, conceptLevelId: levelId })}
+                                    />
+                                </div>
                             )}
                         </div>
                     )}
@@ -457,8 +473,8 @@ const WordDetailModal: React.FC<WordDetailModalProps> = ({ row, table, columns, 
                         {isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </footer>
-            </form>
-        </div>,
+            </form >
+        </div >,
         document.body
     );
 };

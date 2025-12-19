@@ -213,6 +213,7 @@ export interface VocabRow {
   }[];
   /** @deprecated Use tagIds instead. Kept for backward compatibility during migration. */
   tags?: string[];
+  conceptLevelId?: string; // Optional link to ConceptLevel
 }
 
 export interface AnkiConfig {
@@ -485,6 +486,27 @@ export interface AppState {
   ankiProgresses?: AnkiProgress[];
   notifications?: VmindNotification[];
   tags?: Tag[]; // New global tags
+  concepts?: Concept[];
+  conceptLevels?: ConceptLevel[];
+}
+
+export interface Concept {
+  id: string;
+  code: string; // 4-digit unique code (e.g., "9980")
+  name: string; // e.g., "photosynthesis"
+  description?: string;
+  user_id?: string;
+  createdAt: number;
+  modifiedAt: number;
+}
+
+export interface ConceptLevel {
+  id: string;
+  conceptId: string; // Foreign key to Concept
+  name: string; // e.g., "Basic", "Intermediate", "Advanced"
+  order: number; // For sorting levels
+  description?: string;
+  createdAt: number;
 }
 
 export interface Question {

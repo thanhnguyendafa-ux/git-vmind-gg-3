@@ -18,6 +18,7 @@ import AnswerFeedbackPanel from '../study/components/AnswerFeedbackPanel';
 import WordDetailModal from '../tables/WordDetailModal';
 import WordInfoModal from '../tables/components/WordInfoModal';
 import RelationSettingsModal from '../tables/components/RelationSettingsModal';
+import LevelGalleryView from '../concepts/LevelGalleryView'; // Import Gallery View
 import { Relation } from '../../types';
 
 const ratingButtons: { label: string, quality: number, color: string, hotkey: string }[] = [
@@ -44,6 +45,7 @@ const AnkiSessionScreen: React.FC = () => {
     const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
 
     const [relationToEdit, setRelationToEdit] = useState<Relation | null>(null);
+    const [showGallery, setShowGallery] = useState(false);
 
     // Modal State
     const [rowForDetailModal, setRowForDetailModal] = useState<VocabRow | null>(null);
@@ -332,11 +334,21 @@ const AnkiSessionScreen: React.FC = () => {
                         </button>
                         <button
                             onClick={toggleAnkiAutoplay}
-                            className={`p-1 rounded-md transition-colors ${isAnkiAutoplayEnabled ? 'text-primary-500' : 'text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700'}`}
                             title={isAnkiAutoplayEnabled ? "Disable Autoplay" : "Enable Autoplay"}
                         >
-                            <Icon name="volume-up" className="w-4 h-4" />
+                            <Icon name="volume-up" className={`w-5 h-5 transition-colors ${isAnkiAutoplayEnabled ? 'text-primary-500' : 'text-text-subtle'}`} />
                         </button>
+
+                        {/* Gallery View Trigger */}
+                        {currentRow?.conceptLevelId && (
+                            <button
+                                onClick={() => setShowGallery(true)}
+                                title="Open Level Gallery"
+                                className="text-text-subtle hover:text-primary-500 transition-colors"
+                            >
+                                <Icon name="grid-outline" className="w-5 h-5" />
+                            </button>
+                        )}
                         <button onClick={() => handleFinishAnkiSession(sessionState)} className="text-xs hover:text-text-main dark:hover:text-secondary-100 transition-colors p-1 md:p-0" title="End Session">
                             <span className="hidden md:inline">End Session</span>
                             <Icon name="logout" className="md:hidden w-5 h-5" />
@@ -471,6 +483,18 @@ const AnkiSessionScreen: React.FC = () => {
                         useTableStore.getState().updateTable({ ...currentTable, relations: updatedRelations });
                         setRelationToEdit(null);
                         useUIStore.getState().showToast("Card design updated.", "success");
+                    }}
+                />
+            )}
+
+            {showGallery && currentRow && (
+                <LevelGalleryView
+                    currentRowId={currentRow.id}
+                    onClose={() => setShowGallery(false)}
+                    onNavigateToRow={(rowId) => {
+                        console.log("Gallery requested navigation to:", rowId);
+                        setShowGallery(false);
+                        useUIStore.getState().showToast("Navigation is limited in SRS mode.", "info");
                     }}
                 />
             )}

@@ -29,6 +29,7 @@ import WordDetailModal from '../tables/WordDetailModal';
 import WordInfoModal from '../tables/components/WordInfoModal';
 import { useTagStore } from '../../stores/useTagStore';
 import RelationSettingsModal from '../tables/components/RelationSettingsModal';
+import LevelGalleryView from '../concepts/LevelGalleryView';
 
 const statusConfig: { [key in FlashcardStatus]: { label: string; color: string; hex: string; interval: number } } = {
     [FlashcardStatus.New]: { label: 'New', color: 'gray', hex: '#9ca3af', interval: 0 }, // gray-400
@@ -89,6 +90,8 @@ const SessionSummaryOverlay: React.FC<{
 };
 
 const ConfidenceSessionScreen: React.FC = () => {
+    // ...
+    const [showGallery, setShowGallery] = useState(false);
     const activeSession = useSessionStore(useShallow(state => state.activeConfidenceSession));
     const updateActiveConfidenceSession = useSessionStore(state => state.updateActiveConfidenceSession);
     const { saveConfidenceProgress, confidenceProgresses } = useSessionDataStore();
@@ -979,6 +982,18 @@ const ConfidenceSessionScreen: React.FC = () => {
                         >
                             <Icon name="volume-up" className={`w-5 h-5 transition-colors ${isConfidenceAutoplayEnabled ? 'text-primary-500' : 'text-text-subtle'}`} />
                         </button>
+
+                        {/* Gallery View Trigger */}
+                        {currentRow?.conceptLevelId && (
+                            <button
+                                onClick={() => setShowGallery(true)}
+                                className="p-2 rounded-full text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
+                                title="Open Level Gallery"
+                            >
+                                <Icon name="grid-outline" className={`w-5 h-5 hover:text-primary-500 transition-colors`} />
+                            </button>
+                        )}
+
                         <button onClick={() => setIsEndSessionConfirmOpen(true)} className="text-xs hover:text-text-main dark:hover:text-secondary-100 transition-colors p-1 md:p-0" title="End Session">
                             <span className="hidden md:inline">End Session</span>
                             <Icon name="logout" className="md:hidden w-5 h-5" />
@@ -1239,6 +1254,18 @@ const ConfidenceSessionScreen: React.FC = () => {
                 table={currentTable!} // Assuming table exists when button is clickable
                 initialTab="design"
             />
+
+            {showGallery && currentRow && (
+                <LevelGalleryView
+                    currentRowId={currentRow.id}
+                    onClose={() => setShowGallery(false)}
+                    onNavigateToRow={(rowId) => {
+                        console.log("Gallery requested navigation to:", rowId);
+                        setShowGallery(false);
+                        useUIStore.getState().showToast("Navigation is limited in Confidence mode.", "info");
+                    }}
+                />
+            )}
 
             {/* Hide timer when summary is shown or editing relation */}
             {!showSummary && !relationToEdit && <FocusTimer displaySeconds={elapsedSeconds} />}
