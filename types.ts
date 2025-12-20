@@ -6,6 +6,7 @@ export enum Screen {
   Tables,
   Library, // Deprecated in favor of Community, kept for legacy ref safety
   Community, // New Social Hub
+  ConceptLinks, // New Concept Hierarchy Navigator
   Vmind,
   Rewards,
   Settings,
@@ -214,6 +215,8 @@ export interface VocabRow {
   /** @deprecated Use tagIds instead. Kept for backward compatibility during migration. */
   tags?: string[];
   conceptLevelId?: string; // Optional link to ConceptLevel
+  createdAt: number;
+  modifiedAt: number;
 }
 
 export interface AnkiConfig {
@@ -495,6 +498,8 @@ export interface Concept {
   code: string; // 4-digit unique code (e.g., "9980")
   name: string; // e.g., "photosynthesis"
   description?: string;
+  parentId?: string; // For nested concept hierarchies (folder structure)
+  isFolder?: boolean; // True if this concept is a folder/container
   user_id?: string;
   createdAt: number;
   modifiedAt: number;

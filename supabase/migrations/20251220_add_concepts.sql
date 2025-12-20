@@ -24,6 +24,17 @@ CREATE TABLE IF NOT EXISTS concept_levels (
 ALTER TABLE vocab_rows 
 ADD COLUMN IF NOT EXISTS "conceptLevelId" UUID REFERENCES concept_levels(id) ON DELETE SET NULL;
 
+-- Add parent_id for nested concept hierarchies
+ALTER TABLE concepts
+ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES concepts(id) ON DELETE CASCADE;
+
+-- Add is_folder to distinguish folder-type concepts
+ALTER TABLE concepts
+ADD COLUMN IF NOT EXISTS is_folder BOOLEAN DEFAULT false;
+
+-- Create index for parent_id lookups (performance optimization)
+CREATE INDEX IF NOT EXISTS idx_concepts_parent_id ON concepts(parent_id);
+
 -- Create RLS policies
 ALTER TABLE concepts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE concept_levels ENABLE ROW LEVEL SECURITY;

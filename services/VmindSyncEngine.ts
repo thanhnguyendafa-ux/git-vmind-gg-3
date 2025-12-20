@@ -488,7 +488,7 @@ export class VmindSyncEngine {
         switch (type) {
             case 'UPSERT_ROW': {
                 const { row, tableId } = payload;
-                const { stats, ...rest } = row;
+                const { stats, createdAt, modifiedAt, ...rest } = row;
                 const statsForDb = {
                     ...stats,
                     last_studied: stats.lastStudied,
@@ -509,7 +509,14 @@ export class VmindSyncEngine {
                     confi_viewed: stats.confiViewed,
                 };
                 delete statsForDb.lastStudied; delete statsForDb.flashcardStatus; delete statsForDb.flashcardEncounters; delete statsForDb.isFlashcardReviewed; delete statsForDb.lastPracticeDate; delete statsForDb.scrambleEncounters; delete statsForDb.scrambleRatings; delete statsForDb.theaterEncounters; delete statsForDb.ankiRepetitions; delete statsForDb.ankiEaseFactor; delete statsForDb.ankiInterval; delete statsForDb.ankiDueDate; delete statsForDb.confiViewed; delete statsForDb.ankiState; delete statsForDb.ankiStep; delete statsForDb.ankiLapses;
-                const dbRow = { ...rest, stats: statsForDb, table_id: tableId, user_id: userId };
+
+                const dbRow: any = { ...rest, stats: statsForDb, table_id: tableId, user_id: userId };
+                if (createdAt) dbRow.created_at = createdAt;
+                if (modifiedAt) dbRow.modified_at = modifiedAt;
+                if (rest.conceptLevelId) {
+                    dbRow.conceptLevelId = rest.conceptLevelId; // keep as is because it was added as "conceptLevelId" in migration
+                }
+
                 const { error: upsertError } = await supabase.from('vocab_rows').upsert(dbRow);
                 if (upsertError) throw upsertError;
                 break;
