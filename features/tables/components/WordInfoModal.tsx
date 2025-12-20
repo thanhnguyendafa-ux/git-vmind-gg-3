@@ -4,10 +4,6 @@ import Icon from '../../../components/ui/Icon';
 import Modal from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { getPriorityScore, getRankPoint, getLevel } from '../../../utils/priorityScore';
-import { useContextLinks } from '../../../hooks/useContextLinks';
-import ContextViewer from '../../study/components/ContextViewer';
-
-import LinkBuilderModal from '../../knowledge/components/LinkBuilderModal';
 
 interface WordInfoModalProps {
   row: VocabRow | null;
@@ -18,12 +14,11 @@ interface WordInfoModalProps {
 }
 
 const WordInfoModal: React.FC<WordInfoModalProps> = ({ row, table, isOpen, onClose, onEdit }) => {
-  const [isLinkBuilderOpen, setIsLinkBuilderOpen] = React.useState(false);
   const [isStatsExpanded, setIsStatsExpanded] = React.useState(false);
 
   // Hooks must render unconditionally
   // Use optional chaining because row can be null here
-  const contextLinks = useContextLinks(row?.id);
+  // const contextLinks = useContextLinks(row?.id); // REMOVED redundant legacy links
 
   const maxInQueue = React.useMemo(() => {
     if (!table || !table.rows) return 0;
@@ -130,15 +125,7 @@ const WordInfoModal: React.FC<WordInfoModalProps> = ({ row, table, isOpen, onClo
           </div>
         </div>
       </div>
-      <div className="p-4 bg-secondary-50 dark:bg-secondary-900/50 border-t border-secondary-200 dark:border-secondary-700 flex items-center gap-2">
-        <div>
-          <ContextViewer links={contextLinks} />
-        </div>
-        <div className="flex-grow" /> {/* Spacer */}
-        <Button variant="secondary" onClick={() => setIsLinkBuilderOpen(true)} className="mr-2">
-          <Icon name="link" className="w-4 h-4 mr-2" />
-          Connect
-        </Button>
+      <div className="p-4 bg-secondary-50 dark:bg-secondary-900/50 border-t border-secondary-200 dark:border-secondary-700 flex items-center justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Close</Button>
         <Button onClick={onEdit}>
           <Icon name="pencil" className="w-4 h-4 mr-2" />
@@ -146,13 +133,6 @@ const WordInfoModal: React.FC<WordInfoModalProps> = ({ row, table, isOpen, onClo
         </Button>
       </div>
 
-      {/* Link Builder Modal (Stacked) */}
-      <LinkBuilderModal
-        sourceRow={row}
-        sourceTable={table}
-        isOpen={isLinkBuilderOpen}
-        onClose={() => setIsLinkBuilderOpen(false)}
-      />
     </Modal>
   );
 };

@@ -1,0 +1,138 @@
+
+ RUN  v4.0.16 C:/Users/Thanhdafa/Documents/of-copy-215---2-lam-gon-interface-batch-delete
+
+ ❯ services/VmindSyncEngine.test.ts (5 tests | 5 failed) 10112ms
+     × TC_SYNC_01: should add an action to the queue and process it successfully 52ms
+     × TC_SYNC_02: should retry a failed action with exponential backoff 9ms
+     × TC_SYNC_03: should mark an action as "failed" and pause after max retries 7ms
+     × TC_SYNC_04: should allow manually retrying a failed item 5022ms
+     × TC_SYNC_05: should allow discarding a failed item from the queue 5015ms
+ ❯ __tests__/services/VmindSyncEngine.test.ts (5 tests | 5 failed) 10157ms
+     × TC_SYNC_01: should add an action to the queue and process it successfully 52ms
+     × TC_SYNC_02: should retry a failed action with exponential backoff 33ms
+     × TC_SYNC_03: should mark an action as "failed" and pause after max retries 9ms
+     × TC_SYNC_04: should allow manually retrying a failed item 5026ms
+     × TC_SYNC_05: should allow discarding a failed item from the queue 5016ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_01: should add an action to the queue and process it successfully
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ services/VmindSyncEngine.test.ts:117:48
+    115| 
+    116|     // Assert
+    117|     expect(supabase.from('vocab_rows').upsert).toHaveBeenCalledTimes(1…
+       |                                                ^
+    118|     expect(Object.keys(dbStore).length).toBe(0); // Queue should be em…
+    119|     expect(setSyncStatusMock).toHaveBeenCalledWith('saving');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_02: should retry a failed action with exponential backoff
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ services/VmindSyncEngine.test.ts:138:48
+    136|     
+    137|     // Assert after first failure
+    138|     expect(supabase.from('vocab_rows').upsert).toHaveBeenCalledTimes(1…
+       |                                                ^
+    139|     const actionInDB = Object.values(dbStore)[0];
+    140|     expect(actionInDB.retries).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_03: should mark an action as "failed" and pause after max retries
+AssertionError: expected "vi.fn()" to be called 5 times, but got 0 times
+ ❯ services/VmindSyncEngine.test.ts:170:48
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_04: should allow manually retrying a failed item
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ services/VmindSyncEngine.test.ts:179:3
+    177|   });
+    178| 
+    179|   it('TC_SYNC_04: should allow manually retrying a failed item', async…
+       |   ^
+    180|      // Arrange: Create a failed item
+    181|     const failedAction: SyncAction = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_05: should allow discarding a failed item from the queue
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ services/VmindSyncEngine.test.ts:207:3
+    205|   });
+    206| 
+    207|   it('TC_SYNC_05: should allow discarding a failed item from the queue…
+       |   ^
+    208|     // Arrange
+    209|     const failedAction: SyncAction = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  __tests__/services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_01: should add an action to the queue and process it successfully
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ __tests__/services/VmindSyncEngine.test.ts:124:48
+    122| 
+    123|     // Assert
+    124|     expect(supabase.from('vocab_rows').upsert).toHaveBeenCalledTimes(1…
+       |                                                ^
+    125|     expect(Object.keys(dbStore).length).toBe(0); // Queue should be em…
+    126|     expect(setSyncStatusMock).toHaveBeenCalledWith('saving');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  __tests__/services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_02: should retry a failed action with exponential backoff
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ __tests__/services/VmindSyncEngine.test.ts:145:48
+    143|     
+    144|     // Assert after first failure
+    145|     expect(supabase.from('vocab_rows').upsert).toHaveBeenCalledTimes(1…
+       |                                                ^
+    146|     const actionInDB = Object.values(dbStore)[0];
+    147|     expect(actionInDB.retries).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  __tests__/services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_03: should mark an action as "failed" and pause after max retries
+AssertionError: expected "vi.fn()" to be called 5 times, but got 0 times
+ ❯ __tests__/services/VmindSyncEngine.test.ts:177:48
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  __tests__/services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_04: should allow manually retrying a failed item
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ __tests__/services/VmindSyncEngine.test.ts:186:3
+    184|   });
+    185| 
+    186|   it('TC_SYNC_04: should allow manually retrying a failed item', async…
+       |   ^
+    187|      // Arrange: Create a failed item
+    188|     const failedAction: SyncAction = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  __tests__/services/VmindSyncEngine.test.ts > VmindSyncEngine > TC_SYNC_05: should allow discarding a failed item from the queue
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ __tests__/services/VmindSyncEngine.test.ts:214:3
+    212|   });
+    213| 
+    214|   it('TC_SYNC_05: should allow discarding a failed item from the queue…
+       |   ^
+    215|     // Arrange
+    216|     const failedAction: SyncAction = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  10 failed (10)
+   Start at  17:07:52
+   Duration  19.06s (transform 1.90s, setup 2.65s, import 1.90s, tests 20.27s, environment 10.32s)
+
