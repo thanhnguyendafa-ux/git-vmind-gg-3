@@ -13,6 +13,7 @@ import ConceptAnalytics from './components/ConceptAnalytics';
 import ConceptAdvancedSearch from './components/ConceptAdvancedSearch';
 import { createPhotosynthesisSample } from './utils/ConceptLinksSample';
 import { useUIStore } from '../../stores/useUIStore';
+import BlockingLoader from './components/BlockingLoader';
 
 const ConceptLinksScreen: React.FC = () => {
     const {
@@ -32,6 +33,7 @@ const ConceptLinksScreen: React.FC = () => {
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const [filteredConcepts, setFilteredConcepts] = useState<Concept[]>([]);
     const [isLoadingSample, setIsLoadingSample] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('Preparing sample data...');
 
     // Modal states
     const [showConceptForm, setShowConceptForm] = useState(false);
@@ -44,9 +46,22 @@ const ConceptLinksScreen: React.FC = () => {
 
     const handleLoadExample = async () => {
         setIsLoadingSample(true);
+        setLoadingMessage('Initializing sample seeding...');
         try {
-            const newId = await createPhotosynthesisSample();
+            const newId = await createPhotosynthesisSample((msg) => {
+                setLoadingMessage(msg);
+            });
             if (newId) {
+                // Ensure the concept exists in the local concepts list before selecting
+                // to avoid "Concept not found" message in Kanban briefy
+                let attempts = 0;
+                while (attempts < 10) {
+                    const exists = useConceptStore.getState().concepts.some(c => c.id === newId);
+                    if (exists) break;
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
                 setSelectedConceptId(newId);
                 // Also auto-expand parents
                 const concept = useConceptStore.getState().concepts.find(c => c.id === newId);
@@ -56,6 +71,9 @@ const ConceptLinksScreen: React.FC = () => {
                     }
                 }
             }
+        } catch (err) {
+            console.error('Failed to load example:', err);
+            useUIStore.getState().showToast('Failed to load sample data. Please try again.', 'error');
         } finally {
             setIsLoadingSample(false);
         }
@@ -160,6 +178,9 @@ const ConceptLinksScreen: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col bg-background dark:bg-secondary-900">
+            {/* Blocking Loader for Sample Seeding */}
+            <BlockingLoader isVisible={isLoadingSample} message={loadingMessage} />
+
             {/* Header */}
             <header className="flex-shrink-0 border-b border-border-subtle dark:border-white/10 bg-white dark:bg-secondary-800">
                 <div className="flex items-center justify-between p-4">

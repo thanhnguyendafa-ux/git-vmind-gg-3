@@ -4,7 +4,7 @@ import { useUserStore } from '../../../stores/useUserStore';
 import { generateUUID } from '../../../utils/uuidUtils';
 import { VocabRow, FlashcardStatus } from '../../../types';
 
-export const createPhotosynthesisSample = async () => {
+export const createPhotosynthesisSample = async (onStatusChange?: (msg: string) => void) => {
     const conceptStore = useConceptStore.getState();
     const tableStore = useTableStore.getState();
 
@@ -13,6 +13,7 @@ export const createPhotosynthesisSample = async () => {
     let table = tableStore.tables.find(t => t.name === tableName);
 
     if (!table) {
+        onStatusChange?.('Creating Science Table...');
         const columnsStr = 'Vocab, Definition, Note';
         table = await tableStore.createTable(tableName, columnsStr);
     }
@@ -30,6 +31,7 @@ export const createPhotosynthesisSample = async () => {
     // --- Step 3: Get or Create Folder ---
     let scienceFolder = conceptStore.concepts.find(c => c.code === 'SCI-G5');
     if (!scienceFolder) {
+        onStatusChange?.('Initializing Folders...');
         scienceFolder = await conceptStore.createConcept('SCI-G5', 'Science Grade 5', 'Primary Science Curriculum', undefined, true);
     } else {
         // FORCE SYNC: Ensure existing folder is on server
@@ -39,6 +41,7 @@ export const createPhotosynthesisSample = async () => {
     // --- Step 4: Get or Create Concept ---
     let psConcept = conceptStore.concepts.find(c => c.code === 'BIO-PS-G5');
     if (!psConcept) {
+        onStatusChange?.('Creating Concept Nodes...');
         psConcept = await conceptStore.createConcept(
             'BIO-PS-G5',
             'Photosynthesis',
@@ -53,6 +56,7 @@ export const createPhotosynthesisSample = async () => {
     // --- Step 5: Get or Create Levels ---
     let levels = conceptStore.getLevelsByConcept(psConcept.id);
     if (levels.length === 0) {
+        onStatusChange?.('Setting up Concept Levels...');
         const l1 = await conceptStore.createLevel(psConcept.id, 'Level 1', 1, 'Reactants: What plants need (Sunlight, Water, CO2)');
         const l2 = await conceptStore.createLevel(psConcept.id, 'Level 2', 2, 'Structures: Where it happens (Chlorophyll, Chloroplasts)');
         const l3 = await conceptStore.createLevel(psConcept.id, 'Level 3', 3, 'Process: How it works (Gas Exchange, Stomata)');
@@ -139,13 +143,36 @@ export const createPhotosynthesisSample = async () => {
     }
 
     if (rowsToAdd.length > 0) {
+        onStatusChange?.(`Seeding ${rowsToAdd.length} knowledge cards...`);
         try {
             await tableStore.addRows(table.id, rowsToAdd);
         } catch (error) {
             console.error('Failed to create sample data rows:', error);
-            // Don't return null here, partial success (structure) is better than failure
         }
     }
+
+    // --- Step 7: Final Verification ---
+    // Wait until the table in store actually has the rows we just added
+    // This prevents the Kanban from showing "No cards" for a brief moment
+    onStatusChange?.('Verifying data integrity...');
+    let verificationAttempts = 0;
+    const targetRowCount = (table.rows.length || 0) + rowsToAdd.length;
+
+    while (verificationAttempts < 20) {
+        const currentTable = useTableStore.getState().tables.find(t => t.id === table!.id);
+        if (currentTable && currentTable.rows.length >= targetRowCount) {
+            // Check if rows are also linked to concept levels (essential for Kanban)
+            const linkedRows = currentTable.rows.filter(r => r.conceptLevelId);
+            if (linkedRows.length >= rowsToAdd.length) {
+                break;
+            }
+        }
+        await new Promise(resolve => setTimeout(resolve, 200));
+        verificationAttempts++;
+    }
+
+    onStatusChange?.('Sample ready!');
+    await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for smooth transition
 
     return psConcept.id;
 };
