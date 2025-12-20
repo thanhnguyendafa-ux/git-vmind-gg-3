@@ -580,14 +580,18 @@ export class VmindSyncEngine {
                 };
                 delete statsForDb.lastStudied; delete statsForDb.flashcardStatus; delete statsForDb.flashcardEncounters; delete statsForDb.isFlashcardReviewed; delete statsForDb.lastPracticeDate; delete statsForDb.scrambleEncounters; delete statsForDb.scrambleRatings; delete statsForDb.theaterEncounters; delete statsForDb.ankiRepetitions; delete statsForDb.ankiEaseFactor; delete statsForDb.ankiInterval; delete statsForDb.ankiDueDate; delete statsForDb.confiViewed; delete statsForDb.ankiState; delete statsForDb.ankiStep; delete statsForDb.ankiLapses;
 
-                const dbRow: any = { ...rest, stats: statsForDb, table_id: tableId, user_id: userId };
+                const { conceptLevelId: oldId, conceptLevelIds: oldIds, ...cleanRest } = rest as any;
+                const dbRow: any = { ...cleanRest, stats: statsForDb, table_id: tableId, user_id: userId };
+
                 if (createdAt) dbRow.created_at = createdAt;
                 if (modifiedAt) dbRow.modified_at = modifiedAt;
-                if (rest.conceptLevelId) {
-                    dbRow.conceptLevelId = rest.conceptLevelId;
+
+                // Map to clean snake_case columns
+                if (oldId || rest.conceptLevelId) {
+                    dbRow.concept_level_id = oldId || rest.conceptLevelId;
                 }
-                if (rest.conceptLevelIds) {
-                    dbRow.conceptLevelIds = rest.conceptLevelIds;
+                if (oldIds || rest.conceptLevelIds) {
+                    dbRow.concept_level_ids = oldIds || rest.conceptLevelIds;
                 }
 
                 const { error: upsertError } = await supabase.from('vocab_rows').upsert(dbRow);

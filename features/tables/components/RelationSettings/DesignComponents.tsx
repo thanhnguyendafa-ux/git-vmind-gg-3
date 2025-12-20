@@ -19,7 +19,7 @@ export const SmartTextarea: React.FC<{
     const [cursorIndex, setCursorIndex] = useState<number | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const valueRef = useRef(initialValue);
-    
+
     // Sync local state when external value changes (e.g. reset)
     useEffect(() => {
         setLocalValue(initialValue);
@@ -40,7 +40,7 @@ export const SmartTextarea: React.FC<{
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         const pos = e.target.selectionStart;
-        
+
         setLocalValue(val);
         valueRef.current = val;
 
@@ -52,7 +52,7 @@ export const SmartTextarea: React.FC<{
             setShowSuggestions(false);
         }
     };
-    
+
     const commitChange = () => {
         if (localValue !== initialValue) {
             onChange(localValue);
@@ -131,26 +131,26 @@ export const QuickInsertHandle: React.FC<{
     className?: string;
 }> = ({ index, onInsert, table, isFallback, isMobile, className }) => {
     const [isOpen, setIsOpen] = useState(false);
-    
+
     // Explicit positioning classes, overridden if className is provided
     // Updated z-index to 70 to ensure visibility over other UI elements
     // Adjusted mobile offset to -left-2 to prevent clipping in container
-    const containerClasses = className || (isFallback 
-        ? 'relative inline-block z-30' 
+    const containerClasses = className || (isFallback
+        ? 'relative inline-block z-30'
         : `absolute z-[70] top-1/2 -translate-y-1/2 ${isMobile ? '-left-2' : 'left-2'}`);
 
     return (
         <div className={containerClasses}>
-             <Popover
+            <Popover
                 isOpen={isOpen}
                 setIsOpen={setIsOpen}
                 trigger={
-                    <button 
+                    <button
                         className={`
                             flex items-center justify-center 
                             bg-primary-500 text-white shadow-md hover:scale-110 transition-transform cursor-pointer pointer-events-auto
-                            ${isFallback 
-                                ? 'w-8 h-8 rounded-full animate-pulse' 
+                            ${isFallback
+                                ? 'w-8 h-8 rounded-full animate-pulse'
                                 : 'w-5 h-5 rounded-full -translate-x-1/2 opacity-100 lg:group-hover/block:opacity-100 lg:opacity-0 group-hover/dropzone:opacity-100'
                             }
                         `}
@@ -160,14 +160,14 @@ export const QuickInsertHandle: React.FC<{
                         <Icon name="plus" className={isFallback ? "w-5 h-5" : "w-3 h-3"} />
                     </button>
                 }
-                contentClassName="w-60 z-[60]"
+                contentClassName="w-60 z-[1100]"
             >
                 <div className="p-1 space-y-1 max-h-72 overflow-y-auto">
                     <button onClick={() => { onInsert(index, 'text'); setIsOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-secondary-100 dark:hover:bg-secondary-700 flex items-center gap-2">
-                        <Icon name="file-text" className="w-4 h-4 text-text-subtle"/> Text Block
+                        <Icon name="file-text" className="w-4 h-4 text-text-subtle" /> Text Block
                     </button>
                     <button onClick={() => { onInsert(index, 'divider'); setIsOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-secondary-100 dark:hover:bg-secondary-700 flex items-center gap-2">
-                        <Icon name="minus" className="w-4 h-4 text-text-subtle"/> Divider
+                        <Icon name="minus" className="w-4 h-4 text-text-subtle" /> Divider
                     </button>
 
                     {table && table.columns.length > 0 && (
@@ -176,7 +176,7 @@ export const QuickInsertHandle: React.FC<{
                             <p className="text-[10px] font-bold text-text-subtle uppercase px-2 py-1">Inline Rows</p>
                             {table.columns.map(col => (
                                 <button key={`inline-${col.id}`} onClick={() => { onInsert(index, 'inline_composite', col.id); setIsOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-secondary-100 dark:hover:bg-secondary-700 flex items-center gap-2">
-                                    <Icon name="table-cells" className="w-4 h-4 text-success-500"/>
+                                    <Icon name="table-cells" className="w-4 h-4 text-success-500" />
                                     <span><strong>{col.name}:</strong> [Data]</span>
                                 </button>
                             ))}
@@ -184,7 +184,7 @@ export const QuickInsertHandle: React.FC<{
                             <p className="text-[10px] font-bold text-text-subtle uppercase px-2 py-1">Single Fields</p>
                             {table.columns.map(col => (
                                 <button key={`data-${col.id}`} onClick={() => { onInsert(index, 'data', col.id); setIsOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-secondary-100 dark:hover:bg-secondary-700 flex items-center gap-2">
-                                    <Icon name="tag" className="w-4 h-4 text-primary-500"/> Data: {col.name}
+                                    <Icon name="tag" className="w-4 h-4 text-primary-500" /> Data: {col.name}
                                 </button>
                             ))}
                         </>
@@ -213,44 +213,44 @@ export const DesignerBlock: React.FC<{
 
     const changeFontSize = (direction: 'up' | 'down') => {
         const FONT_SIZES = ['0.75rem', '0.875rem', '1rem', '1.125rem', '1.25rem', '1.5rem', '2rem', '3rem'];
-        
+
         const currentIndex = FONT_SIZES.indexOf(typography.fontSize);
         let nextIndex = currentIndex;
         if (direction === 'up') nextIndex = Math.min(currentIndex + 1, FONT_SIZES.length - 1);
         else nextIndex = Math.max(currentIndex - 1, 0);
-        
-        if (currentIndex === -1) nextIndex = direction === 'up' ? 2 : 1; 
-        
+
+        if (currentIndex === -1) nextIndex = direction === 'up' ? 2 : 1;
+
         onUpdate({ typography: { fontSize: FONT_SIZES[nextIndex] } });
     };
 
     const toggleStyle = (key: 'fontWeight' | 'fontStyle', onVal: string, offVal: string) => {
         onUpdate({ typography: { [key]: typography[key] === onVal ? offVal : onVal } });
     };
-    
+
     const setAlign = (align: 'left' | 'center' | 'right') => {
         onUpdate({ typography: { textAlign: align } });
     };
 
-    const menuPositionClass = (isMobile && index === 0) 
+    const menuPositionClass = (isMobile && index === 0)
         ? 'top-full mt-2' // Below block
         : '-top-9';       // Above block (default)
 
-    const borderClass = isLocked 
+    const borderClass = isLocked
         ? (isSelected ? 'border-amber-500/50' : 'border-transparent')
         : (isSelected ? 'border-primary-200/50 dark:border-primary-800/50' : 'border-transparent hover:border-primary-200/50 dark:hover:border-primary-800/50');
-        
+
     const bgClass = isLocked
         ? (isSelected ? 'bg-amber-50/30 dark:bg-amber-900/10 ring-1 ring-amber-500' : '')
         : (isSelected ? 'bg-primary-50/30 dark:bg-primary-900/10 ring-1 ring-primary-500' : '');
 
     return (
-        <div 
+        <div
             onClick={(e) => { e.stopPropagation(); onSelect(); }}
             className={`group/block relative w-full min-h-[1.5rem] py-0.5 transition-all cursor-pointer border ${borderClass} ${bgClass} ${isSelected ? 'z-30' : 'z-10'}`}
         >
-             {isSelected && type !== 'divider' && (
-                <div 
+            {isSelected && type !== 'divider' && (
+                <div
                     className={`absolute ${menuPositionClass} right-0 z-50 flex items-center gap-0.5 p-0.5 bg-surface dark:bg-secondary-800 text-text-main dark:text-white rounded-md shadow-lg border border-secondary-200 dark:border-secondary-700 animate-fade-scale-in pointer-events-auto overflow-x-auto max-w-[95vw]`}
                     onMouseDown={(e) => {
                         e.preventDefault(); // Prevent focus loss on textarea
@@ -258,9 +258,9 @@ export const DesignerBlock: React.FC<{
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {isLocked && <div className="px-2 text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1"><Icon name="lock-closed" className="w-3 h-3"/> System</div>}
+                    {isLocked && <div className="px-2 text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1"><Icon name="lock-closed" className="w-3 h-3" /> System</div>}
                     {!isLocked && <div className="w-px h-3 bg-secondary-300 dark:bg-secondary-600 mx-0.5" />}
-                    
+
                     <button onClick={() => changeFontSize('down')} className="p-1 md:p-1.5 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded"><span className="text-xs font-bold">A-</span></button>
                     <button onClick={() => changeFontSize('up')} className="p-1 md:p-1.5 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded"><span className="text-sm font-bold">A+</span></button>
                     <div className="w-px h-3 bg-secondary-300 dark:bg-secondary-600 mx-0.5" />
@@ -269,16 +269,16 @@ export const DesignerBlock: React.FC<{
                     <div className="w-px h-3 bg-secondary-300 dark:bg-secondary-600 mx-0.5" />
                     <button onClick={() => setAlign('left')} className={`p-1 md:p-1.5 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded ${typography.textAlign === 'left' ? 'text-primary-500' : ''}`}><Icon name="align-left" className="w-3.5 h-3.5 md:w-3 md:h-3" /></button>
                     <button onClick={() => setAlign('center')} className={`p-1 md:p-1.5 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded ${typography.textAlign === 'center' ? 'text-primary-500' : ''}`}><Icon name="align-center" className="w-3.5 h-3.5 md:w-3 md:h-3" /></button>
-                    
+
                     {onChangeType && !isLocked && (
-                         <>
+                        <>
                             <div className="w-px h-3 bg-secondary-300 dark:bg-secondary-600 mx-0.5" />
                             <button onClick={onChangeType} className="p-1 md:p-1.5 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded" title="Switch Data/Label">
                                 <Icon name="arrows-right-left" className="w-3.5 h-3.5 md:w-3 md:h-3" />
                             </button>
-                         </>
+                        </>
                     )}
-                    
+
                     {!isLocked && (
                         <>
                             <div className="w-px h-3 bg-secondary-300 dark:bg-secondary-600 mx-0.5" />
@@ -290,7 +290,7 @@ export const DesignerBlock: React.FC<{
                 </div>
             )}
             {isSelected && type === 'divider' && !isLocked && (
-                 <div 
+                <div
                     className={`absolute ${menuPositionClass} right-0 z-50 flex items-center gap-0.5 p-0.5 bg-surface dark:bg-secondary-800 text-text-main dark:text-white rounded-md shadow-lg border border-secondary-200 dark:border-secondary-700 animate-fade-scale-in pointer-events-auto`}
                     onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     onClick={(e) => e.stopPropagation()}
@@ -300,9 +300,9 @@ export const DesignerBlock: React.FC<{
                     </button>
                 </div>
             )}
-            
+
             {children}
-            
+
             <div className="absolute inset-x-0 bottom-0 h-0 group-hover/block:border-b-2 group-hover/block:border-primary-500/30 pointer-events-none" />
         </div>
     );
