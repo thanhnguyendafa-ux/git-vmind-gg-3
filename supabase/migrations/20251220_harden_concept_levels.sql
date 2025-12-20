@@ -11,6 +11,7 @@ AND concept_levels.user_id IS NULL;
 
 -- Update RLS policies for concept_levels to be direct
 DROP POLICY IF EXISTS "Users can manage levels for their concepts" ON concept_levels;
+DROP POLICY IF EXISTS "Users can manage their own concept levels" ON concept_levels;
 
 CREATE POLICY "Users can manage their own concept levels" ON concept_levels
     FOR ALL

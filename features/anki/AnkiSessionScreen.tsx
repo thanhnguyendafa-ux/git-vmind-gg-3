@@ -20,6 +20,7 @@ import WordInfoModal from '../tables/components/WordInfoModal';
 import RelationSettingsModal from '../tables/components/RelationSettingsModal';
 import LevelGalleryView from '../concepts/LevelGalleryView'; // Import Gallery View
 import { Relation } from '../../types';
+import MultiConceptPicker from '../concepts/components/MultiConceptPicker';
 
 const ratingButtons: { label: string, quality: number, color: string, hotkey: string }[] = [
     { label: 'Again', quality: 1, color: 'bg-red-500 hover:bg-red-600', hotkey: '1' },
@@ -51,6 +52,7 @@ const AnkiSessionScreen: React.FC = () => {
     const [rowForDetailModal, setRowForDetailModal] = useState<VocabRow | null>(null);
     const [rowForInfoModal, setRowForInfoModal] = useState<VocabRow | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isConceptPickerOpen, setIsConceptPickerOpen] = useState(false);
 
     // For "Early Review" check or timer check
     const [tick, setTick] = useState(0);
@@ -339,16 +341,13 @@ const AnkiSessionScreen: React.FC = () => {
                             <Icon name="volume-up" className={`w-5 h-5 transition-colors ${isAnkiAutoplayEnabled ? 'text-primary-500' : 'text-text-subtle'}`} />
                         </button>
 
-                        {/* Gallery View Trigger */}
-                        {currentRow?.conceptLevelId && (
-                            <button
-                                onClick={() => setShowGallery(true)}
-                                title="Open Level Gallery"
-                                className="text-text-subtle hover:text-primary-500 transition-colors"
-                            >
-                                <Icon name="grid-outline" className="w-5 h-5" />
-                            </button>
-                        )}
+                        <button
+                            onClick={() => setIsConceptPickerOpen(true)}
+                            title="Link to Concept"
+                            className="text-text-subtle hover:text-purple-500 transition-colors"
+                        >
+                            <Icon name="link" className="w-5 h-5" />
+                        </button>
                         <button onClick={() => handleFinishAnkiSession(sessionState)} className="text-xs hover:text-text-main dark:hover:text-secondary-100 transition-colors p-1 md:p-0" title="End Session">
                             <span className="hidden md:inline">End Session</span>
                             <Icon name="logout" className="md:hidden w-5 h-5" />
@@ -468,39 +467,54 @@ const AnkiSessionScreen: React.FC = () => {
                 onConfigureAI={() => { }}
             />
 
-            {relationToEdit && currentTable && (
-                <RelationSettingsModal
-                    isOpen={!!relationToEdit}
-                    relation={relationToEdit}
-                    table={currentTable}
-                    onClose={() => setRelationToEdit(null)}
-                    onSave={async (updatedRel) => {
-                        if (!currentTable) return;
-                        const updatedRelations = currentTable.relations.map(r => r.id === updatedRel.id ? updatedRel : r);
-                        await upsertRow(currentTable.id, { ...currentRow } as any); // Trigger reactivity if needed, but actually we need updateTable
-                        // But wait, AnkiSessionScreen calls upsertRow/deleteRows directly from store.
-                        // We need updateTable from store to save relation changes.
-                        useTableStore.getState().updateTable({ ...currentTable, relations: updatedRelations });
-                        setRelationToEdit(null);
-                        useUIStore.getState().showToast("Card design updated.", "success");
-                    }}
-                />
-            )}
+            {
+                relationToEdit && currentTable && (
+                    <RelationSettingsModal
+                        isOpen={!!relationToEdit}
+                        relation={relationToEdit}
+                        table={currentTable}
+                        onClose={() => setRelationToEdit(null)}
+                        onSave={async (updatedRel) => {
+                            if (!currentTable) return;
+                            const updatedRelations = currentTable.relations.map(r => r.id === updatedRel.id ? updatedRel : r);
+                            await upsertRow(currentTable.id, { ...currentRow } as any); // Trigger reactivity if needed, but actually we need updateTable
+                            // But wait, AnkiSessionScreen calls upsertRow/deleteRows directly from store.
+                            // We need updateTable from store to save relation changes.
+                            useTableStore.getState().updateTable({ ...currentTable, relations: updatedRelations });
+                            setRelationToEdit(null);
+                            useUIStore.getState().showToast("Card design updated.", "success");
+                        }}
+                    />
+                )
+            }
 
-            {showGallery && currentRow && (
-                <LevelGalleryView
-                    currentRowId={currentRow.id}
-                    onClose={() => setShowGallery(false)}
-                    onNavigateToRow={(rowId) => {
-                        console.log("Gallery requested navigation to:", rowId);
-                        setShowGallery(false);
-                        useUIStore.getState().showToast("Navigation is limited in SRS mode.", "info");
-                    }}
-                />
-            )}
+            {
+                showGallery && currentRow && (
+                    <LevelGalleryView
+                        currentRowId={currentRow.id}
+                        onClose={() => setShowGallery(false)}
+                        onNavigateToRow={(rowId) => {
+                            console.log("Gallery requested navigation to:", rowId);
+                            setShowGallery(false);
+                            useUIStore.getState().showToast("Navigation is limited in SRS mode.", "info");
+                        }}
+                    />
+                )
+            }
+
+            {
+                currentRow && currentTable && (
+                    <MultiConceptPicker
+                        isOpen={isConceptPickerOpen}
+                        onClose={() => setIsConceptPickerOpen(false)}
+                        targetRowIds={[currentRow.id]}
+                        targetTableId={currentTable.id}
+                    />
+                )
+            }
 
             <FocusTimer displaySeconds={elapsedSeconds} />
-        </div>
+        </div >
     );
 };
 

@@ -20,6 +20,7 @@ import AIPromptModal from '../AIPromptModal';
 import BatchAiModal from '../BatchAiModal';
 import PasteImportModal from '../PasteImportModal';
 import LinkTemplateModal from '../LinkTemplateModal';
+import MultiConceptPicker from '../../../concepts/components/MultiConceptPicker';
 
 export const TableModalsContainer: React.FC = () => {
     const {
@@ -36,7 +37,8 @@ export const TableModalsContainer: React.FC = () => {
         isBatchAiModalOpen, setIsBatchAiModalOpen,
         pasteData, setPasteData,
         linkTemplateCol, setLinkTemplateCol,
-        isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen
+        isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen,
+        isConceptPickerOpen, setIsConceptPickerOpen
     } = useTableScreen();
 
     const {
@@ -57,7 +59,7 @@ export const TableModalsContainer: React.FC = () => {
     const { handleSaveToJournal } = useNoteStore();
     const { showToast, setIsApiKeyModalOpen } = useUIStore();
     const { batchUpdateRows } = useTableStore();
-    
+
     // Connect to TableView Context for batch operations selection
     const { state, dispatch } = useTableView();
 
@@ -80,7 +82,7 @@ export const TableModalsContainer: React.FC = () => {
         showToast("Starting AI generation...", 'info');
         let totalFilled = 0;
         const fillable = fillablePrompts.filter(p => selectedPromptIds.has(p.prompt.id));
-        
+
         const generationPromises = [];
         for (const { prompt, fillableCells } of fillable) {
             for (const cell of fillableCells.slice(0, 5 - totalFilled)) { // Limit to 5 total
@@ -131,19 +133,19 @@ export const TableModalsContainer: React.FC = () => {
                     }
                 }}
             />
-            <WordDetailModal 
-                isOpen={!!rowToEdit} 
-                row={rowToEdit} 
+            <WordDetailModal
+                isOpen={!!rowToEdit}
+                row={rowToEdit}
                 table={table}
-                columns={table.columns} 
-                aiPrompts={table.aiPrompts} 
-                imageConfig={table.imageConfig} 
-                audioConfig={table.audioConfig} 
-                onClose={() => { setRowToEdit(null); setIsQuickAddMode(false); }} 
-                onSave={(r) => handleUpdateRow(r, isQuickAddMode)} 
-                onDelete={handleDeleteRow} 
-                onConfigureAI={setColumnToConfigureAI} 
-                onAddColumn={handleAddNewColumn} 
+                columns={table.columns}
+                aiPrompts={table.aiPrompts}
+                imageConfig={table.imageConfig}
+                audioConfig={table.audioConfig}
+                onClose={() => { setRowToEdit(null); setIsQuickAddMode(false); }}
+                onSave={(r) => handleUpdateRow(r, isQuickAddMode)}
+                onDelete={handleDeleteRow}
+                onConfigureAI={setColumnToConfigureAI}
+                onAddColumn={handleAddNewColumn}
                 quickAddMode={isQuickAddMode}
             />
             {previewRow && (
@@ -155,10 +157,10 @@ export const TableModalsContainer: React.FC = () => {
                     onSaveToJournal={handleSaveToJournal}
                 />
             )}
-            <PublishModal 
-                isOpen={isPublishModalOpen} 
-                onClose={() => setIsPublishModalOpen(false)} 
-                table={table} 
+            <PublishModal
+                isOpen={isPublishModalOpen}
+                onClose={() => setIsPublishModalOpen(false)}
+                table={table}
             />
             <ColumnEditorModal isOpen={isColumnEditorOpen} onClose={() => setIsColumnEditorOpen(false)} table={table} onSave={handleSaveColumns} />
             <RelationSettingsModal isOpen={!!relationToEdit} onClose={() => setRelationToEdit(null)} onSave={handleSaveRelation} relation={relationToEdit} table={table} />
@@ -174,7 +176,7 @@ export const TableModalsContainer: React.FC = () => {
                     table={table}
                 />
             )}
-             {linkTemplateCol && (
+            {linkTemplateCol && (
                 <LinkTemplateModal
                     isOpen={!!linkTemplateCol}
                     onClose={() => setLinkTemplateCol(null)}
@@ -187,15 +189,21 @@ export const TableModalsContainer: React.FC = () => {
                 isOpen={isBatchDeleteConfirmOpen}
                 onClose={() => setIsBatchDeleteConfirmOpen(false)}
                 onConfirm={() => {
-                     handleBatchDelete(state.selectedRows);
-                     dispatch({ type: 'SET_SELECTED_ROWS', payload: new Set() });
-                     setIsBatchDeleteConfirmOpen(false); 
+                    handleBatchDelete(state.selectedRows);
+                    dispatch({ type: 'SET_SELECTED_ROWS', payload: new Set() });
+                    setIsBatchDeleteConfirmOpen(false);
                 }}
                 title="Delete Selected Rows"
                 message={`Are you sure you want to delete ${state.selectedRows.size} row(s)?`}
                 warning="This action cannot be undone."
                 confirmText="Delete"
                 confirmVariant="destructive"
+            />
+            <MultiConceptPicker
+                isOpen={isConceptPickerOpen}
+                onClose={() => setIsConceptPickerOpen(false)}
+                targetRowIds={Array.from(state.selectedRows)}
+                targetTableId={table.id}
             />
         </>
     );

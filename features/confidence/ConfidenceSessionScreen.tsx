@@ -30,6 +30,7 @@ import WordInfoModal from '../tables/components/WordInfoModal';
 import { useTagStore } from '../../stores/useTagStore';
 import RelationSettingsModal from '../tables/components/RelationSettingsModal';
 import LevelGalleryView from '../concepts/LevelGalleryView';
+import MultiConceptPicker from '../concepts/components/MultiConceptPicker';
 
 const statusConfig: { [key in FlashcardStatus]: { label: string; color: string; hex: string; interval: number } } = {
     [FlashcardStatus.New]: { label: 'New', color: 'gray', hex: '#9ca3af', interval: 0 }, // gray-400
@@ -159,6 +160,7 @@ const ConfidenceSessionScreen: React.FC = () => {
     const [rowForDetailModal, setRowForDetailModal] = useState<VocabRow | null>(null);
     const [rowForInfoModal, setRowForInfoModal] = useState<VocabRow | null>(null);
     const [relationToEdit, setRelationToEdit] = useState<Relation | null>(null);
+    const [isConceptPickerOpen, setIsConceptPickerOpen] = useState(false);
 
     // State for delete confirmation
     const [rowToDelete, setRowToDelete] = useState<string | null>(null);
@@ -1139,6 +1141,16 @@ const ConfidenceSessionScreen: React.FC = () => {
                                         </div>
                                     ))}
                                     <div className="flex justify-end pt-2">
+                                        {/* Link to Concept */}
+                                        <button
+                                            onClick={() => setIsConceptPickerOpen(true)}
+                                            className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/10 group"
+                                            title="Link to Concept"
+                                        >
+                                            <Icon name="link" className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                        </button>
+
+                                        <div className="w-px h-6 bg-white/10 mx-1" />
                                         <Button size="sm" onClick={handleSaveIntervals}>Save</Button>
                                     </div>
                                 </div>
@@ -1187,6 +1199,14 @@ const ConfidenceSessionScreen: React.FC = () => {
                 onConfirm={handleManualJump}
                 queueLength={session.queue.length}
             />
+            {currentRow && currentTable && (
+                <MultiConceptPicker
+                    isOpen={isConceptPickerOpen}
+                    onClose={() => setIsConceptPickerOpen(false)}
+                    targetRowIds={[currentRow.id]}
+                    targetTableId={currentTable.id}
+                />
+            )}
 
             <ConfirmationModal
                 isOpen={isResetConfirmOpen}

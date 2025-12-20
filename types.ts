@@ -214,7 +214,9 @@ export interface VocabRow {
   }[];
   /** @deprecated Use tagIds instead. Kept for backward compatibility during migration. */
   tags?: string[];
-  conceptLevelId?: string; // Optional link to ConceptLevel
+  conceptLevelIds?: string[]; // Multiple links to ConceptLevels
+  /** @deprecated Use conceptLevelIds instead */
+  conceptLevelId?: string;
   createdAt: number;
   modifiedAt: number;
 }

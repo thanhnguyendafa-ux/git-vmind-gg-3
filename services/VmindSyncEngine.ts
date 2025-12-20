@@ -584,7 +584,10 @@ export class VmindSyncEngine {
                 if (createdAt) dbRow.created_at = createdAt;
                 if (modifiedAt) dbRow.modified_at = modifiedAt;
                 if (rest.conceptLevelId) {
-                    dbRow.conceptLevelId = rest.conceptLevelId; // keep as is because it was added as "conceptLevelId" in migration
+                    dbRow.conceptLevelId = rest.conceptLevelId;
+                }
+                if (rest.conceptLevelIds) {
+                    dbRow.conceptLevelIds = rest.conceptLevelIds;
                 }
 
                 const { error: upsertError } = await supabase.from('vocab_rows').upsert(dbRow);

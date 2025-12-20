@@ -8,6 +8,7 @@ import TableViewControls from './TableViewControls';
 import TableView from './TableView';
 import GalleryView from './GalleryView';
 import { useTableView } from '../contexts/TableViewContext';
+import { useTableScreen } from '../contexts/TableScreenContext';
 import { useProcessedTableData } from '../hooks/useProcessedTableData';
 import { Button } from '../../../components/ui/Button';
 import { useLocalStorage } from '../../../hooks/useLocalStorage';
@@ -42,6 +43,7 @@ interface ViewTabProps {
 
 const ViewTab: React.FC<ViewTabProps> = (props) => {
     const { table, isLoading, onBatchDelete, onConfirmBatchGenerate, fillablePrompts, onRunAiClick, onPasteData, onPasteClick, preFilteredRowIds, progressName, initialTagFilter, onClearFilter, onDeleteRow, onPreviewRow, sortableStats, onViewRow } = props;
+    const { isConceptPickerOpen, setIsConceptPickerOpen } = useTableScreen();
     const { state, dispatch } = useTableView();
     const { selectedRows, visibleColumns, visibleStats, fontSize } = state;
     const { showToast } = useUIStore();
@@ -301,6 +303,7 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
                             <button onClick={onConfirmBatchGenerate} className="flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 font-semibold animate-ai-glow px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="sparkles" className="w-4 h-4" />AI Fill</button>
                         )}
                         <button onClick={onBatchDelete} className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-semibold px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="trash" className="w-4 h-4" />Delete</button>
+                        <button onClick={() => setIsConceptPickerOpen(true)} className="flex items-center gap-1.5 text-sm text-purple-400 hover:text-purple-300 font-semibold px-2 py-1 hover:bg-slate-700 rounded transition-colors"><Icon name="link" className="w-4 h-4" />Concept</button>
                         <div className="w-px h-4 bg-slate-600 mx-1"></div>
                         <button onClick={() => dispatch({ type: 'SET_SELECTED_ROWS', payload: new Set() })} className="p-1 text-slate-400 hover:text-white rounded-full hover:bg-slate-700"><Icon name="x" className="w-4 h-4" /></button>
                     </div>
@@ -314,6 +317,7 @@ const ViewTab: React.FC<ViewTabProps> = (props) => {
                                 {singleSelectedRow && (<button onClick={() => { onPreviewRow(singleSelectedRow); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-3 text-text-main dark:text-secondary-100"> <Icon name="play" className="w-5 h-5 text-emerald-500" /> Preview Card </button>)}
                                 {hasFillableSelected && (<button onClick={() => { onConfirmBatchGenerate(); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-3 text-text-main dark:text-secondary-100"> <Icon name="sparkles" className="w-5 h-5 text-cyan-500" /> AI Fill Empty Cells </button>)}
                                 <button onClick={() => { onBatchDelete(); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-error-50 dark:hover:bg-error-900/20 rounded-md flex items-center gap-3 text-error-600 dark:text-error-400"> <Icon name="trash" className="w-5 h-5" /> Delete Selected </button>
+                                <button onClick={() => { setIsConceptPickerOpen(true); setIsSelectionMenuOpen(false); }} className="w-full text-left px-3 py-3 text-sm hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-md flex items-center gap-3 text-text-main dark:text-secondary-100"> <Icon name="link" className="w-5 h-5 text-purple-500" /> Link to Concept </button>
                             </div>
                         </Popover>
                         <div className="w-px h-6 bg-slate-600 mx-1"></div>

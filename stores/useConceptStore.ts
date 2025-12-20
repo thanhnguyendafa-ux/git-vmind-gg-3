@@ -175,7 +175,7 @@ export const useConceptStore = create<ConceptState>()(
 
                 allTables.forEach(table => {
                     table.rows.forEach(row => {
-                        if (row.conceptLevelId === levelId) {
+                        if (row.conceptLevelIds?.includes(levelId) || row.conceptLevelId === levelId) {
                             matchingRows.push(row);
                         }
                     });
