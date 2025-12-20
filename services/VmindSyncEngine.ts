@@ -61,6 +61,14 @@ export const getSyncActionDetails = (action: SyncAction): string => {
                 return 'Add Bookmark';
             case 'DELETE_BOOKMARK':
                 return 'Remove Bookmark';
+            case 'UPSERT_CONCEPT':
+                return `Concept: "${payload.concept?.name || 'Untitled'}"`;
+            case 'DELETE_CONCEPT':
+                return 'Delete Concept';
+            case 'UPSERT_CONCEPT_LEVEL':
+                return `Level: "${payload.level?.name || 'Untitled'}"`;
+            case 'DELETE_CONCEPT_LEVEL':
+                return 'Delete Level';
             default:
                 return type;
         }
@@ -307,7 +315,8 @@ export class VmindSyncEngine {
             userId,
             retries: 0,
             timestamp: Date.now(),
-            status: 'pending'
+            status: 'pending',
+            deferCount: 0
         };
 
         this.queue.push(action);
@@ -433,6 +442,67 @@ export class VmindSyncEngine {
             const errorCode = error?.code;
             const isTerminalError = errorCode === '23503' || errorCode === '23505';
 
+            // FIX: If it's a FK violation (23503) or a Permission Denied (42501), 
+            // it might be a dependency ordering issue (child syncing before parent).
+            // Move it to the end of the queue to give other items (dependencies) a chance to process.
+            if (errorCode === '23503' || errorCode === '42501') {
+                const currentDeferCount = action.deferCount || 0;
+
+                if (currentDeferCount >= 5) {
+                    // Stop the loop!
+                    console.error(`Foreign Key Violation: Max deferral limit reached for ${action.type}. Marking as failed.`);
+                    action.status = 'failed';
+                    action.lastError = `Dependencies missing (FK Violation). Processed ${currentDeferCount} times without resolution.`;
+                    await this.saveToDB(action);
+
+                    this.logAction(action.id, action.type, 'failed', `Failed: Dependencies Missing (Loop Detected)`);
+
+                    this.broadcastQueueState();
+                    // Proceed to next
+                    this.isProcessing = false;
+                    this._processQueue();
+                    return;
+                }
+
+                console.warn(`Foreign Key Violation for ${action.type}. Deferring item to end of queue (${currentDeferCount + 1}/5). Details: ${userError}`);
+
+                // 1. Remove from DB and Queue
+                await this.removeFromDB(action.id);
+                this.queue.shift();
+
+                // 2. Reset status and push to back with incremented deferCount
+                action.status = 'pending';
+                action.retries = 0; // Reset retries to give it a fresh start
+                action.deferCount = currentDeferCount + 1;
+
+                // 3. Save to DB and Queue
+                this.queue.push(action);
+                await this.saveToDB(action);
+
+                this.broadcastQueueState();
+
+                // 4. Continue processing the next item immediately
+                this.isProcessing = false;
+                this._processQueue();
+                return;
+            }
+
+            // FIX: If it's a unique violation (23505), the item already exists.
+            // Just discard it silently since the data is already in the database.
+            if (errorCode === '23505') {
+                console.warn(`Unique Violation for ${action.type}. Item already exists, discarding. Details: ${userError}`);
+
+                // Remove from queue and DB
+                this.queue.shift();
+                await this.removeFromDB(action.id);
+                this.broadcastQueueState();
+
+                // Continue processing next item
+                this.isProcessing = false;
+                this._processQueue();
+                return;
+            }
+
             const isNetworkError = userError.includes('Network connection lost');
 
             if (!isTerminalError && action.retries < this.maxRetries) {
@@ -466,9 +536,6 @@ export class VmindSyncEngine {
 
             } else {
                 action.status = 'failed';
-                if (errorCode === '23503') {
-                    action.lastError = "Data dependency missing. Try resetting queue or pull fresh data.";
-                }
                 await this.saveToDB(action);
 
                 this.logAction(action.id, action.type, 'failed', `Failed: ${itemDetails} - ${action.lastError}`);
@@ -483,30 +550,33 @@ export class VmindSyncEngine {
     }
 
     private async executeAction(action: SyncAction) {
+
         const { type, payload, userId } = action;
+
 
         switch (type) {
             case 'UPSERT_ROW': {
                 const { row, tableId } = payload;
-                const { stats, createdAt, modifiedAt, ...rest } = row;
+                const { stats, createdAt, modifiedAt, ...rest } = row as any;
+                const s = stats as any;
                 const statsForDb = {
-                    ...stats,
-                    last_studied: stats.lastStudied,
-                    flashcard_status: stats.flashcardStatus,
-                    flashcard_encounters: stats.flashcardEncounters,
-                    is_flashcard_reviewed: stats.isFlashcardReviewed,
-                    last_practice_date: stats.lastPracticeDate,
-                    scramble_encounters: stats.scrambleEncounters,
-                    scramble_ratings: stats.scrambleRatings,
-                    theater_encounters: stats.theaterEncounters,
-                    anki_state: stats.ankiState,
-                    anki_step: stats.ankiStep,
-                    anki_repetitions: stats.ankiRepetitions,
-                    anki_ease_factor: stats.ankiEaseFactor,
-                    anki_interval: stats.ankiInterval,
-                    anki_lapses: stats.ankiLapses,
-                    anki_due_date: stats.ankiDueDate,
-                    confi_viewed: stats.confiViewed,
+                    ...s,
+                    last_studied: s.lastStudied,
+                    flashcard_status: s.flashcardStatus,
+                    flashcard_encounters: s.flashcardEncounters,
+                    is_flashcard_reviewed: s.isFlashcardReviewed,
+                    last_practice_date: s.lastPracticeDate,
+                    scramble_encounters: s.scrambleEncounters,
+                    scramble_ratings: s.scrambleRatings,
+                    theater_encounters: s.theaterEncounters,
+                    anki_state: s.ankiState,
+                    anki_step: s.ankiStep,
+                    anki_repetitions: s.ankiRepetitions,
+                    anki_ease_factor: s.ankiEaseFactor,
+                    anki_interval: s.ankiInterval,
+                    anki_lapses: s.ankiLapses,
+                    anki_due_date: s.ankiDueDate,
+                    confi_viewed: s.confiViewed,
                 };
                 delete statsForDb.lastStudied; delete statsForDb.flashcardStatus; delete statsForDb.flashcardEncounters; delete statsForDb.isFlashcardReviewed; delete statsForDb.lastPracticeDate; delete statsForDb.scrambleEncounters; delete statsForDb.scrambleRatings; delete statsForDb.theaterEncounters; delete statsForDb.ankiRepetitions; delete statsForDb.ankiEaseFactor; delete statsForDb.ankiInterval; delete statsForDb.ankiDueDate; delete statsForDb.confiViewed; delete statsForDb.ankiState; delete statsForDb.ankiStep; delete statsForDb.ankiLapses;
 
@@ -518,7 +588,12 @@ export class VmindSyncEngine {
                 }
 
                 const { error: upsertError } = await supabase.from('vocab_rows').upsert(dbRow);
-                if (upsertError) throw upsertError;
+                if (upsertError) {
+                    if (upsertError.code === '23505' || upsertError.code === '409') {
+                        console.error("[VmindSyncEngine] Conflict detected for UPSERT_ROW:", upsertError);
+                    }
+                    throw upsertError;
+                }
                 break;
             }
             case 'UPSERT_TABLE': {
@@ -822,6 +897,50 @@ export class VmindSyncEngine {
 
                 // 3. Update
                 const { error } = await supabase.from('notes').update({ bookmarks: updatedBookmarks }).eq('id', noteId);
+                if (error) throw error;
+                break;
+            }
+            case 'UPSERT_CONCEPT': {
+                const { concept } = payload;
+                const conceptForDb = {
+                    id: concept.id,
+                    code: concept.code,
+                    name: concept.name,
+                    description: concept.description,
+                    parent_id: concept.parentId,
+                    is_folder: concept.isFolder,
+                    user_id: userId,
+                    created_at: concept.createdAt,
+                    modified_at: concept.modifiedAt
+                };
+                const { error } = await supabase.from('concepts').upsert(conceptForDb);
+                if (error) throw error;
+                break;
+            }
+            case 'DELETE_CONCEPT': {
+                const { conceptId } = payload;
+                const { error } = await supabase.from('concepts').delete().eq('id', conceptId);
+                if (error) throw error;
+                break;
+            }
+            case 'UPSERT_CONCEPT_LEVEL': {
+                const { level } = payload;
+                const levelForDb = {
+                    id: level.id,
+                    concept_id: level.conceptId,
+                    name: level.name,
+                    order: level.order,
+                    description: level.description,
+                    created_at: level.createdAt,
+                    user_id: userId
+                };
+                const { error } = await supabase.from('concept_levels').upsert(levelForDb);
+                if (error) throw error;
+                break;
+            }
+            case 'DELETE_CONCEPT_LEVEL': {
+                const { levelId } = payload;
+                const { error } = await supabase.from('concept_levels').delete().eq('id', levelId);
                 if (error) throw error;
                 break;
             }

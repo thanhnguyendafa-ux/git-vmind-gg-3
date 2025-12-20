@@ -67,6 +67,7 @@ const MapScreen = React.lazy(() => import('./features/map/MapScreen'));
 const TagManagerScreen = React.lazy(() => import('./features/tags/TagManagerScreen'));
 const TimeTrackingScreen = React.lazy(() => import('./features/tracking/TimeTrackingScreen'));
 const StatsScreen = React.lazy(() => import('./features/profile/StatsScreen'));
+const ConceptLinksScreen = React.lazy(() => import('./features/concepts/ConceptLinksScreen'));
 
 const LoadingFallback = () => (
     <div className="min-h-screen bg-background dark:bg-secondary-900 flex items-center justify-center">
@@ -486,6 +487,7 @@ export const AppContent: React.FC = () => {
             case Screen.TagManager: return <TagManagerScreen />;
             case Screen.TimeTracking: return <TimeTrackingScreen />;
             case Screen.Stats: return <StatsScreen />;
+            case Screen.ConceptLinks: return <ConceptLinksScreen />;
             default: return <HomeScreen />;
         }
     };

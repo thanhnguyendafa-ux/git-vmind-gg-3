@@ -38,6 +38,10 @@ interface UIState {
   isImmersive: boolean;
   backgroundSettings: BackgroundSettings;
 
+  // Concept Section State (Persisted)
+  selectedConceptId: string | null;
+  expandedConceptIds: string[];
+
   // Library Module
   isLibraryMode: boolean;
 
@@ -85,6 +89,11 @@ interface UIState {
   setIsImmersive: (isImmersive: boolean) => void;
   setBackgroundSettings: (settings: Partial<BackgroundSettings>) => void;
   setIsLibraryMode: (isLibrary: boolean) => void;
+
+  // Concept Section Actions
+  setSelectedConceptId: (id: string | null) => void;
+  setExpandedConceptIds: (ids: string[]) => void;
+  toggleExpandedConceptId: (id: string) => void;
 }
 
 const DEFAULT_BG_SETTINGS: BackgroundSettings = {
@@ -131,6 +140,10 @@ export const useUIStore = create<UIState>()(
     isImmersive: false,
     backgroundSettings: loadBgSettings(),
     isLibraryMode: false,
+
+    // Concept Section State
+    selectedConceptId: localStorage.getItem('vmind-selected-concept') || null,
+    expandedConceptIds: JSON.parse(localStorage.getItem('vmind-expanded-concepts') || '[]'),
 
     // Navigation Guard State
     pendingAction: null,
@@ -263,5 +276,23 @@ export const useUIStore = create<UIState>()(
       return { backgroundSettings: updated };
     }),
     setIsLibraryMode: (isLibrary) => set({ isLibraryMode: isLibrary }),
+
+    // Concept Section Actions
+    setSelectedConceptId: (id) => set(() => {
+      if (id) localStorage.setItem('vmind-selected-concept', id);
+      else localStorage.removeItem('vmind-selected-concept');
+      return { selectedConceptId: id };
+    }),
+    setExpandedConceptIds: (ids) => set(() => {
+      localStorage.setItem('vmind-expanded-concepts', JSON.stringify(ids));
+      return { expandedConceptIds: ids };
+    }),
+    toggleExpandedConceptId: (id) => set(state => {
+      const next = state.expandedConceptIds.includes(id)
+        ? state.expandedConceptIds.filter(i => i !== id)
+        : [...state.expandedConceptIds, id];
+      localStorage.setItem('vmind-expanded-concepts', JSON.stringify(next));
+      return { expandedConceptIds: next };
+    }),
   })
 );

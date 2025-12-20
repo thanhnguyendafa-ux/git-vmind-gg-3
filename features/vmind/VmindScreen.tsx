@@ -119,6 +119,14 @@ const VmindScreen: React.FC = () => {
             enabled: true,
             action: () => attemptNavigation(Screen.Journal)
         },
+        {
+            name: 'Concept Links',
+            icon: 'hierarchy',
+            color: 'purple',
+            description: 'Organize vocabulary by concept hierarchies.',
+            enabled: true,
+            action: () => attemptNavigation(Screen.ConceptLinks)
+        },
     ];
 
     const renderModeCard = (mode: any, index: number, totalPrevious: number = 0) => {

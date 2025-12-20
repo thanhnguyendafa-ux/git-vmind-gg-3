@@ -12,17 +12,26 @@ import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import ConceptAnalytics from './components/ConceptAnalytics';
 import ConceptAdvancedSearch from './components/ConceptAdvancedSearch';
 import { createPhotosynthesisSample } from './utils/ConceptLinksSample';
+import { useUIStore } from '../../stores/useUIStore';
 
 const ConceptLinksScreen: React.FC = () => {
-    const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
+    const {
+        selectedConceptId: persistedSelectedId,
+        setSelectedConceptId,
+        expandedConceptIds,
+        setExpandedConceptIds,
+        toggleExpandedConceptId
+    } = useUIStore();
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [expandedConcepts, setExpandedConcepts] = useState<Set<string>>(new Set());
+    // Convert to Set for faster lookup in children components
+    const expandedConcepts = useMemo(() => new Set(expandedConceptIds), [expandedConceptIds]);
     const [selectedCard, setSelectedCard] = useState<VocabRow | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [activeView, setActiveView] = useState<'kanban' | 'analytics'>('kanban');
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const [filteredConcepts, setFilteredConcepts] = useState<Concept[]>([]);
-    const [isLoadingExample, setIsLoadingExample] = useState(false);
+    const [isLoadingSample, setIsLoadingSample] = useState(false);
 
     // Modal states
     const [showConceptForm, setShowConceptForm] = useState(false);
@@ -34,42 +43,68 @@ const ConceptLinksScreen: React.FC = () => {
     const { concepts, getRootConcepts, deleteConcept } = useConceptStore();
 
     const handleLoadExample = async () => {
-        setIsLoadingExample(true);
+        setIsLoadingSample(true);
         try {
             const newId = await createPhotosynthesisSample();
             if (newId) {
                 setSelectedConceptId(newId);
-                // Also expand the parent if it's nested
+                // Also auto-expand parents
                 const concept = useConceptStore.getState().concepts.find(c => c.id === newId);
                 if (concept?.parentId) {
-                    toggleExpanded(concept.parentId);
+                    if (!expandedConceptIds.includes(concept.parentId)) {
+                        setExpandedConceptIds([...expandedConceptIds, concept.parentId]);
+                    }
                 }
             }
         } finally {
-            setIsLoadingExample(false);
+            setIsLoadingSample(false);
         }
     };
 
     // Auto-select first root concept if none selected
-    React.useEffect(() => {
-        if (!selectedConceptId && concepts.length > 0) {
+    useEffect(() => {
+        if (!persistedSelectedId && concepts.length > 0) {
             const roots = getRootConcepts();
             if (roots.length > 0) {
                 setSelectedConceptId(roots[0].id);
             }
         }
-    }, [concepts, selectedConceptId, getRootConcepts]);
+    }, [concepts, persistedSelectedId, getRootConcepts, setSelectedConceptId]);
+
+    // REACTIVE GUARD: If the selected concept no longer exists (e.g. deleted), clear the selection
+    useEffect(() => {
+        if (persistedSelectedId && concepts.length > 0) {
+            const exists = concepts.some(c => c.id === persistedSelectedId);
+            if (!exists) {
+                console.log(`[ReactiveGuard] Selected concept ${persistedSelectedId} no longer exists. Clearing selection.`);
+                setSelectedConceptId(null);
+            }
+        }
+    }, [concepts, persistedSelectedId, setSelectedConceptId]);
+
+    // Auto-expand parents of selected concept and implement "Auto Hiện Ra" for root folders
+    useEffect(() => {
+        const rootFolders = getRootConcepts().filter(c => c.isFolder);
+
+        // If nothing expanded yet, auto-expand root folders (User request: "auto hiện ra")
+        if (expandedConceptIds.length === 0 && rootFolders.length > 0) {
+            setExpandedConceptIds(rootFolders.map(c => c.id));
+            return;
+        }
+
+        if (persistedSelectedId) {
+            const concept = concepts.find(c => c.id === persistedSelectedId);
+            if (concept?.parentId) {
+                // Ensure parent is expanded
+                if (!expandedConceptIds.includes(concept.parentId)) {
+                    setExpandedConceptIds([...expandedConceptIds, concept.parentId]);
+                }
+            }
+        }
+    }, [persistedSelectedId, concepts, getRootConcepts, expandedConceptIds, setExpandedConceptIds]);
 
     const toggleExpanded = (conceptId: string) => {
-        setExpandedConcepts(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(conceptId)) {
-                newSet.delete(conceptId);
-            } else {
-                newSet.add(conceptId);
-            }
-            return newSet;
-        });
+        toggleExpandedConceptId(conceptId);
     };
 
     const handleEditConcept = (concept: Concept) => {
@@ -85,11 +120,28 @@ const ConceptLinksScreen: React.FC = () => {
 
         setIsDeleting(true);
         try {
-            await deleteConcept(deletingConcept.id);
-            // If deleted concept was selected, clear selection
-            if (selectedConceptId === deletingConcept.id) {
+            const idToDelete = deletingConcept.id;
+
+            // Check if currently selected concept is the one being deleted OR a child of it
+            let shouldClearSelection = false;
+            if (persistedSelectedId) {
+                if (persistedSelectedId === idToDelete) {
+                    shouldClearSelection = true;
+                } else {
+                    // Check if selected concept is a descendant of the deleted concept
+                    const hierarchy = useConceptStore.getState().getConceptHierarchy(persistedSelectedId);
+                    if (hierarchy.some(c => c.id === idToDelete)) {
+                        shouldClearSelection = true;
+                    }
+                }
+            }
+
+            await deleteConcept(idToDelete);
+
+            if (shouldClearSelection) {
                 setSelectedConceptId(null);
             }
+
             setDeletingConcept(null);
         } catch (err) {
             console.error('Failed to delete concept:', err);
@@ -103,8 +155,8 @@ const ConceptLinksScreen: React.FC = () => {
     };
 
     const selectedConcept = useMemo(() => {
-        return concepts.find(c => c.id === selectedConceptId);
-    }, [concepts, selectedConceptId]);
+        return concepts.find(c => c.id === persistedSelectedId);
+    }, [concepts, persistedSelectedId]);
 
     return (
         <div className="h-full flex flex-col bg-background dark:bg-secondary-900">
@@ -169,7 +221,7 @@ const ConceptLinksScreen: React.FC = () => {
                     {/* Stats & Actions */}
                     <div className="flex items-center gap-3">
                         {/* View Toggle */}
-                        {selectedConceptId && !selectedConcept?.isFolder && (
+                        {persistedSelectedId && !selectedConcept?.isFolder && (
                             <div className="flex items-center bg-secondary-100 dark:bg-secondary-700 rounded-lg p-1">
                                 <button
                                     onClick={() => setActiveView('kanban')}
@@ -198,11 +250,11 @@ const ConceptLinksScreen: React.FC = () => {
                         </div>
                         <button
                             onClick={handleLoadExample}
-                            disabled={isLoadingExample}
+                            disabled={isLoadingSample}
                             className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium flex items-center gap-1.5 disabled:opacity-50"
                         >
-                            <Icon name={isLoadingExample ? "loader" : "book-open"} className={`w-4 h-4 ${isLoadingExample ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">Example</span>
+                            <Icon name={isLoadingSample ? "loader" : "book-open"} className={`w-4 h-4 ${isLoadingSample ? 'animate-spin' : ''}`} />
+                            <span className="hidden sm:inline">Sample</span>
                         </button>
                         <button
                             onClick={() => setShowConceptForm(true)}
@@ -211,7 +263,7 @@ const ConceptLinksScreen: React.FC = () => {
                             <Icon name="plus" className="w-4 h-4" />
                             <span className="hidden sm:inline">New Concept</span>
                         </button>
-                        {selectedConceptId && !selectedConcept?.isFolder && (
+                        {persistedSelectedId && !selectedConcept?.isFolder && (
                             <button
                                 onClick={() => setShowLevelForm(true)}
                                 className="px-3 py-1.5 bg-secondary-100 dark:bg-secondary-700 text-text-main dark:text-secondary-100 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-600 transition-colors text-sm font-medium flex items-center gap-1.5"
@@ -248,7 +300,7 @@ const ConceptLinksScreen: React.FC = () => {
             <div className="flex-1 flex overflow-hidden">
                 {/* Sidebar */}
                 <ConceptTreeSidebar
-                    selectedId={selectedConceptId}
+                    selectedId={persistedSelectedId}
                     onSelect={setSelectedConceptId}
                     expanded={expandedConcepts}
                     onToggleExpand={toggleExpanded}
@@ -261,15 +313,15 @@ const ConceptLinksScreen: React.FC = () => {
 
                 {/* Content Area */}
                 <div className="flex-1 overflow-hidden">
-                    {selectedConceptId ? (
+                    {persistedSelectedId ? (
                         activeView === 'kanban' ? (
                             <ConceptKanbanBoard
-                                conceptId={selectedConceptId}
+                                conceptId={persistedSelectedId}
                                 searchQuery={searchQuery}
                                 onCardClick={handleCardClick}
                             />
                         ) : (
-                            <ConceptAnalytics conceptId={selectedConceptId} />
+                            <ConceptAnalytics conceptId={persistedSelectedId} />
                         )
                     ) : (
                         <div className="h-full flex items-center justify-center">
@@ -331,9 +383,9 @@ const ConceptLinksScreen: React.FC = () => {
             )}
 
             {/* Level Form Modal */}
-            {showLevelForm && selectedConceptId && (
+            {showLevelForm && persistedSelectedId && (
                 <LevelFormModal
-                    conceptId={selectedConceptId}
+                    conceptId={persistedSelectedId}
                     onClose={() => setShowLevelForm(false)}
                     onSuccess={() => {
                         // Refresh handled by store

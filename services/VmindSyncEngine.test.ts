@@ -3,38 +3,46 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act } from '@testing-library/react';
+
+
 import { VmindSyncEngine } from './VmindSyncEngine';
 import { useUIStore } from '../stores/useUIStore';
 import { supabase } from './supabaseClient';
 import { SyncAction } from '../types';
 
 // Mock test globals
-declare var describe: (name: string, fn: () => void) => void;
-declare var it: (name: string, fn: () => void) => void;
-declare var expect: (actual: any) => any;
-declare var beforeEach: (fn: () => void) => void;
-declare var afterEach: (fn: () => void) => void;
-declare var vi: any;
+// declare var describe: (name: string, fn: () => void) => void;
+// declare var it: (name: string, fn: () => void) => void;
+// declare var expect: (actual: any) => any;
+// declare var beforeEach: (fn: () => void) => void;
+// declare var afterEach: (fn: () => void) => void;
+// declare var vi: any;
+
 
 // --- Mocks ---
 
 // Mock Supabase client
+const upsertMock = vi.fn();
+const deleteMock = vi.fn(() => ({
+  in: vi.fn(),
+}));
+const selectMock = vi.fn(() => ({
+  eq: vi.fn(() => ({
+    single: vi.fn(),
+  })),
+}));
+
 vi.mock('./supabaseClient', () => ({
   supabase: {
     from: vi.fn(() => ({
-      upsert: vi.fn(),
-      delete: vi.fn(() => ({
-        in: vi.fn(),
-      })),
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn(),
-        })),
-      })),
+      upsert: upsertMock,
+      delete: deleteMock,
+      select: selectMock,
     })),
     rpc: vi.fn(),
   },
 }));
+
 
 // Mock Zustand UI store
 const setSyncStatusMock = vi.fn();
@@ -89,11 +97,11 @@ describe('VmindSyncEngine', () => {
   beforeEach(() => {
     // Reset engine instance to get a fresh one for each test
     (VmindSyncEngine as any).instance = undefined;
-    
+
     // Clear mocks
     vi.clearAllMocks();
     Object.keys(dbStore).forEach(key => delete dbStore[key]);
-    
+
     // Use fake timers to control retry logic
     vi.useFakeTimers();
   });
@@ -106,7 +114,7 @@ describe('VmindSyncEngine', () => {
     // Arrange
     vi.mocked(supabase.from('vocab_rows').upsert).mockResolvedValueOnce({ error: null } as any);
     const engine = VmindSyncEngine.getInstance();
-    
+
     // Act
     await act(async () => {
       engine.push('UPSERT_ROW', { tableId: 't1', row: { id: 'r1', cols: {}, stats: {} } }, 'user1');
@@ -133,7 +141,7 @@ describe('VmindSyncEngine', () => {
       engine.push('UPSERT_ROW', { tableId: 't1', row: { id: 'r1', cols: {}, stats: {} } }, 'user1');
       await vi.advanceTimersByTimeAsync(100); // Allow initial process
     });
-    
+
     // Assert after first failure
     expect(supabase.from('vocab_rows').upsert).toHaveBeenCalledTimes(1);
     const actionInDB = Object.values(dbStore)[0];
@@ -153,44 +161,44 @@ describe('VmindSyncEngine', () => {
     // Arrange
     vi.mocked(supabase.from('vocab_rows').upsert).mockRejectedValue(new Error('Persistent Error'));
     const engine = VmindSyncEngine.getInstance();
-    
+
     // Act
     await act(async () => {
       engine.push('UPSERT_ROW', { tableId: 't1', row: { id: 'r1-fail', cols: {}, stats: {} } }, 'user1');
       // Run through all retries
-      for(let i = 0; i < 5; i++) {
+      for (let i = 0; i < 5; i++) {
         // Advance timers just enough for the next retry attempt
         await vi.advanceTimersByTimeAsync(100); // initial process
         const delay = Math.pow(2, i + 1) * 1000;
         await vi.advanceTimersByTimeAsync(delay);
       }
     });
-  
+
     // Assert
     expect(supabase.from('vocab_rows').upsert).toHaveBeenCalledTimes(5); // 1 initial + 4 retries... wait, it's 5 retries. So 6 calls? The code says action.retries < maxRetries (5). So 0, 1, 2, 3, 4. That's 5 calls.
     const failedAction = Object.values(dbStore)[0];
     expect(failedAction.status).toBe('failed');
     expect(failedAction.retries).toBe(5);
     expect(setSyncStatusMock).toHaveBeenCalledWith('error');
-// FIX: Replaced `expect.stringMatching` with a direct string comparison to resolve the type error. The mapped error message is now explicitly checked.
+    // FIX: Replaced `expect.stringMatching` with a direct string comparison to resolve the type error. The mapped error message is now explicitly checked.
     expect(showToastMock).toHaveBeenCalledWith('Sync Failed: An unexpected error occurred. We will keep trying.', 'error');
   });
 
   it('TC_SYNC_04: should allow manually retrying a failed item', async () => {
-     // Arrange: Create a failed item
+    // Arrange: Create a failed item
     const failedAction: SyncAction = {
       id: 'failed-1', type: 'UPSERT_ROW', payload: { tableId: 't1', row: { id: 'r-fail', cols: {}, stats: {} } },
       userId: 'user1', retries: 5, timestamp: Date.now(), status: 'failed', lastError: 'Max retries exceeded'
     };
     dbStore['failed-1'] = failedAction;
-    
+
     vi.mocked(supabase.from('vocab_rows').upsert).mockResolvedValueOnce({ error: null } as any);
     const engine = VmindSyncEngine.getInstance();
     await act(async () => {
-        // Load the failed item into the engine's queue
-        await (engine as any).loadQueue();
+      // Load the failed item into the engine's queue
+      await (engine as any).loadQueue();
     });
-    
+
     // Act
     await act(async () => {
       await engine.retryItem('failed-1');
@@ -213,7 +221,7 @@ describe('VmindSyncEngine', () => {
     dbStore['discard-1'] = failedAction;
     const engine = VmindSyncEngine.getInstance();
     await act(async () => {
-        await (engine as any).loadQueue();
+      await (engine as any).loadQueue();
     });
 
     // Act
@@ -226,4 +234,51 @@ describe('VmindSyncEngine', () => {
     expect(supabase.from('vocab_rows').upsert).not.toHaveBeenCalled();
     expect(setSyncStatusMock).toHaveBeenCalledWith('idle');
   });
+
+  it('TC_SYNC_06: should handle 23503 Foreign Key error by deferring the item', async () => {
+    // Arrange: Mock the sequence:
+    // 1. UPSERT_ROW -> Fails with 23503 (Missing Concept Level)
+    // 2. UPSERT_CONCEPT_LEVEL -> Success
+    // 3. Retry UPSERT_ROW -> Success
+
+    // Mock implementations
+    // Mock implementations
+    upsertMock
+      .mockRejectedValueOnce({ code: '23503', message: 'Foreign key violation' }) // First attempt fails (ROW)
+      .mockResolvedValueOnce({ error: null } as any)  // Second attempt succeeds (LEVEL)
+      .mockResolvedValueOnce({ error: null } as any); // Third attempt succeeds (ROW retry)
+
+    // Note: upsertMock is shared, so we chain responses for ALL calls.
+    // Call 1: Row (Fail)
+    // Call 2: Level (Success)
+    // Call 3: Row (Success)
+
+    const engine = VmindSyncEngine.getInstance();
+
+
+    // Act
+    await act(async () => {
+      // Push the dependent row FIRST (Simulation of out-of-order queue)
+      engine.push('UPSERT_ROW', { tableId: 't1', row: { id: 'row1', conceptLevelId: 'level1', cols: {}, stats: {} } }, 'user1');
+
+      // Push the dependency SECOND
+      engine.push('UPSERT_CONCEPT_LEVEL', { level: { id: 'level1', conceptId: 'c1', name: 'L1', order: 1, createdAt: 100 } }, 'user1');
+
+      // Run timers
+      await vi.runAllTimersAsync();
+    });
+
+    // Assert
+    // 1. Row should have been attempted once and failed
+    // 2. Level should have been attempted and succeeded
+    // 3. Row should have been retried and succeeded
+
+    // NOTE: This test will FAIL initially because the engine stops at the failed row.
+    // We expect the fix to make the engine defer the row to the back of the queue.
+
+    // Check calls
+    expect(upsertMock).toHaveBeenCalledTimes(3);
+    expect(Object.keys(dbStore).length).toBe(0); // Everything synced
+  });
+
 });

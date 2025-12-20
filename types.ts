@@ -743,7 +743,11 @@ export type SyncActionType =
   | 'UPSERT_CONTEXT_LINK'
   | 'DELETE_CONTEXT_LINK'
   | 'UPSERT_BOOKMARK' // New for atomic bookmark upsert
-  | 'DELETE_BOOKMARK'; // New for atomic bookmark delete
+  | 'DELETE_BOOKMARK' // New for atomic bookmark delete
+  | 'UPSERT_CONCEPT'
+  | 'DELETE_CONCEPT'
+  | 'UPSERT_CONCEPT_LEVEL'
+  | 'DELETE_CONCEPT_LEVEL';
 
 export interface SyncAction {
   id: string;
@@ -754,6 +758,7 @@ export interface SyncAction {
   userId: string;
   status: 'pending' | 'processing' | 'failed';
   lastError?: string;
+  deferCount?: number;
 }
 
 export interface SyncLogEntry {
