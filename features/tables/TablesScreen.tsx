@@ -1,6 +1,4 @@
-
 import * as React from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import { Table, Folder, Screen, VocabRow, FlashcardStatus, Column, Tag, ConfidenceProgress, AnkiProgress, AnkiConfig } from '../../types';
 import { useTableStore } from '../../stores/useTableStore';
 import { useUIStore } from '../../stores/useUIStore';
@@ -13,6 +11,7 @@ import Modal from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import ConfirmationModal from '../../components/ui/ConfirmationModal';
 import { useTagStore } from '../../stores/useTagStore';
+import { TableActionService } from '../../services/TableActionService';
 import { populateAccountWithSampleData } from '../../services/sampleDataService';
 import TablesLayout from './components/TablesLayout';
 import TablesSidebar from './components/TablesSidebar';
@@ -132,21 +131,21 @@ const TablesScreen: React.FC = () => {
     const [selectedTableId, setSelectedTableId] = React.useState<string | null>(null);
     const [currentFolderId, setCurrentFolderId] = React.useState<string | null>(null);
 
-    const tableDisplayData = useTableStore(useShallow(state =>
+    const tableDisplayData = useTableStore(state =>
         state.tables.map(t => ({
             ...t,
             rowCount: t.rowCount ?? t.rows.length,
         }))
-    ));
-    const folders = useTableStore(useShallow(state => state.folders));
-    const allGlobalTags = useTagStore(useShallow(state => state.tags.filter(t => !t.scope || t.scope === 'global')));
+    );
+    const folders = useTableStore(state => state.folders);
+    const allGlobalTags = useTagStore(state => state.tags.filter(t => !t.scope || t.scope === 'global'));
 
     const { createTable, createFolder, createAnkiStyleTable, moveTableToFolder, upsertRow, updateTable, deleteTable, deleteFolder, updateFolder } = useTableStore.getState();
     const { setIsTablesSidebarOpen, setCurrentScreen, triggerGlobalAction } = useUIStore();
     const { setStudySetupSourceTableId } = useSessionStore();
     const { confidenceProgresses, deleteConfidenceProgress } = useSessionDataStore();
 
-    const settings = useUserStore(useShallow(state => state.settings));
+    const settings = useUserStore(state => state.settings);
 
     const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
     const [newTableName, setNewTableName] = React.useState('');
@@ -175,41 +174,24 @@ const TablesScreen: React.FC = () => {
         return Array.from(tagSet).sort();
     }, [tableDisplayData]);
 
-    // --- Dependency Analysis for Deletion ---
-    const affectedConfidenceSets = React.useMemo(() => {
+    // --- Dependency Analysis for Deletion (USING SERVICE) ---
+    const affectedSets = React.useMemo(() => {
         if (!tableToDelete || !tableToDelete.id) return [];
-        return confidenceProgresses.filter(p => p.tableIds.includes(tableToDelete.id!));
+        return TableActionService.getAffectedConfidenceSets(tableToDelete.id);
     }, [tableToDelete, confidenceProgresses]);
 
-    const hasLinkedConcepts = React.useMemo(() => {
-        if (!tableToDelete || !tableToDelete.id) return false;
-        const table = tableDisplayData.find(t => t.id === tableToDelete.id);
-        return table?.rows.some(r => !!r.conceptLevelId) || false;
-    }, [tableToDelete, tableDisplayData]);
+    const affectedConfidenceSets = affectedSets; // Alias for JSX usage
 
     const deleteWarningMessage = React.useMemo(() => {
-        let msg = "";
+        if (!tableToDelete || !tableToDelete.id || !tableToDelete.name) return "";
+        return TableActionService.getDeleteWarning(tableToDelete.id, tableToDelete.name);
+    }, [tableToDelete, confidenceProgresses]);
 
-        if (affectedConfidenceSets.length > 0) {
-            const list = affectedConfidenceSets.slice(0, 3).map(s => `• ${s.name}`).join('\n');
-            const more = affectedConfidenceSets.length > 3 ? `\n...and ${affectedConfidenceSets.length - 3} more.` : '';
-            msg += `This table is used by ${affectedConfidenceSets.length} Confidence Set(s). Deleting it will also PERMANENTLY delete these sets:\n\n${list}${more}\n\n`;
-        }
-
-        if (hasLinkedConcepts) {
-            msg += "⚠️ Warning: This table contains cards linked to Concept Links. Deleting it will remove those cards from the Kanban board.";
-        }
-
-        if (!msg) {
-            return "Are you sure you want to permanently delete this table and all its words?";
-        }
-
-        return msg;
-    }, [affectedConfidenceSets, hasLinkedConcepts]);
-
-    const deleteWarningTitle = affectedConfidenceSets.length > 0
-        ? "Delete Table & Dependencies?"
-        : `Delete "${tableToDelete?.name}"?`;
+    const deleteWarningTitle = React.useMemo(() => {
+        if (!tableToDelete || !tableToDelete.id) return "Delete Table?";
+        const affectedSetsLocal = TableActionService.getAffectedConfidenceSets(tableToDelete.id);
+        return affectedSetsLocal.length > 0 ? "Delete Table & Dependencies?" : `Delete "${tableToDelete.name}"?`;
+    }, [tableToDelete, confidenceProgresses]);
 
 
     const handleCreateTable = async () => {
@@ -251,7 +233,9 @@ const TablesScreen: React.FC = () => {
             setRowForQuickAdd({
                 id: crypto.randomUUID(),
                 cols: {},
-                stats: { correct: 0, incorrect: 0, lastStudied: null, flashcardStatus: FlashcardStatus.New, flashcardEncounters: 0, isFlashcardReviewed: false, lastPracticeDate: null }
+                stats: { correct: 0, incorrect: 0, lastStudied: null, flashcardStatus: FlashcardStatus.New, flashcardEncounters: 0, isFlashcardReviewed: false, lastPracticeDate: null },
+                createdAt: Date.now(),
+                modifiedAt: Date.now()
             });
         }
     };
@@ -296,15 +280,8 @@ const TablesScreen: React.FC = () => {
             setDeletionMessage(`Deleting "${tableToDelete.name}" and cleaning up dependencies...`);
 
             try {
-                // 1. Cascading Delete: Remove dependent Confidence Sets
-                if (affectedConfidenceSets.length > 0) {
-                    for (const set of affectedConfidenceSets) {
-                        await deleteConfidenceProgress(set.id);
-                    }
-                }
-
-                // 2. Delete the Table
-                await deleteTable(tableToDelete.id);
+                // Delegate completely to Service
+                await TableActionService.deleteTableWithDependencies(tableToDelete.id);
 
                 if (selectedTableId === tableToDelete.id) {
                     setSelectedTableId(null);
@@ -331,8 +308,7 @@ const TablesScreen: React.FC = () => {
     };
 
     const tablesWithoutFolder = React.useMemo(() => {
-        const tablesInFolders = new Set(folders.flatMap(f => f.tableIds));
-        return tableDisplayData.filter(t => !tablesInFolders.has(t.id!));
+        return TableActionService.getUncategorizedTables(tableDisplayData, folders);
     }, [tableDisplayData, folders]);
 
     // --- Navigation Logic ---
