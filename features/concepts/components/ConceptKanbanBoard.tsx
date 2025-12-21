@@ -128,15 +128,15 @@ const ConceptKanbanBoard: React.FC<ConceptKanbanBoardProps> = ({
     if (levels.length === 0) {
         return (
             <div className="h-full flex items-center justify-center">
-                <div className="text-center max-w-md p-8">
-                    <div className="w-20 h-20 mx-auto mb-4 bg-secondary-100 dark:bg-secondary-800 rounded-full flex items-center justify-center">
-                        <Icon name="layers" className="w-10 h-10 text-text-subtle" />
+                <div className="text-center max-w-md p-8 animate-fadeIn">
+                    <div className="w-24 h-24 mx-auto mb-6 bg-white/30 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] flex items-center justify-center border border-white/40 dark:border-white/10 shadow-xl">
+                        <Icon name="layers" className="w-10 h-10 text-slate-400 dark:text-emerald-400/50" />
                     </div>
-                    <h2 className="text-xl font-semibold text-text-main dark:text-secondary-100 mb-2">
-                        No Levels Defined
+                    <h2 className="text-3xl font-serif font-medium text-slate-900 dark:text-white mb-2">
+                        Levels Required
                     </h2>
-                    <p className="text-text-subtle">
-                        Create levels for this concept to organize cards
+                    <p className="text-sm font-medium text-slate-500 dark:text-emerald-200/40 uppercase tracking-[0.15em]">
+                        Create structural levels to begin organizing cards
                     </p>
                 </div>
             </div>

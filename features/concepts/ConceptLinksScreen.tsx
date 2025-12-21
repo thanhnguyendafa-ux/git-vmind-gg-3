@@ -14,6 +14,7 @@ import ConceptAdvancedSearch from './components/ConceptAdvancedSearch';
 import { createPhotosynthesisSample } from './utils/ConceptLinksSample';
 import { useUIStore } from '../../stores/useUIStore';
 import BlockingLoader from './components/BlockingLoader';
+import AuroraBackground from '../../components/ui/AuroraBackground';
 
 const ConceptLinksScreen: React.FC = () => {
     const {
@@ -177,242 +178,238 @@ const ConceptLinksScreen: React.FC = () => {
     }, [concepts, persistedSelectedId]);
 
     return (
-        <div className="h-full flex flex-col bg-background dark:bg-secondary-900">
-            {/* Blocking Loader for Sample Seeding */}
-            <BlockingLoader isVisible={isLoadingSample} message={loadingMessage} />
+        <div className="h-full relative flex flex-col overflow-hidden">
+            {/* 1. The Atmosphere */}
+            <AuroraBackground />
 
-            {/* Header */}
-            <header className="flex-shrink-0 border-b border-border-subtle dark:border-white/10 bg-white dark:bg-secondary-800">
-                <div className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="lg:hidden p-2 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-lg transition-colors"
-                        >
-                            <Icon name="menu" className="w-5 h-5 text-text-main dark:text-secondary-100" />
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                                <Icon name="hierarchy" className="w-5 h-5 text-purple-600 dark:text-purple-400" variant="filled" />
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-bold text-text-main dark:text-secondary-100">
-                                    Concept Links
-                                </h1>
-                                <p className="text-xs text-text-subtle">
-                                    {selectedConcept ? selectedConcept.name : 'Select a concept to begin'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+            {/* Organic Noise Texture Overlay */}
+            <div className="absolute inset-0 z-0 opacity-[0.04] pointer-events-none bg-noise mix-blend-overlay" />
 
-                    {/* Search Bar */}
-                    <div className="flex items-center gap-2 flex-1 max-w-md mx-4">
-                        <div className="relative flex-1">
-                            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-subtle" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search concepts and cards..."
-                                className="w-full pl-10 pr-4 py-2 bg-secondary-100 dark:bg-secondary-700 border border-border-subtle dark:border-white/10 rounded-lg text-sm text-text-main dark:text-secondary-100 placeholder-text-subtle focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery('')}
-                                    aria-label="Clear search"
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-subtle hover:text-text-main"
-                                >
-                                    <Icon name="x" className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                        <button
-                            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-                            className={`p-2 rounded-lg transition-colors ${showAdvancedSearch
-                                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
-                                : 'bg-secondary-100 dark:bg-secondary-700 text-text-subtle hover:text-text-main'
-                                }`}
-                            title="Advanced Search"
-                        >
-                            <Icon name="filter" className="w-5 h-5" />
-                        </button>
-                    </div>
+            {/* Content Layer */}
+            <div className="relative z-10 h-full flex flex-col overflow-hidden">
+                {/* Blocking Loader for Sample Seeding */}
+                <BlockingLoader isVisible={isLoadingSample} message={loadingMessage} />
 
-                    {/* Stats & Actions */}
-                    <div className="flex items-center gap-3">
-                        {/* View Toggle */}
-                        {persistedSelectedId && !selectedConcept?.isFolder && (
-                            <div className="flex items-center bg-secondary-100 dark:bg-secondary-700 rounded-lg p-1">
-                                <button
-                                    onClick={() => setActiveView('kanban')}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeView === 'kanban'
-                                        ? 'bg-white dark:bg-secondary-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                                        : 'text-text-subtle hover:text-text-main'
-                                        }`}
-                                >
-                                    Kanban
-                                </button>
-                                <button
-                                    onClick={() => setActiveView('analytics')}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeView === 'analytics'
-                                        ? 'bg-white dark:bg-secondary-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                                        : 'text-text-subtle hover:text-text-main'
-                                        }`}
-                                >
-                                    Analytics
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="hidden md:flex items-center gap-1 text-sm text-text-subtle mr-2">
-                            <Icon name="folder" className="w-4 h-4" />
-                            <span>{concepts.length} concepts</span>
-                        </div>
-                        <button
-                            onClick={handleLoadExample}
-                            disabled={isLoadingSample}
-                            className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium flex items-center gap-1.5 disabled:opacity-50"
-                        >
-                            <Icon name={isLoadingSample ? "loader" : "book-open"} className={`w-4 h-4 ${isLoadingSample ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">Sample</span>
-                        </button>
-                        <button
-                            onClick={() => setShowConceptForm(true)}
-                            className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center gap-1.5"
-                        >
-                            <Icon name="plus" className="w-4 h-4" />
-                            <span className="hidden sm:inline">New Concept</span>
-                        </button>
-                        {persistedSelectedId && !selectedConcept?.isFolder && (
+                {/* Header */}
+                <header className="flex-shrink-0 backdrop-blur-xl bg-white/40 dark:bg-black/20 border-b border-white/20 dark:border-white/5">
+                    <div className="flex items-center justify-between p-4 px-6">
+                        <div className="flex items-center gap-4">
                             <button
-                                onClick={() => setShowLevelForm(true)}
-                                className="px-3 py-1.5 bg-secondary-100 dark:bg-secondary-700 text-text-main dark:text-secondary-100 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-600 transition-colors text-sm font-medium flex items-center gap-1.5"
+                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                className="lg:hidden p-2 hover:bg-white/20 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95"
+                            >
+                                <Icon name="menu" className="w-5 h-5 text-slate-800 dark:text-emerald-100" />
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-purple-500/10 dark:bg-purple-400/10 rounded-2xl">
+                                    <Icon name="hierarchy" className="w-6 h-6 text-purple-600 dark:text-purple-400" variant="filled" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h1 className="text-2xl font-serif font-bold tracking-tight text-slate-900 dark:text-white leading-none">
+                                        Concept Links
+                                    </h1>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-800/50 dark:text-emerald-400/50 mt-1.5 truncate">
+                                        {selectedConcept ? selectedConcept.name : 'Select a concept to begin'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Search Bar - Optimized Density */}
+                        <div className="flex items-center gap-2 flex-1 max-w-lg mx-6">
+                            <div className="relative flex-1 group">
+                                <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-purple-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search architectural seeds..."
+                                    className="w-full pl-11 pr-4 py-2.5 bg-white/30 dark:bg-white/5 backdrop-blur-md border border-white/60 dark:border-white/10 rounded-2xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        aria-label="Clear search"
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                    >
+                                        <Icon name="x" className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                                className={`p-2.5 rounded-2xl transition-all active:scale-95 ${showAdvancedSearch
+                                    ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30'
+                                    : 'bg-white/30 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white border border-white/60 dark:border-white/10'
+                                    }`}
+                                title="Advanced Search"
+                            >
+                                <Icon name="filter" className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Stats & Actions */}
+                        <div className="flex items-center gap-3">
+                            {/* View Toggle */}
+                            {persistedSelectedId && !selectedConcept?.isFolder && (
+                                <div className="flex items-center bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl p-1 border border-white/60 dark:border-white/10">
+                                    <button
+                                        onClick={() => setActiveView('kanban')}
+                                        className={`px-4 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeView === 'kanban'
+                                            ? 'bg-white dark:bg-white/10 text-purple-600 dark:text-purple-400 shadow-sm'
+                                            : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                    >
+                                        Kanban
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveView('analytics')}
+                                        className={`px-4 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeView === 'analytics'
+                                            ? 'bg-white dark:bg-white/10 text-purple-600 dark:text-purple-400 shadow-sm'
+                                            : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                    >
+                                        Analytics
+                                    </button>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleLoadExample}
+                                disabled={isLoadingSample}
+                                className="px-4 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-2xl hover:bg-emerald-500/20 transition-all text-xs font-bold uppercase tracking-widest disabled:opacity-50 active:scale-95 flex items-center gap-2"
+                            >
+                                <Icon name={isLoadingSample ? "loader" : "book-open"} className={`w-4 h-4 ${isLoadingSample ? 'animate-spin' : ''}`} />
+                                <span className="hidden xl:inline">Sample</span>
+                            </button>
+                            <button
+                                onClick={() => setShowConceptForm(true)}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-2xl hover:bg-purple-700 shadow-lg shadow-purple-600/20 transition-all active:scale-95 text-xs font-bold uppercase tracking-widest flex items-center gap-2"
                             >
                                 <Icon name="plus" className="w-4 h-4" />
-                                <span className="hidden sm:inline">Add Level</span>
+                                <span className="hidden xl:inline">New Concept</span>
                             </button>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Advanced Search Panel */}
+                <AnimatePresence>
+                    {showAdvancedSearch && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden border-b border-border-subtle dark:border-white/10"
+                        >
+                            <div className="p-6 backdrop-blur-3xl bg-white/40 dark:bg-black/40">
+                                <ConceptAdvancedSearch
+                                    onResultsChange={setFilteredConcepts}
+                                    onClose={() => setShowAdvancedSearch(false)}
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Main Content */}
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Sidebar */}
+                    <ConceptTreeSidebar
+                        selectedId={persistedSelectedId}
+                        onSelect={setSelectedConceptId}
+                        expanded={expandedConcepts}
+                        onToggleExpand={toggleExpanded}
+                        isOpen={isSidebarOpen}
+                        onClose={() => setIsSidebarOpen(false)}
+                        searchQuery={searchQuery}
+                        onEdit={handleEditConcept}
+                        onDelete={handleDeleteConcept}
+                    />
+
+                    {/* Content Area */}
+                    <div className="flex-1 overflow-hidden">
+                        {persistedSelectedId ? (
+                            activeView === 'kanban' ? (
+                                <ConceptKanbanBoard
+                                    conceptId={persistedSelectedId}
+                                    searchQuery={searchQuery}
+                                    onCardClick={handleCardClick}
+                                />
+                            ) : (
+                                <ConceptAnalytics conceptId={persistedSelectedId} />
+                            )
+                        ) : (
+                            <div className="h-full flex items-center justify-center">
+                                <div className="text-center max-w-md p-8">
+                                    <div className="w-24 h-24 mx-auto mb-6 bg-white/30 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] flex items-center justify-center border border-white/40 dark:border-white/10 shadow-xl">
+                                        <Icon name="hierarchy" className="w-10 h-10 text-slate-400 dark:text-emerald-400/50" />
+                                    </div>
+                                    <h2 className="text-3xl font-serif font-medium text-slate-900 dark:text-white mb-3">
+                                        Architecture Pending
+                                    </h2>
+                                    <p className="text-sm font-medium text-slate-500 dark:text-emerald-200/40 uppercase tracking-[0.15em] mb-4">
+                                        Select a concept seed to begin building
+                                    </p>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
-            </header>
 
-            {/* Advanced Search Panel */}
-            <AnimatePresence>
-                {showAdvancedSearch && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden border-b border-border-subtle dark:border-white/10"
-                    >
-                        <div className="p-4 bg-secondary-50 dark:bg-secondary-900">
-                            <ConceptAdvancedSearch
-                                onResultsChange={setFilteredConcepts}
-                                onClose={() => setShowAdvancedSearch(false)}
-                            />
-                        </div>
-                    </motion.div>
+                {/* Card Detail Modal */}
+                {selectedCard && (
+                    <CardDetailModal
+                        card={selectedCard}
+                        onClose={() => setSelectedCard(null)}
+                    />
                 )}
-            </AnimatePresence>
 
-            {/* Main Content */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Sidebar */}
-                <ConceptTreeSidebar
-                    selectedId={persistedSelectedId}
-                    onSelect={setSelectedConceptId}
-                    expanded={expandedConcepts}
-                    onToggleExpand={toggleExpanded}
-                    isOpen={isSidebarOpen}
-                    onClose={() => setIsSidebarOpen(false)}
-                    searchQuery={searchQuery}
-                    onEdit={handleEditConcept}
-                    onDelete={handleDeleteConcept}
-                />
+                {/* Concept Form Modal - Create */}
+                {showConceptForm && !editingConcept && (
+                    <ConceptFormModal
+                        onClose={() => setShowConceptForm(false)}
+                        onSuccess={() => {
+                            // Refresh handled by store
+                        }}
+                    />
+                )}
 
-                {/* Content Area */}
-                <div className="flex-1 overflow-hidden">
-                    {persistedSelectedId ? (
-                        activeView === 'kanban' ? (
-                            <ConceptKanbanBoard
-                                conceptId={persistedSelectedId}
-                                searchQuery={searchQuery}
-                                onCardClick={handleCardClick}
-                            />
-                        ) : (
-                            <ConceptAnalytics conceptId={persistedSelectedId} />
-                        )
-                    ) : (
-                        <div className="h-full flex items-center justify-center">
-                            <div className="text-center max-w-md p-8">
-                                <div className="w-20 h-20 mx-auto mb-4 bg-secondary-100 dark:bg-secondary-800 rounded-full flex items-center justify-center">
-                                    <Icon name="hierarchy" className="w-10 h-10 text-text-subtle" />
-                                </div>
-                                <h2 className="text-xl font-semibold text-text-main dark:text-secondary-100 mb-2">
-                                    No Concept Selected
-                                </h2>
-                                <p className="text-text-subtle mb-4">
-                                    Select a concept from the sidebar to view its organization
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                {/* Concept Form Modal - Edit */}
+                {editingConcept && (
+                    <ConceptFormModal
+                        concept={editingConcept}
+                        onClose={() => setEditingConcept(null)}
+                        onSuccess={() => {
+                            // Refresh handled by store
+                        }}
+                    />
+                )}
+
+                {/* Delete Confirmation Dialog */}
+                {deletingConcept && (
+                    <DeleteConfirmDialog
+                        title="Delete Concept?"
+                        message="This will permanently delete the concept and all its levels. Cards will not be deleted, but their concept level assignments will be removed."
+                        itemName={`${deletingConcept.name} (${deletingConcept.code})`}
+                        onConfirm={confirmDelete}
+                        onCancel={() => setDeletingConcept(null)}
+                        isDeleting={isDeleting}
+                    />
+                )}
+
+                {/* Level Form Modal */}
+                {showLevelForm && persistedSelectedId && (
+                    <LevelFormModal
+                        conceptId={persistedSelectedId}
+                        onClose={() => setShowLevelForm(false)}
+                        onSuccess={() => {
+                            // Refresh handled by store
+                        }}
+                    />
+                )}
             </div>
-
-            {/* Card Detail Modal */}
-            {selectedCard && (
-                <CardDetailModal
-                    card={selectedCard}
-                    onClose={() => setSelectedCard(null)}
-                />
-            )}
-
-            {/* Concept Form Modal - Create */}
-            {showConceptForm && !editingConcept && (
-                <ConceptFormModal
-                    onClose={() => setShowConceptForm(false)}
-                    onSuccess={() => {
-                        // Refresh handled by store
-                    }}
-                />
-            )}
-
-            {/* Concept Form Modal - Edit */}
-            {editingConcept && (
-                <ConceptFormModal
-                    concept={editingConcept}
-                    onClose={() => setEditingConcept(null)}
-                    onSuccess={() => {
-                        // Refresh handled by store
-                    }}
-                />
-            )}
-
-            {/* Delete Confirmation Dialog */}
-            {deletingConcept && (
-                <DeleteConfirmDialog
-                    title="Delete Concept?"
-                    message="This will permanently delete the concept and all its levels. Cards will not be deleted, but their concept level assignments will be removed."
-                    itemName={`${deletingConcept.name} (${deletingConcept.code})`}
-                    onConfirm={confirmDelete}
-                    onCancel={() => setDeletingConcept(null)}
-                    isDeleting={isDeleting}
-                />
-            )}
-
-            {/* Level Form Modal */}
-            {showLevelForm && persistedSelectedId && (
-                <LevelFormModal
-                    conceptId={persistedSelectedId}
-                    onClose={() => setShowLevelForm(false)}
-                    onSuccess={() => {
-                        // Refresh handled by store
-                    }}
-                />
-            )}
         </div>
     );
 };

@@ -62,10 +62,10 @@ const ConceptTreeSidebar: React.FC<ConceptTreeSidebarProps> = ({
                             }
                         }}
                         className={`
-                            w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200
+                            w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-300 active:scale-[0.98] group/item
                             ${isSelected
-                                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                                : 'hover:bg-secondary-100 dark:hover:bg-secondary-700 text-text-main dark:text-secondary-100'
+                                ? 'bg-purple-500/10 dark:bg-purple-400/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 shadow-sm shadow-purple-500/5'
+                                : 'hover:bg-white/40 dark:hover:bg-white/5 text-slate-600 dark:text-emerald-100/60 hover:text-slate-900 dark:hover:text-emerald-100'
                             }
                         `}
                         style={{ paddingLeft: `${depth * 16 + 12}px` }}
@@ -93,7 +93,7 @@ const ConceptTreeSidebar: React.FC<ConceptTreeSidebarProps> = ({
 
                         {/* Code Badge */}
                         {concept.code && hoveredId !== concept.id && (
-                            <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-secondary-200 dark:bg-secondary-600 text-text-subtle">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-slate-400 dark:text-emerald-400/40">
                                 {concept.code}
                             </span>
                         )}
@@ -101,17 +101,17 @@ const ConceptTreeSidebar: React.FC<ConceptTreeSidebarProps> = ({
 
                     {/* Action Buttons (appear on hover) */}
                     {hoveredId === concept.id && (onEdit || onDelete) && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white dark:bg-secondary-800 rounded-lg shadow-lg border border-border-subtle dark:border-white/10 p-0.5">
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white/60 dark:bg-black/40 backdrop-blur-xl rounded-xl border border-white/60 dark:border-white/10 p-1 shadow-xl">
                             {onEdit && (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onEdit(concept);
                                     }}
-                                    className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded text-blue-600 dark:text-blue-400 transition-colors"
+                                    className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400 transition-colors"
                                     title="Edit concept"
                                 >
-                                    <Icon name="edit" className="w-3.5 h-3.5" />
+                                    <Icon name="edit" className="w-4 h-4" />
                                 </button>
                             )}
                             {onDelete && (
@@ -120,10 +120,10 @@ const ConceptTreeSidebar: React.FC<ConceptTreeSidebarProps> = ({
                                         e.stopPropagation();
                                         onDelete(concept);
                                     }}
-                                    className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-600 dark:text-red-400 transition-colors"
+                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-600 dark:text-red-400 transition-colors"
                                     title="Delete concept"
                                 >
-                                    <Icon name="trash" className="w-3.5 h-3.5" />
+                                    <Icon name="trash" className="w-4 h-4" />
                                 </button>
                             )}
                         </div>
@@ -163,19 +163,19 @@ const ConceptTreeSidebar: React.FC<ConceptTreeSidebarProps> = ({
             {/* Sidebar */}
             <div
                 className={`
-                    flex-shrink-0 w-80 border-r border-border-subtle dark:border-white/10 
-                    bg-white dark:bg-secondary-800 overflow-y-auto custom-scrollbar
+                    flex-shrink-0 w-80 border-r border-white/20 dark:border-white/5
+                    bg-white/40 dark:bg-black/20 backdrop-blur-3xl overflow-y-auto custom-scrollbar
                     transition-transform duration-300
                     lg:relative lg:translate-x-0
                     fixed inset-y-0 left-0 z-50
-                    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                    ${isOpen ? 'translate-x-0 shadow-2xl shadow-black/20' : '-translate-x-full'}
                 `}
             >
                 <div className="p-4">
                     {/* Sidebar Header */}
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-sm font-semibold text-text-subtle uppercase tracking-wider">
-                            Concept Tree
+                    <div className="flex items-center justify-between mb-6 px-2">
+                        <h2 className="text-[10px] font-bold text-emerald-800/50 dark:text-emerald-400/50 uppercase tracking-[0.2em]">
+                            Concept Architecture
                         </h2>
                         <button
                             onClick={onClose}

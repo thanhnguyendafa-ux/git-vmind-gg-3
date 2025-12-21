@@ -4,10 +4,13 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   ({ className, style, ...props }, ref) => (
     <div
       ref={ref}
-      // Changed rounded-xl to rounded-2xl for softer shape language
-      className={`rounded-2xl bg-surface text-text-main ${className || ''}`}
+      // Sanctuary Upgrade: Glassmorphism + Soft Shadows
+      className={`
+        rounded-2xl backdrop-blur-xl border border-white/20 dark:border-white/10
+        bg-white/70 dark:bg-white/5 text-text-main shadow-xl shadow-emerald-900/5
+        transition-all duration-300 ${className || ''}
+      `}
       style={{
-        // Soft, colored shadow using the CSS variable defined in index.html
         boxShadow: '0 10px 40px -10px var(--shadow-color, rgba(0,0,0,0.1))',
         ...style,
       }}

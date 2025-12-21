@@ -11,6 +11,7 @@ import Modal from '../../components/ui/Modal';
 import { NeedsAttentionList } from '../../components/ui/NeedsAttentionList';
 import { Button } from '../../components/ui/Button';
 import { VmindSyncEngine } from '../../services/VmindSyncEngine';
+import { Card } from '../../components/ui/Card';
 import RestorationGarden from '../garden/components/RestorationGarden';
 import { isGardenAwake } from '../../stores/useGardenStore';
 import StreakCard from './components/StreakCard';
@@ -19,7 +20,6 @@ import ActivityPulseWidget from './components/ActivityPulseWidget';
 import { Screen } from '../../types';
 import { useTableStats } from '../tables/hooks/useTableStats';
 import AuroraBackground from '../../components/ui/AuroraBackground';
-import { OrganicCard } from '../../components/ui/OrganicCard';
 
 const PushPullControls: React.FC = () => {
     const { syncQueue, syncStatus, pullData, isPulling, setIsPulling, setIsSyncModalOpen, showToast, isPullDisabled, setIsPullDisabled } = useUIStore(useShallow(state => ({
@@ -228,7 +228,7 @@ const HomeScreen: React.FC = () => {
                 </header>
 
                 {/* --- THE SANCTUARY GRID --- */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
                     {/* LEFT COLUMN: The Focus (8 cols) */}
                     <div className="lg:col-span-8 space-y-8">
@@ -236,9 +236,9 @@ const HomeScreen: React.FC = () => {
                         {/* THE GARDEN: Absolute Hero */}
                         <div className="relative group">
                             <div className="absolute -inset-4 bg-emerald-500/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                            <OrganicCard className="h-[400px] sm:h-[500px] border-none !bg-transparent !shadow-none overflow-visible" hoverScale={false}>
+                            <div className="h-[400px] sm:h-[500px] overflow-visible">
                                 <RestorationGarden isAwake={isAwake} className="h-full w-full" />
-                            </OrganicCard>
+                            </div>
                         </div>
 
                         {/* GARDENER'S LEDGER (Grid inside Column) */}
@@ -250,53 +250,53 @@ const HomeScreen: React.FC = () => {
                         </div>
 
                         {/* ACTIONABLE WIDGETS */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <OrganicCard className="p-6 md:p-8" delay={500}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="animate-fadeIn" style={{ animationDelay: '500ms' }}>
                                 <RecentStudiesCard />
-                            </OrganicCard>
-                            <OrganicCard className="p-6 md:p-8" delay={600}>
+                            </div>
+                            <div className="animate-fadeIn" style={{ animationDelay: '600ms' }}>
                                 <ActivityPulseWidget />
-                            </OrganicCard>
+                            </div>
                         </div>
                     </div>
 
                     {/* RIGHT COLUMN: The Pulse (4 cols) */}
-                    <div className="lg:col-span-4 space-y-8">
+                    <div className="lg:col-span-4 space-y-6">
 
-                        <OrganicCard className="p-8" delay={200}>
+                        <div className="animate-fadeIn" style={{ animationDelay: '200ms' }}>
                             <StreakCard />
-                        </OrganicCard>
+                        </div>
 
-                        <OrganicCard className="p-8" delay={300}>
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-6 flex items-center gap-2">
+                        <div className="animate-fadeIn" style={{ animationDelay: '300ms' }}>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-4 px-2 flex items-center gap-2">
                                 <Icon name="chart-bar" className="w-4 h-4" />
                                 Growth Pattern
                             </h3>
                             <TimeSpentBarChart />
-                        </OrganicCard>
+                        </div>
 
-                        <OrganicCard className="p-8" delay={400}>
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-6 flex items-center gap-2">
+                        <div className="animate-fadeIn" style={{ animationDelay: '400ms' }}>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-4 px-2 flex items-center gap-2">
                                 <Icon name="bell" className="w-4 h-4" />
                                 Notifications
                             </h3>
                             <NotificationCard />
-                        </OrganicCard>
+                        </div>
                     </div>
 
                 </div>
 
                 {/* --- FULL WIDTH SECTION: THE SEASON MAP --- */}
-                <div className="mt-8 animate-fadeIn" style={{ animationDelay: '500ms' }}>
-                    <OrganicCard className="p-8 md:p-10" delay={500}>
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-8 flex items-center gap-2">
+                <div className="mt-6 animate-fadeIn" style={{ animationDelay: '500ms' }}>
+                    <Card className="p-8 md:p-10">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-8 flex items-center gap-2 px-2">
                             <Icon name="calendar" className="w-4 h-4" />
                             Season Map
                         </h3>
                         <div className="px-2">
                             <ActivityHeatmap activity={stats.activity} />
                         </div>
-                    </OrganicCard>
+                    </Card>
                 </div>
 
                 {/* Footer Quote */}

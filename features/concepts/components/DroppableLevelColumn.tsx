@@ -28,33 +28,33 @@ const DroppableLevelColumn: React.FC<DroppableLevelColumnProps> = ({
 
     return (
         <div
-            className={`flex flex-col min-w-[280px] max-w-[320px] h-full rounded-2xl border shadow-lg transition-all duration-200 ${isOver
-                    ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-300 dark:border-purple-600 scale-105'
-                    : 'bg-white/70 dark:bg-black/20 backdrop-blur-lg border-white/40 dark:border-white/5'
+            className={`flex flex-col min-w-[300px] max-w-[340px] h-full rounded-[2.5rem] border transition-all duration-500 ${isOver
+                ? 'bg-purple-500/10 border-purple-400/50 scale-[1.02] shadow-2xl shadow-purple-500/10'
+                : 'bg-white/40 dark:bg-black/20 backdrop-blur-xl border-white/60 dark:border-white/5 shadow-xl shadow-black/5'
                 }`}
         >
             {/* Column Header */}
             <button
                 onClick={onToggle}
-                className="flex-shrink-0 p-4 flex items-center justify-between hover:bg-white/50 dark:hover:bg-white/5 rounded-t-2xl transition-colors"
+                className="flex-shrink-0 p-6 flex items-center justify-between hover:bg-white/20 dark:hover:bg-white/5 rounded-t-[2.5rem] transition-all group/header"
             >
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-500 text-white text-sm font-bold">
+                    <div className="w-10 h-10 flex items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-serif font-bold text-lg group-hover/header:rotate-12 transition-transform">
                         {level.order}
                     </div>
-                    <div className="text-left">
-                        <h3 className="text-sm font-semibold text-text-main dark:text-secondary-100">
+                    <div className="text-left min-w-0">
+                        <h3 className="text-base font-serif font-bold text-slate-900 dark:text-white leading-tight">
                             {level.name}
                         </h3>
                         {level.description && (
-                            <p className="text-xs text-text-subtle line-clamp-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800/40 dark:text-emerald-400/30 mt-0.5 truncate">
                                 {level.description}
                             </p>
                         )}
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-secondary-200 dark:bg-secondary-600 text-text-subtle font-medium">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-slate-400 dark:text-emerald-400/40">
                         {cards.length}
                     </span>
                     <Icon
@@ -91,8 +91,8 @@ const DroppableLevelColumn: React.FC<DroppableLevelColumnProps> = ({
                                     <Icon
                                         name={isOver ? "download" : "credit-card"}
                                         className={`w-8 h-8 mx-auto mb-2 ${isOver
-                                                ? 'text-purple-500 dark:text-purple-400'
-                                                : 'text-text-subtle'
+                                            ? 'text-purple-500 dark:text-purple-400'
+                                            : 'text-text-subtle'
                                             }`}
                                     />
                                     <p className="text-text-subtle text-sm">

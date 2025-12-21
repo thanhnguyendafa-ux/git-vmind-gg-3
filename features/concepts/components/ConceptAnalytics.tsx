@@ -57,48 +57,52 @@ const ConceptAnalytics: React.FC<ConceptAnalyticsProps> = ({ conceptId }) => {
     }
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar p-6 bg-background dark:bg-secondary-900">
+        <div className="h-full overflow-y-auto custom-scrollbar p-6 bg-transparent">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                            <Icon name="chart-bar" className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                <div className="mb-10">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="p-3 bg-purple-500/10 dark:bg-purple-400/10 rounded-2xl">
+                            <Icon name="chart-bar" className="w-7 h-7 text-purple-600 dark:text-purple-400" variant="filled" />
                         </div>
-                        <h2 className="text-2xl font-bold text-text-main dark:text-secondary-100">
-                            Analytics: {analytics.concept.name}
-                        </h2>
+                        <div>
+                            <h2 className="text-3xl font-serif font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+                                Analytics: {analytics.concept.name}
+                            </h2>
+                            {analytics.concept.description && (
+                                <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-emerald-800/40 dark:text-emerald-400/30 mt-1 italic">
+                                    {analytics.concept.description}
+                                </p>
+                            )}
+                        </div>
                     </div>
-                    {analytics.concept.description && (
-                        <p className="text-text-subtle ml-14">{analytics.concept.description}</p>
-                    )}
                 </div>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                    <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30 rounded-2xl border border-blue-200 dark:border-blue-800 shadow-sm">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Icon name="credit-card" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                            <div className="text-sm font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+                    <div className="p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-white/60 dark:border-white/10 shadow-xl shadow-black/5 hover:scale-[1.02] transition-all duration-500 group">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Icon name="credit-card" className="w-4 h-4 text-blue-500/50 dark:text-blue-400/30" />
+                            <div className="text-[10px] font-bold text-blue-600/60 dark:text-blue-400/40 uppercase tracking-[0.2em]">
                                 Total Cards
                             </div>
                         </div>
-                        <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                        <div className="text-5xl font-serif font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {analytics.totalCards}
                         </div>
                     </div>
 
-                    <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/30 rounded-2xl border border-green-200 dark:border-green-800 shadow-sm">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Icon name="check-circle" className="w-5 h-5 text-green-600 dark:text-green-400" />
-                            <div className="text-sm font-semibold text-green-700 dark:text-green-300 uppercase tracking-wide">
+                    <div className="p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-white/60 dark:border-white/10 shadow-xl shadow-black/5 hover:scale-[1.02] transition-all duration-500 group">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Icon name="check-circle" className="w-4 h-4 text-emerald-500/50 dark:text-emerald-400/30" />
+                            <div className="text-[10px] font-bold text-emerald-600/60 dark:text-emerald-400/40 uppercase tracking-[0.2em]">
                                 Studied
                             </div>
                         </div>
-                        <div className="text-4xl font-bold text-green-600 dark:text-green-400">
+                        <div className="text-5xl font-serif font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                             {analytics.studiedCards}
                         </div>
-                        <div className="mt-1 text-sm text-green-600 dark:text-green-400">
+                        <div className="mt-2 text-[10px] font-bold text-emerald-600/40 dark:text-emerald-400/20 uppercase tracking-widest">
                             {analytics.totalCards > 0
                                 ? `${((analytics.studiedCards / analytics.totalCards) * 100).toFixed(0)}% coverage`
                                 : 'No cards yet'
@@ -106,19 +110,19 @@ const ConceptAnalytics: React.FC<ConceptAnalyticsProps> = ({ conceptId }) => {
                         </div>
                     </div>
 
-                    <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/30 rounded-2xl border border-purple-200 dark:border-purple-800 shadow-sm">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Icon name="trophy" className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                            <div className="text-sm font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wide">
+                    <div className="p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-white/60 dark:border-white/10 shadow-xl shadow-black/5 hover:scale-[1.02] transition-all duration-500 group">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Icon name="trophy" className="w-4 h-4 text-purple-500/50 dark:text-purple-400/30" />
+                            <div className="text-[10px] font-bold text-purple-600/60 dark:text-purple-400/40 uppercase tracking-[0.2em]">
                                 Success Rate
                             </div>
                         </div>
-                        <div className="text-4xl font-bold text-purple-600 dark:text-purple-400">
-                            {analytics.overallSuccessRate.toFixed(1)}%
+                        <div className="text-5xl font-serif font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                            {analytics.overallSuccessRate.toFixed(1)}<span className="text-2xl ml-1 opacity-40">%</span>
                         </div>
-                        <div className="mt-2 h-2 bg-purple-200 dark:bg-purple-800 rounded-full overflow-hidden">
+                        <div className="mt-4 h-1.5 bg-slate-200/50 dark:bg-white/5 rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-purple-500 transition-all"
+                                className="h-full bg-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.4)] transition-all duration-1000"
                                 style={{ width: `${analytics.overallSuccessRate}%` }}
                             />
                         </div>
@@ -126,59 +130,61 @@ const ConceptAnalytics: React.FC<ConceptAnalyticsProps> = ({ conceptId }) => {
                 </div>
 
                 {/* Level Breakdown */}
-                <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-border-subtle dark:border-white/10 p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-text-main dark:text-secondary-100 mb-6 flex items-center gap-2">
+                <div className="bg-white/30 dark:bg-black/20 backdrop-blur-3xl rounded-[2.5rem] border border-white/40 dark:border-white/5 p-8 shadow-xl shadow-black/5">
+                    <h3 className="text-sm font-bold text-emerald-800/50 dark:text-emerald-400/40 uppercase tracking-[0.25em] mb-8 flex items-center gap-3">
                         <Icon name="layers" className="w-5 h-5" />
                         Level Breakdown
                     </h3>
 
                     {analytics.levelStats.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {analytics.levelStats.map(({ level, cardCount, studiedCount, successRate }) => (
                                 <div
                                     key={level.id}
-                                    className="p-4 bg-secondary-50 dark:bg-secondary-700/50 rounded-xl hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors"
+                                    className="p-5 bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/10 hover:border-purple-500/30 transition-all duration-300 group/item"
                                 >
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-500 text-white text-sm font-bold">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 flex items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-serif font-bold text-lg group-hover/item:rotate-12 transition-transform">
                                                 {level.order}
                                             </div>
                                             <div>
-                                                <span className="font-semibold text-text-main dark:text-secondary-100">
+                                                <span className="text-base font-serif font-bold text-slate-900 dark:text-white leading-tight">
                                                     {level.name}
                                                 </span>
                                                 {level.description && (
-                                                    <p className="text-xs text-text-subtle mt-0.5">{level.description}</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800/30 dark:text-emerald-400/20 mt-0.5 truncate max-w-[150px]">
+                                                        {level.description}
+                                                    </p>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-sm font-semibold text-text-main dark:text-secondary-100">
-                                                {studiedCount}/{cardCount}
+                                            <div className="text-xs font-serif font-bold text-slate-900 dark:text-white">
+                                                {studiedCount}<span className="opacity-40 mx-1">/</span>{cardCount}
                                             </div>
-                                            <div className="text-xs text-text-subtle">
-                                                cards studied
+                                            <div className="text-[9px] font-bold uppercase tracking-tight text-slate-400 dark:text-emerald-400/20">
+                                                seeded cards
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Progress Bar */}
-                                    <div className="space-y-1">
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-text-subtle">Success Rate</span>
-                                            <span className={`font-semibold ${successRate >= 80 ? 'text-green-600 dark:text-green-400' :
-                                                    successRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                                                        'text-red-600 dark:text-red-400'
+                                    {/* Progress Tool */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400/60 dark:text-emerald-400/20">Success</span>
+                                            <span className={`text-[10px] font-bold font-serif ${successRate >= 80 ? 'text-emerald-500' :
+                                                successRate >= 50 ? 'text-amber-500' :
+                                                    'text-rose-500'
                                                 }`}>
                                                 {successRate.toFixed(1)}%
                                             </span>
                                         </div>
-                                        <div className="h-2 bg-secondary-200 dark:bg-secondary-600 rounded-full overflow-hidden">
+                                        <div className="h-1 bg-slate-200/30 dark:bg-white/5 rounded-full overflow-hidden">
                                             <div
-                                                className={`h-full transition-all ${successRate >= 80 ? 'bg-green-500' :
-                                                        successRate >= 50 ? 'bg-yellow-500' :
-                                                            'bg-red-500'
+                                                className={`h-full transition-all duration-1000 ${successRate >= 80 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' :
+                                                    successRate >= 50 ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]' :
+                                                        'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.3)]'
                                                     }`}
                                                 style={{ width: `${successRate}%` }}
                                             />
@@ -188,10 +194,10 @@ const ConceptAnalytics: React.FC<ConceptAnalyticsProps> = ({ conceptId }) => {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-8">
-                            <Icon name="layers" className="w-12 h-12 mx-auto mb-2 text-text-subtle" />
-                            <p className="text-sm text-text-subtle">
-                                No levels defined for this concept
+                        <div className="text-center py-12 bg-white/20 dark:bg-white/5 rounded-[2.5rem] border border-dashed border-white/40 dark:border-white/10">
+                            <Icon name="layers" className="w-12 h-12 mx-auto mb-3 text-slate-400/30" />
+                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400/50">
+                                Architectural levels pending
                             </p>
                         </div>
                     )}

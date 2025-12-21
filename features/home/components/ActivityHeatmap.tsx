@@ -124,6 +124,16 @@ export const ActivityHeatmap: React.FC<{ activity: UserStats['activity']; title?
 
     const textColor = isDark ? '#94a3b8' : '#64748b'; // Slate-400 / Slate-500
 
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to the end (current week) on mount or activity change
+    React.useEffect(() => {
+        if (scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            container.scrollLeft = container.scrollWidth;
+        }
+    }, [activity]);
+
     return (
         <div className="w-full flex flex-col gap-4 animate-fadeIn">
             {/* Header & Legend */}
@@ -154,7 +164,7 @@ export const ActivityHeatmap: React.FC<{ activity: UserStats['activity']; title?
                 SVG Container - Fully Responsive
                 The viewBox allows the SVG to scale up or down based on the parent width.
             */}
-            <div className="w-full relative overflow-x-auto overflow-y-hidden no-scrollbar">
+            <div ref={scrollContainerRef} className="w-full relative overflow-x-auto overflow-y-hidden no-scrollbar">
                 <div className="min-w-[800px] w-full">
                     <svg
                         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}

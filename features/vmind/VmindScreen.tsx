@@ -207,45 +207,52 @@ const VmindScreen: React.FC = () => {
             <AuroraBackground />
 
             {/* 1. Content Layer */}
-            <div className="relative z-10 h-full w-full overflow-y-auto p-4 sm:p-6 custom-scrollbar">
-                <header className="mb-6 sm:mb-10 mt-2 animate-fadeIn">
-                    <h1 className="text-2xl sm:text-4xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-emerald-600 dark:from-primary-400 dark:to-emerald-400 mb-1 sm:mb-2">
+            <div className="relative z-10 h-full w-full overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-12 custom-scrollbar">
+                <header className="mb-6 sm:mb-10 mt-2 animate-fadeIn max-w-4xl mx-auto">
+                    <h1 className="text-2xl sm:text-4xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-emerald-600 dark:from-primary-400 dark:to-emerald-400 mb-1 sm:mb-2 text-center lg:text-left">
                         Learning Center
                     </h1>
-                    <p className="text-text-subtle text-sm sm:text-base max-w-lg">
+                    <p className="text-text-subtle text-sm sm:text-base max-w-lg text-center lg:text-left mx-auto lg:mx-0">
                         Choose your path. From active recall to passive immersion, cultivate your mind your way.
                     </p>
                 </header>
 
-                <main className="space-y-8 sm:space-y-12 pb-20">
-                    <section>
-                        <div className="flex items-center gap-2 mb-4 sm:mb-6 animate-fadeIn" style={{ animationDelay: '100ms' }}>
-                            <div className="p-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
-                                <Icon name="brain" className="w-4 h-4 sm:w-5 sm:h-5" variant="filled" />
+                <main className="max-w-7xl mx-auto">
+                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+                        {/* Left Column: Study Modes */}
+                        <section className="flex-1 space-y-4 sm:space-y-6">
+                            <div className="flex items-center gap-2 mb-4 sm:mb-6 animate-fadeIn" style={{ animationDelay: '100ms' }}>
+                                <div className="p-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
+                                    <Icon name="brain" className="w-4 h-4 sm:w-5 sm:h-5" variant="filled" />
+                                </div>
+                                <h2 className="text-lg sm:text-xl font-bold text-text-main dark:text-secondary-100">
+                                    Study Architecture
+                                </h2>
                             </div>
-                            <h2 className="text-lg sm:text-xl font-bold text-text-main dark:text-secondary-100">
-                                Study Modes
-                            </h2>
-                        </div>
-                        {/* Responsive Jewel Grid: 2 cols on mobile, 3 on tablet, 4 on desktop */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-                            {studyModesGroup.map((mode, idx) => renderModeCard(mode, idx, 0))}
-                        </div>
-                    </section>
+                            {/* Responsive Jewel Grid: 2 cols on mobile, 2 on desktop column */}
+                            <div className="grid grid-cols-2 gap-3 sm:gap-6">
+                                {studyModesGroup.map((mode, idx) => renderModeCard(mode, idx, 0))}
+                            </div>
+                        </section>
 
-                    <section>
-                        <div className="flex items-center gap-2 mb-4 sm:mb-6 animate-fadeIn" style={{ animationDelay: '300ms' }}>
-                            <div className="p-1.5 rounded-lg bg-info-100 dark:bg-info-900/30 text-info-600 dark:text-info-400">
-                                <Icon name="sparkles" className="w-4 h-4 sm:w-5 sm:h-5" variant="filled" />
+                        {/* Middle Divider (Desktop only) */}
+                        <div className="hidden lg:block w-px bg-white/10 self-stretch" />
+
+                        {/* Right Column: Tools & Resources */}
+                        <section className="flex-1 space-y-4 sm:space-y-6">
+                            <div className="flex items-center gap-2 mb-4 sm:mb-6 animate-fadeIn" style={{ animationDelay: '300ms' }}>
+                                <div className="p-1.5 rounded-lg bg-info-100 dark:bg-info-900/30 text-info-600 dark:text-info-400">
+                                    <Icon name="sparkles" className="w-4 h-4 sm:w-5 sm:h-5" variant="filled" />
+                                </div>
+                                <h2 className="text-lg sm:text-xl font-bold text-text-main dark:text-secondary-100">
+                                    Knowledge Tools
+                                </h2>
                             </div>
-                            <h2 className="text-lg sm:text-xl font-bold text-text-main dark:text-secondary-100">
-                                Tools & Resources
-                            </h2>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-                            {otherModesGroup.map((mode, idx) => renderModeCard(mode, idx, studyModesGroup.length))}
-                        </div>
-                    </section>
+                            <div className="grid grid-cols-2 gap-3 sm:gap-6">
+                                {otherModesGroup.map((mode, idx) => renderModeCard(mode, idx, studyModesGroup.length))}
+                            </div>
+                        </section>
+                    </div>
                 </main>
             </div>
         </div>
