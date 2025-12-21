@@ -6,7 +6,8 @@ import Icon from '../../components/ui/Icon';
 import { useSessionStore } from '../../stores/useSessionStore';
 import { useTableStore } from '../../stores/useTableStore';
 import { useUIStore } from '../../stores/useUIStore';
-import { calculateNextAnkiState, AnkiCalculationResult } from '../../utils/srs';
+import { ankiService } from '../../services/AnkiService';
+import { AnkiCalculationResult } from '../../utils/srs';
 import { formatAnkiInterval } from '../../utils/timeUtils';
 import { Button } from '../../components/ui/Button';
 import { useTagStore } from '../../stores/useTagStore';
@@ -142,7 +143,7 @@ const AnkiSessionScreen: React.FC = () => {
 
         const intervals = new Map<number, AnkiCalculationResult>();
         ratingButtons.forEach(btn => {
-            const result = calculateNextAnkiState(currentRow.stats, btn.quality, sessionState.config);
+            const result = ankiService.calculateNextAnkiState(currentRow.stats, btn.quality, sessionState.config);
             intervals.set(btn.quality, result);
         });
         return intervals;
@@ -190,61 +191,12 @@ const AnkiSessionScreen: React.FC = () => {
     const handleRate = (quality: number) => {
         if (!sessionState || !currentRow) return;
 
-        const calculationResult = nextIntervals.get(quality);
-        if (!calculationResult) return;
+        const { updatedSession, isFinished } = ankiService.rateCard(sessionState, currentRow, quality);
 
-        const { nextStats: newStats, nextState, dueInMinutes } = calculationResult;
-        const now = Date.now();
-
-        const updatedSession: AnkiSessionData = JSON.parse(JSON.stringify(sessionState));
-
-        // 1. Add to history
-        updatedSession.history.push({
-            rowId: currentRow.id,
-            quality,
-            timestamp: now,
-            newStats
-        });
-
-        // 2. Handle Learning/Relearning Re-queuing
-        const updatedCard: AnkiCard = {
-            ...sessionState.currentCard!,
-            state: nextState,
-            step: newStats.ankiStep || 0,
-            interval: newStats.ankiInterval || 0,
-            easeFactor: newStats.ankiEaseFactor || 2.5,
-            due: newStats.ankiDueDate || (now + dueInMinutes * 60 * 1000),
-            lapses: newStats.ankiLapses || 0
-        };
-
-        if (nextState === 'Learning' || nextState === 'Relearning') {
-            updatedSession.learningQueue.push(updatedCard);
-            updatedSession.learningQueue.sort((a, b) => a.due - b.due);
-        }
-
-        // 3. Determine next card and update queues
-        let nextCard: AnkiCard | null = null;
-        const currentTimestamp = Date.now();
-
-        if (updatedSession.learningQueue.length > 0 && updatedSession.learningQueue[0].due <= currentTimestamp) {
-            nextCard = updatedSession.learningQueue.shift()!;
-        }
-        else if (updatedSession.reviewQueue.length > 0) {
-            nextCard = updatedSession.reviewQueue.shift()!;
-        }
-        else if (updatedSession.newQueue.length > 0) {
-            nextCard = updatedSession.newQueue.shift()!;
-        }
-        else if (updatedSession.learningQueue.length > 0) {
-            nextCard = updatedSession.learningQueue.shift()!;
-        }
-
-        if (!nextCard) {
-            handleFinishAnkiSession({ ...updatedSession, currentCard: null });
+        if (isFinished) {
+            handleFinishAnkiSession(updatedSession);
             return;
         }
-
-        updatedSession.currentCard = nextCard;
 
         setSessionState(updatedSession);
         setIsAnswered(false);
@@ -355,7 +307,7 @@ const AnkiSessionScreen: React.FC = () => {
                     </div>
                 </div>
                 <div className="relative h-1 w-full rounded-full bg-secondary-200 dark:bg-secondary-800 overflow-hidden">
-                    <div className="bg-primary-500 h-full rounded-full transition-all duration-300" style={{ width: `${sessionProgress?.sessionProgress?.percent || 0}%` }}></div>
+                    <div className="bg-primary-500 h-full rounded-full transition-all duration-300" style={{ width: `${sessionProgress?.percent || 0}%` }}></div>
                 </div>
             </header>
 
