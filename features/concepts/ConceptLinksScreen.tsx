@@ -12,6 +12,7 @@ import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import ConceptAnalytics from './components/ConceptAnalytics';
 import ConceptAdvancedSearch from './components/ConceptAdvancedSearch';
 import { createPhotosynthesisSample } from './utils/ConceptLinksSample';
+import SmartImportModal from './components/SmartImportModal';
 import { useUIStore } from '../../stores/useUIStore';
 import BlockingLoader from './components/BlockingLoader';
 import AuroraBackground from '../../components/ui/AuroraBackground';
@@ -41,6 +42,7 @@ const ConceptLinksScreen: React.FC = () => {
     const [editingConcept, setEditingConcept] = useState<Concept | null>(null);
     const [deletingConcept, setDeletingConcept] = useState<Concept | null>(null);
     const [showLevelForm, setShowLevelForm] = useState(false);
+    const [showSmartImport, setShowSmartImport] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const { concepts, getRootConcepts, deleteConcept } = useConceptStore();
@@ -282,6 +284,15 @@ const ConceptLinksScreen: React.FC = () => {
                                 <Icon name={isLoadingSample ? "loader" : "book-open"} className={`w-4 h-4 ${isLoadingSample ? 'animate-spin' : ''}`} />
                                 <span className="hidden xl:inline">Sample</span>
                             </button>
+
+                            <button
+                                onClick={() => setShowSmartImport(true)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all active:scale-95 text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                            >
+                                <Icon name="wand" className="w-4 h-4" />
+                                <span className="hidden xl:inline">Factory</span>
+                            </button>
+
                             <button
                                 onClick={() => setShowConceptForm(true)}
                                 className="px-4 py-2 bg-purple-600 text-white rounded-2xl hover:bg-purple-700 shadow-lg shadow-purple-600/20 transition-all active:scale-95 text-xs font-bold uppercase tracking-widest flex items-center gap-2"
@@ -407,6 +418,14 @@ const ConceptLinksScreen: React.FC = () => {
                         onSuccess={() => {
                             // Refresh handled by store
                         }}
+                    />
+                )}
+
+                {/* Smart Import Modal (Factory) */}
+                {showSmartImport && (
+                    <SmartImportModal
+                        onClose={() => setShowSmartImport(false)}
+                        onSuccess={() => setShowSmartImport(false)}
                     />
                 )}
             </div>

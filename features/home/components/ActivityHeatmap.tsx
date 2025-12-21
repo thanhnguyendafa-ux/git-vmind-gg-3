@@ -125,14 +125,34 @@ export const ActivityHeatmap: React.FC<{ activity: UserStats['activity']; title?
     const textColor = isDark ? '#94a3b8' : '#64748b'; // Slate-400 / Slate-500
 
     const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+    const [canScrollRight, setCanScrollRight] = React.useState(false);
+
+    const checkScroll = React.useCallback(() => {
+        if (scrollContainerRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+            setCanScrollLeft(scrollLeft > 5);
+            setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
+        }
+    }, []);
 
     // Auto-scroll to the end (current week) on mount or activity change
     React.useEffect(() => {
         if (scrollContainerRef.current) {
             const container = scrollContainerRef.current;
             container.scrollLeft = container.scrollWidth;
+            // Immediate check after scroll
+            setTimeout(checkScroll, 100);
         }
-    }, [activity]);
+    }, [activity, checkScroll]);
+
+    React.useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (container) {
+            container.addEventListener('scroll', checkScroll);
+            return () => container.removeEventListener('scroll', checkScroll);
+        }
+    }, [checkScroll]);
 
     return (
         <div className="w-full flex flex-col gap-4 animate-fadeIn">
@@ -161,61 +181,79 @@ export const ActivityHeatmap: React.FC<{ activity: UserStats['activity']; title?
             </div>
 
             {/* 
-                SVG Container - Fully Responsive
-                The viewBox allows the SVG to scale up or down based on the parent width.
+                SVG Container - Fully Responsive with Discovery Fades
             */}
-            <div ref={scrollContainerRef} className="w-full relative overflow-x-auto overflow-y-hidden no-scrollbar">
-                <div className="min-w-[800px] w-full">
-                    <svg
-                        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-                        className="w-full h-auto block drop-shadow-sm"
-                        preserveAspectRatio="xMinYMin meet"
-                    >
-                        {/* Month Labels */}
-                        <g transform={`translate(0, 10)`}>
-                            {monthLabels.map((label, i) => (
-                                <text
-                                    key={i}
-                                    x={label.x}
-                                    y={0}
-                                    className="text-[9px] font-bold"
-                                    fill={textColor}
-                                    style={{ fontSize: '9px', fontFamily: 'var(--font-sans)' }}
-                                >
-                                    {label.text}
-                                </text>
-                            ))}
-                        </g>
+            <div className="relative group/heatmap">
+                {/* Left Fade Indicator */}
+                <div className={`
+                    absolute left-0 top-0 bottom-0 w-12 z-20 pointer-events-none transition-opacity duration-300
+                    bg-gradient-to-r ${isDark ? 'from-[#051A14]' : 'from-white'} to-transparent
+                    ${canScrollLeft ? 'opacity-100' : 'opacity-0'}
+                `} />
 
-                        {/* Heatmap Grid */}
-                        <g transform={`translate(0, ${LABEL_HEIGHT})`}>
-                            {weeks.map((week, wIndex) => (
-                                <g key={wIndex} transform={`translate(${wIndex * WEEK_WIDTH}, 0)`}>
-                                    {week.map((day, dIndex) => {
-                                        const isFuture = day.date > new Date();
-                                        const opacity = isFuture ? 0.3 : 1; // Slight fade for future days
+                {/* Right Fade Indicator */}
+                <div className={`
+                    absolute right-0 top-0 bottom-0 w-12 z-20 pointer-events-none transition-opacity duration-300
+                    bg-gradient-to-l ${isDark ? 'from-[#051A14]' : 'from-white'} to-transparent
+                    ${canScrollRight ? 'opacity-100' : 'opacity-0'}
+                `} />
 
-                                        return (
-                                            <rect
-                                                key={dIndex}
-                                                x={0}
-                                                y={dIndex * DAY_HEIGHT}
-                                                width={CELL_SIZE}
-                                                height={CELL_SIZE}
-                                                rx={2}
-                                                ry={2}
-                                                fill={getFillColor(day.intensity)}
-                                                opacity={opacity}
-                                                className="transition-colors duration-200 hover:stroke-2 hover:stroke-black/20 dark:hover:stroke-white/20"
-                                            >
-                                                <title>{`${day.date.toDateString()}: ${Math.round(day.count / 60)} mins`}</title>
-                                            </rect>
-                                        );
-                                    })}
-                                </g>
-                            ))}
-                        </g>
-                    </svg>
+                <div
+                    ref={scrollContainerRef}
+                    className="w-full relative overflow-x-auto overflow-y-hidden no-scrollbar cursor-grab active:cursor-grabbing"
+                >
+                    <div className="min-w-[800px] w-full py-2">
+                        <svg
+                            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+                            className="w-full h-auto block drop-shadow-sm"
+                            preserveAspectRatio="xMinYMin meet"
+                        >
+                            {/* Month Labels */}
+                            <g transform={`translate(0, 10)`}>
+                                {monthLabels.map((label, i) => (
+                                    <text
+                                        key={i}
+                                        x={label.x}
+                                        y={0}
+                                        className="text-[9px] font-bold"
+                                        fill={textColor}
+                                        style={{ fontSize: '9px', fontFamily: 'var(--font-sans)' }}
+                                    >
+                                        {label.text}
+                                    </text>
+                                ))}
+                            </g>
+
+                            {/* Heatmap Grid */}
+                            <g transform={`translate(0, ${LABEL_HEIGHT})`}>
+                                {weeks.map((week, wIndex) => (
+                                    <g key={wIndex} transform={`translate(${wIndex * WEEK_WIDTH}, 0)`}>
+                                        {week.map((day, dIndex) => {
+                                            const isFuture = day.date > new Date();
+                                            const opacity = isFuture ? 0.3 : 1; // Slight fade for future days
+
+                                            return (
+                                                <rect
+                                                    key={dIndex}
+                                                    x={0}
+                                                    y={dIndex * DAY_HEIGHT}
+                                                    width={CELL_SIZE}
+                                                    height={CELL_SIZE}
+                                                    rx={2}
+                                                    ry={2}
+                                                    fill={getFillColor(day.intensity)}
+                                                    opacity={opacity}
+                                                    className="transition-colors duration-200 hover:stroke-2 hover:stroke-black/20 dark:hover:stroke-white/20"
+                                                >
+                                                    <title>{`${day.date.toDateString()}: ${Math.round(day.count / 60)} mins`}</title>
+                                                </rect>
+                                            );
+                                        })}
+                                    </g>
+                                ))}
+                            </g>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>

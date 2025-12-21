@@ -113,7 +113,7 @@ describe('ConceptKanbanBoard', () => {
             />
         );
 
-        expect(screen.getBy Text('No Levels Defined')).toBeInTheDocument();
+        expect(screen.getByText('No Levels Defined')).toBeInTheDocument();
     });
 
     it('filters cards by search query', () => {
