@@ -11,7 +11,7 @@ interface MultiConceptPickerProps {
     onClose: () => void;
     targetRowIds: string[]; // Support for batch linking
     targetTableId: string;
-    onSuccess?: () => void;
+    onSuccess?: (levelIds: string[]) => void;
 }
 
 const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
@@ -21,13 +21,17 @@ const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
     targetTableId,
     onSuccess
 }) => {
-    const { concepts, conceptLevels, getLevelsByConcept, getChildConcepts, getRootConcepts } = useConceptStore();
+    const { concepts, conceptLevels, getLevelsByConcept, getChildConcepts, getRootConcepts, isHydrated } = useConceptStore();
     const { batchUpdateRows, tables } = useTableStore();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
     const [selectedLevelIds, setSelectedLevelIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
+    const [isCreatingConcept, setIsCreatingConcept] = useState(false);
+    const [isCreatingLevel, setIsCreatingLevel] = useState<string | null>(null); // conceptId
+    const [newName, setNewName] = useState('');
+    const [newCode, setNewCode] = useState('');
 
     // Initialize selection if single row
     React.useEffect(() => {
@@ -45,6 +49,14 @@ const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
             setSelectedLevelIds(new Set());
         }
     }, [isOpen, targetRowIds, targetTableId, tables]);
+
+    // Force re-render check on open
+    React.useEffect(() => {
+        if (isOpen) {
+            // Just a side-effect to log or ensure strict mode doesn't swallow updates
+            // Ideally simply accessing the store above is enough, but this confirms mounting.
+        }
+    }, [isOpen, isHydrated]);
 
     const toggleFolder = (id: string) => {
         const next = new Set(expandedFolders);
@@ -70,7 +82,7 @@ const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
                 changes: { conceptLevelIds: levelIds }
             }));
             await batchUpdateRows(targetTableId, updates);
-            onSuccess?.();
+            onSuccess?.(levelIds);
             onClose();
         } catch (error) {
             console.error("Failed to update concept links", error);
@@ -79,14 +91,45 @@ const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
         }
     };
 
-    const filteredConcepts = useMemo(() => {
-        if (!searchQuery.trim()) return getRootConcepts();
-        const query = searchQuery.toLowerCase();
-        return concepts.filter(c =>
-            c.name.toLowerCase().includes(query) ||
-            c.code.toLowerCase().includes(query)
+    const handleCreateConcept = async (parentId?: string) => {
+        if (!newName.trim() || !newCode.trim()) return;
+        try {
+            const concept = await useConceptStore.getState().createConcept(newCode, newName, '', parentId);
+            setExpandedFolders(prev => new Set(prev).add(concept.id));
+            setNewName('');
+            setNewCode('');
+            setIsCreatingConcept(false);
+        } catch (error: any) {
+            console.error("Failed to create concept", error);
+        }
+    };
+
+    const handleCreateLevel = async (conceptId: string) => {
+        if (!newName.trim()) return;
+        try {
+            const levels = getLevelsByConcept(conceptId);
+            const nextOrder = levels.length > 0 ? Math.max(...levels.map(l => l.order)) + 1 : 1;
+            const level = await useConceptStore.getState().createLevel(conceptId, newName, nextOrder);
+            toggleLevel(level.id); // Auto select
+            setNewName('');
+            setIsCreatingLevel(null);
+        } catch (error: any) {
+            console.error("Failed to create level", error);
+        }
+    };
+
+    // Reactivity Fix: Calculate directly in render to ensure fresh data
+    const rootList = isHydrated ? getRootConcepts() : [];
+
+    // Filter Logic
+    const filteredConcepts = (() => {
+        if (!searchQuery.trim()) return rootList;
+        const lower = searchQuery.toLowerCase();
+        return rootList.filter(c =>
+            c.name.toLowerCase().includes(lower) ||
+            c.code.toLowerCase().includes(lower)
         );
-    }, [concepts, getRootConcepts, searchQuery]);
+    })();
 
     const renderConcept = (concept: Concept, depth = 0) => {
         const children = getChildConcepts(concept.id);
@@ -113,7 +156,34 @@ const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
                         {concept.name}
                         <span className="ml-2 text-[10px] opacity-40 font-mono">{concept.code}</span>
                     </span>
+
+                    {/* Quick Add Level Btn */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setNewName('');
+                            setIsCreatingLevel(isCreatingLevel === concept.id ? null : concept.id);
+                        }}
+                        className="p-1.5 hover:bg-white/10 rounded-md text-text-subtle hover:text-purple-400 transition-colors"
+                    >
+                        <Icon name="plus" className="w-4 h-4" />
+                    </button>
                 </div>
+
+                {/* Create Level Inline Form */}
+                {isCreatingLevel === concept.id && (
+                    <div className="ml-8 mr-4 my-1 p-2 bg-white/5 rounded-xl border border-white/10 flex gap-2 animate-fadeIn">
+                        <input
+                            type="text"
+                            placeholder="Level name (e.g. Mastered)"
+                            value={newName}
+                            onChange={e => setNewName(e.target.value)}
+                            className="flex-1 bg-transparent border-none text-xs focus:ring-0"
+                            autoFocus
+                        />
+                        <button onClick={() => handleCreateLevel(concept.id)} className="p-1 px-2 bg-purple-600 rounded-lg text-[10px] text-white font-bold">Add</button>
+                    </div>
+                )}
 
                 <AnimatePresence>
                     {isExpanded && (
@@ -135,8 +205,8 @@ const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
                                 >
                                     <div
                                         className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedLevelIds.has(level.id)
-                                                ? 'bg-purple-600 border-purple-600'
-                                                : 'border-border-subtle group-hover:border-purple-400'
+                                            ? 'bg-purple-600 border-purple-600'
+                                            : 'border-border-subtle group-hover:border-purple-400'
                                             }`}
                                         onClick={(e) => {
                                             e.preventDefault();
@@ -184,12 +254,50 @@ const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
                         </p>
                     </div>
                     <button
+                        onClick={() => {
+                            setNewName('');
+                            setNewCode('');
+                            setIsCreatingConcept(!isCreatingConcept);
+                        }}
+                        className={`p-2 rounded-full transition-colors ${isCreatingConcept ? 'bg-purple-500 text-white' : 'hover:bg-white/10 text-text-subtle'}`}
+                        title="New Root Concept"
+                    >
+                        <Icon name="plus" className="w-5 h-5" />
+                    </button>
+                    <button
                         onClick={onClose}
                         className="p-2 hover:bg-white/10 rounded-full transition-colors"
                     >
                         <Icon name="x" className="w-5 h-5 text-text-subtle" />
                     </button>
                 </div>
+
+                {/* Create Root Concept Form */}
+                {isCreatingConcept && (
+                    <div className="p-4 mx-4 mb-2 bg-purple-500/10 rounded-2xl border border-purple-500/30 space-y-3 animate-slideInDown">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Code"
+                                value={newCode}
+                                onChange={e => setNewCode(e.target.value.toUpperCase())}
+                                className="w-20 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm font-mono uppercase"
+                                maxLength={8}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Concept Name..."
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                                className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setIsCreatingConcept(false)} className="text-xs px-3 py-1.5 rounded-lg hover:bg-white/5">Cancel</button>
+                            <button onClick={() => handleCreateConcept()} className="text-xs px-3 py-1.5 bg-purple-600 rounded-lg text-white font-bold">Create</button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Search */}
                 <div className="p-4">
@@ -208,7 +316,15 @@ const MultiConceptPicker: React.FC<MultiConceptPickerProps> = ({
                 {/* Tree Area */}
                 <div className="max-h-[400px] overflow-y-auto px-2 pb-4 scrollbar-thin scrollbar-thumb-white/10">
                     {filteredConcepts.map(concept => renderConcept(concept))}
-                    {filteredConcepts.length === 0 && (
+
+                    {!isHydrated && (
+                        <div className="py-12 text-center flex flex-col items-center">
+                            <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
+                            <p className="text-sm text-text-subtle">Loading concepts...</p>
+                        </div>
+                    )}
+
+                    {isHydrated && filteredConcepts.length === 0 && (
                         <div className="py-12 text-center">
                             <Icon name="search" className="w-12 h-12 text-text-subtle mx-auto opacity-20 mb-4" />
                             <p className="text-sm text-text-subtle italic">No concepts found</p>

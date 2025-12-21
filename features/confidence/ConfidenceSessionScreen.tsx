@@ -141,6 +141,7 @@ const ConfidenceSessionScreen: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const [showSummary, setShowSummary] = useState(false);
+    const [showMasteryDialog, setShowMasteryDialog] = useState(false);
     const [summaryStats, setSummaryStats] = useState<{ duration: number, droplets: number } | null>(null);
 
     const [isDebugMode, setIsDebugMode] = useState(false);
@@ -160,7 +161,7 @@ const ConfidenceSessionScreen: React.FC = () => {
     const [rowForDetailModal, setRowForDetailModal] = useState<VocabRow | null>(null);
     const [rowForInfoModal, setRowForInfoModal] = useState<VocabRow | null>(null);
     const [relationToEdit, setRelationToEdit] = useState<Relation | null>(null);
-    const [isConceptPickerOpen, setIsConceptPickerOpen] = useState(false);
+    const [isSessionLevelPickerOpen, setIsSessionLevelPickerOpen] = useState(false);
 
     // State for delete confirmation
     const [rowToDelete, setRowToDelete] = useState<string | null>(null);
@@ -170,12 +171,12 @@ const ConfidenceSessionScreen: React.FC = () => {
     const currentRowId = session.queue[session.currentIndex];
 
     useEffect(() => {
-        if (showSummary || relationToEdit) return; // Stop timer when summary or modal is active
+        if (showSummary || relationToEdit || rowForDetailModal) return; // Stop timer when summary or modal is active
         const timer = setInterval(() => {
             setElapsedSeconds(Math.floor((Date.now() - session.startTime) / 1000));
         }, 1000);
         return () => clearInterval(timer);
-    }, [session.startTime, showSummary, relationToEdit]);
+    }, [session.startTime, showSummary, relationToEdit, rowForDetailModal]);
 
     // Handle Escape key to exit fullscreen
     useEffect(() => {
@@ -487,21 +488,28 @@ const ConfidenceSessionScreen: React.FC = () => {
         setPreviewTargetIndex(null);
 
         if (cycleReset) {
-            // Automatic completion flow
+            // Automatic completion flow - Calculate stats for current cycle
             const duration = Math.floor((Date.now() - session.startTime) / 1000);
             const droplets = Math.floor(duration / 60);
             const xpGained = newHistory.length * 5;
 
-            // Stats are calculated and saved here, skipping the UI step to prevent double-saving
+            // Stats are calculated and saved here
             updateStatsFromSession(duration, xpGained, 0, 'Confidence', droplets, newHistory.length);
             addDrops(droplets);
             useCounterStore.getState().increment(session.progressId);
 
-            // Use triggerGlobalAction to ensure data consistency on cycle reset
-            triggerGlobalAction(() => {
-                setSummaryStats({ duration, droplets });
-                setShowSummary(true);
-            });
+            // Check if 100% of the queue is "Superb" (Mastery)
+            const isQueueFullyMastered = newQueue.every(id => updatedCardStates[id] === FlashcardStatus.Superb);
+
+            if (isQueueFullyMastered) {
+                triggerGlobalAction(() => {
+                    setSummaryStats({ duration, droplets });
+                    setShowMasteryDialog(true);
+                });
+            } else {
+                // Silently reset to start and show a brief toast
+                showToast("Cycle complete! Keep going until everything is purple.", "success");
+            }
         }
     }
 
@@ -1042,36 +1050,40 @@ const ConfidenceSessionScreen: React.FC = () => {
             {/* Main content area - Using w-full and overflow-visible for the container to let card handle scroll */}
             <main className={`flex-1 flex flex-col w-full relative overflow-y-auto hide-scrollbar ${isAnswered ? 'md:pb-[200px]' : isFullscreen ? 'pb-4' : 'pb-24'} px-0`}>
 
-                <UnifiedQuestionCard
-                    key={v3Card.id}
-                    card={v3Card}
-                    design={currentRelation.design?.front}
-                    backDesign={currentRelation.design?.back}
-                    row={currentRow}
-                    table={currentTable}
-                    relation={currentRelation} // Pass relation here
-                    onAnswer={handleUnifiedAnswer}
-                    onEdit={() => setRowForDetailModal(currentRow)}
-                    onViewInfo={() => setRowForInfoModal(currentRow)}
-                    onReveal={() => setIsAnswered(true)}
-                    hideFlashcardButtons={true}
-                    onRelationUpdate={handleSaveRelation}
-                />
+                <div className="relative w-full max-w-7xl mx-auto">
+                    <UnifiedQuestionCard
+                        key={v3Card.id}
+                        card={v3Card}
+                        design={currentRelation.design?.front}
+                        backDesign={currentRelation.design?.back}
+                        row={currentRow}
+                        table={currentTable}
+                        relation={currentRelation} // Pass relation here
+                        onAnswer={handleUnifiedAnswer}
+                        onEdit={() => setRowForDetailModal(currentRow)}
+                        onViewInfo={() => setRowForInfoModal(currentRow)}
+                        onReveal={() => setIsAnswered(true)}
+                        hideFlashcardButtons={true}
+                        onRelationUpdate={handleSaveRelation}
+                    />
 
-                {/* Feedback Panel (stays in scrollable area) */}
-                {isAnswered && v3Card.type !== 'flashcard' && feedback && (
-                    <div className="w-full mt-6 px-4 md:px-6 animate-fadeIn">
-                        <AnswerFeedbackPanel
-                            feedback={feedback}
-                            question={question}
-                            row={currentRow}
-                            relation={currentRelation}
-                            table={currentTable}
-                            onViewDetails={() => setRowForDetailModal(currentRow)}
-                            onViewCorrectCard={() => setRowForInfoModal(currentRow)}
-                        />
-                    </div>
-                )}
+                    {/* Feedback Panel (Overlapping the Card) */}
+                    {isAnswered && v3Card.type !== 'flashcard' && feedback && (
+                        <div className="absolute inset-0 z-20 px-4 md:px-6 py-0 animate-fadeIn pointer-events-none">
+                            <div className="w-full h-full bg-surface/95 dark:bg-secondary-800/95 backdrop-blur-md rounded-2xl border border-secondary-200 dark:border-secondary-700 shadow-2xl pointer-events-auto flex flex-col items-center justify-center p-6 sm:p-12 overflow-y-auto">
+                                <AnswerFeedbackPanel
+                                    feedback={feedback}
+                                    question={question}
+                                    row={currentRow}
+                                    relation={currentRelation}
+                                    table={currentTable}
+                                    onViewDetails={() => setRowForDetailModal(currentRow)}
+                                    onViewCorrectCard={() => setRowForInfoModal(currentRow)}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
             </main>
 
             {/* Sticky Button Footer (Desktop only) */}
@@ -1143,7 +1155,7 @@ const ConfidenceSessionScreen: React.FC = () => {
                                     <div className="flex justify-end pt-2">
                                         {/* Link to Concept */}
                                         <button
-                                            onClick={() => setIsConceptPickerOpen(true)}
+                                            onClick={() => setIsSessionLevelPickerOpen(true)}
                                             className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/10 group"
                                             title="Link to Concept"
                                         >
@@ -1201,8 +1213,8 @@ const ConfidenceSessionScreen: React.FC = () => {
             />
             {currentRow && currentTable && (
                 <MultiConceptPicker
-                    isOpen={isConceptPickerOpen}
-                    onClose={() => setIsConceptPickerOpen(false)}
+                    isOpen={isSessionLevelPickerOpen}
+                    onClose={() => setIsSessionLevelPickerOpen(false)}
                     targetRowIds={[currentRow.id]}
                     targetTableId={currentTable.id}
                 />
@@ -1251,6 +1263,65 @@ const ConfidenceSessionScreen: React.FC = () => {
                     setRowForInfoModal(null);
                 }}
             />
+
+            {/* Mastery Achievement Dialog */}
+            <Modal
+                isOpen={showMasteryDialog}
+                onClose={() => setShowMasteryDialog(false)}
+                title="Mastery Achievement!"
+                showCloseButton={false}
+            >
+                <div className="p-6 flex flex-col items-center text-center">
+                    <div className="mb-6 p-5 bg-purple-500/10 rounded-full animate-bounce">
+                        <Icon name="trophy" className="w-16 h-16 text-purple-500" variant="filled" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-text-main dark:text-secondary-100 mb-2">You are confident with this queue!</h3>
+                    <p className="text-text-subtle mb-8">Amazing job! All cards in this queue have reached the <b>Superb</b> level. You have mastered this set.</p>
+
+                    <div className="grid grid-cols-2 gap-4 w-full mb-8">
+                        <div className="bg-secondary-50 dark:bg-secondary-900/50 rounded-xl p-4 flex flex-col items-center justify-center gap-1 border border-secondary-100 dark:border-secondary-700/50">
+                            <Icon name="clock" className="w-6 h-6 text-text-subtle mb-1" />
+                            <span className="text-lg font-bold text-text-main dark:text-secondary-100">{summaryStats ? formatShortDuration(summaryStats.duration) : '0s'}</span>
+                            <span className="text-xs text-text-subtle font-medium uppercase tracking-wider">Total Time</span>
+                        </div>
+                        <div className="bg-secondary-50 dark:bg-secondary-900/50 rounded-xl p-4 flex flex-col items-center justify-center gap-1 border border-secondary-100 dark:border-secondary-700/50">
+                            <Icon name="cloud-rain" className="w-6 h-6 text-sky-500 mb-1" variant="filled" />
+                            <span className="text-lg font-bold text-text-main dark:text-secondary-100">+{summaryStats?.droplets || 0}</span>
+                            <span className="text-xs text-text-subtle font-medium uppercase tracking-wider">Droplets</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col w-full gap-3">
+                        <Button
+                            onClick={() => setShowMasteryDialog(false)}
+                            className="w-full py-3 text-base bg-purple-600 hover:bg-purple-700"
+                            size="lg"
+                        >
+                            <Icon name="repeat" className="w-5 h-5 mr-2" />
+                            Continue Learning
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                setShowMasteryDialog(false);
+                                handleResetSession();
+                            }}
+                            className="w-full py-3 text-base"
+                            size="lg"
+                        >
+                            <Icon name="repeat" className="w-5 h-5 mr-2" />
+                            Reset & Start Over
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={handleCloseSummary}
+                            className="w-full"
+                        >
+                            Return to Menu
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             <WordDetailModal
                 isOpen={!!rowForDetailModal}

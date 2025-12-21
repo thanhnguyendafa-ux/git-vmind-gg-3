@@ -8,6 +8,7 @@ import { useUserStore } from './useUserStore';
 interface ConceptState {
     concepts: Concept[];
     conceptLevels: ConceptLevel[];
+    isHydrated: boolean; // Add hydration flag
 
     // Actions
     createConcept: (code: string, name: string, description?: string, parentId?: string, isFolder?: boolean) => Promise<Concept>;
@@ -32,6 +33,8 @@ interface ConceptState {
     // Search Functions
     searchConceptsByName: (query: string) => Concept[];
     searchCardsByConceptLevel: (levelId: string, query: string) => VocabRow[];
+    setInitialData: (data: { concepts: Concept[], conceptLevels: ConceptLevel[] }) => void;
+    cleanupDuplicateConcepts: () => Promise<void>;
 }
 
 export const useConceptStore = create<ConceptState>()(
@@ -39,6 +42,7 @@ export const useConceptStore = create<ConceptState>()(
         (set, get) => ({
             concepts: [],
             conceptLevels: [],
+            isHydrated: false, // Default to false
 
             createConcept: async (code, name, description, parentId, isFolder = false) => {
                 // Validation: Check uniqueness of code
@@ -241,10 +245,66 @@ export const useConceptStore = create<ConceptState>()(
                     ids = [...ids, ...get().getRecursiveChildIds(child.id)];
                 }
                 return ids;
+            },
+            setInitialData: (data) => {
+                set({
+                    concepts: data.concepts,
+                    conceptLevels: data.conceptLevels,
+                    isHydrated: true // Mark as hydrated
+                });
+            },
+
+            cleanupDuplicateConcepts: async () => {
+                const { concepts } = get();
+                const uniqueCodes = new Set<string>();
+                const idsToDelete: string[] = [];
+
+                // 1. Identify duplicates
+                concepts.forEach(c => {
+                    const key = c.code; // Key by code only
+                    if (uniqueCodes.has(key)) {
+                        idsToDelete.push(c.id);
+                    } else {
+                        uniqueCodes.add(key);
+                    }
+                });
+
+                if (idsToDelete.length === 0) return;
+
+                console.log(`[Cleanup] Found ${idsToDelete.length} duplicate concepts. Deleting...`);
+
+                // 2. Remove from local state
+                set(state => ({
+                    concepts: state.concepts.filter(c => !idsToDelete.includes(c.id)),
+                    // Also cleanup orphan levels if necessary, though simpler to just leave orphans or cascade delete
+                    // For now, let's just delete the concepts.
+                }));
+
+                // 3. Sync deletions to Server
+                const { session, isGuest } = useUserStore.getState();
+                if (!isGuest && session) {
+                    for (const conceptId of idsToDelete) {
+                        try {
+                            VmindSyncEngine.getInstance().push('DELETE_CONCEPT', { conceptId }, session.user.id);
+                        } catch (e) {
+                            console.error(`[Cleanup] Failed to queue delete for ${conceptId}`, e);
+                        }
+                    }
+                }
             }
         }),
         {
             name: 'vmind-concept-store',
+            onRehydrateStorage: () => (state) => {
+                // Only mark as hydrated if we actually restored some data.
+                // Otherwise custom initial fetch will handle it.
+                if (state && (state.concepts.length > 0 || state.conceptLevels.length > 0)) {
+                    state.setInitialData({
+                        concepts: state.concepts,
+                        conceptLevels: state.conceptLevels
+                    });
+                }
+            }
             // We persist mainly for local dev/testing if generic sync isn't hooking this up yet.
         }
     )

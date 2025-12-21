@@ -29,10 +29,17 @@ export const createPhotosynthesisSample = async (onStatusChange?: (msg: string) 
     if (!vocabCol || !defCol) throw new Error("Table columns missing required fields");
 
     // --- Step 3: Get or Create Folder ---
+    // Use code as the unique identifier for idempotency
     let scienceFolder = conceptStore.concepts.find(c => c.code === 'SCI-G5');
     if (!scienceFolder) {
         onStatusChange?.('Initializing Folders...');
-        scienceFolder = await conceptStore.createConcept('SCI-G5', 'Science Grade 5', 'Primary Science Curriculum', undefined, true);
+        try {
+            scienceFolder = await conceptStore.createConcept('SCI-G5', 'Science Grade 5', 'Primary Science Curriculum', undefined, true);
+        } catch (e: any) {
+            // If it failed because it exists (maybe data loaded mid-flight), try to find it again
+            scienceFolder = conceptStore.concepts.find(c => c.code === 'SCI-G5');
+            if (!scienceFolder) throw e;
+        }
     } else {
         // FORCE SYNC: Ensure existing folder is on server
         await conceptStore.updateConcept(scienceFolder.id, {});
@@ -42,25 +49,30 @@ export const createPhotosynthesisSample = async (onStatusChange?: (msg: string) 
     let psConcept = conceptStore.concepts.find(c => c.code === 'BIO-PS-G5');
     if (!psConcept) {
         onStatusChange?.('Creating Concept Nodes...');
-        psConcept = await conceptStore.createConcept(
-            'BIO-PS-G5',
-            'Photosynthesis',
-            'The process by which green plants and some other organisms use sunlight to synthesize foods with the help of chlorophyll.',
-            scienceFolder.id
-        );
+        try {
+            psConcept = await conceptStore.createConcept(
+                'BIO-PS-G5',
+                'Photosynthesis',
+                'The process by which green plants and some other organisms use sunlight to synthesize foods with the help of chlorophyll.',
+                scienceFolder!.id
+            );
+        } catch (e: any) {
+            psConcept = conceptStore.concepts.find(c => c.code === 'BIO-PS-G5');
+            if (!psConcept) throw e;
+        }
     } else {
         // FORCE SYNC: Ensure existing concept is on server
         await conceptStore.updateConcept(psConcept.id, {});
     }
 
     // --- Step 5: Get or Create Levels ---
-    let levels = conceptStore.getLevelsByConcept(psConcept.id);
+    let levels = conceptStore.getLevelsByConcept(psConcept!.id);
     if (levels.length === 0) {
         onStatusChange?.('Setting up Concept Levels...');
-        const l1 = await conceptStore.createLevel(psConcept.id, 'Level 1', 1, 'Reactants: What plants need (Sunlight, Water, CO2)');
-        const l2 = await conceptStore.createLevel(psConcept.id, 'Level 2', 2, 'Structures: Where it happens (Chlorophyll, Chloroplasts)');
-        const l3 = await conceptStore.createLevel(psConcept.id, 'Level 3', 3, 'Process: How it works (Gas Exchange, Stomata)');
-        const l4 = await conceptStore.createLevel(psConcept.id, 'Level 4', 4, 'Products: What is produced (Glucose, Oxygen)');
+        const l1 = await conceptStore.createLevel(psConcept!.id, 'Level 1', 1, 'Reactants: What plants need (Sunlight, Water, CO2)');
+        const l2 = await conceptStore.createLevel(psConcept!.id, 'Level 2', 2, 'Structures: Where it happens (Chlorophyll, Chloroplasts)');
+        const l3 = await conceptStore.createLevel(psConcept!.id, 'Level 3', 3, 'Process: How it works (Gas Exchange, Stomata)');
+        const l4 = await conceptStore.createLevel(psConcept!.id, 'Level 4', 4, 'Products: What is produced (Glucose, Oxygen)');
         levels = [l1, l2, l3, l4];
     } else {
         // Ensure sorted for mapping

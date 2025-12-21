@@ -4,6 +4,7 @@ import Icon from '../../components/ui/Icon';
 import { useUserStore } from '../../stores/useUserStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useTableStore } from '../../stores/useTableStore';
+import { useConceptStore } from '../../stores/useConceptStore'; // Added import
 import { AppSettings, Screen, Theme } from '../../types';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -33,6 +34,7 @@ const SettingsScreen: React.FC = () => {
     } = useUIStore();
     const { apiKey, setApiKey } = useApiKeyStore();
     const { tables, loadingTableIds, fetchTablePayload } = useTableStore();
+    const { cleanupDuplicateConcepts } = useConceptStore(); // Added hook usage
 
     const [localApiKey, setLocalApiKey] = React.useState(apiKey || '');
     const [isEditingApiKey, setIsEditingApiKey] = React.useState(!apiKey);
@@ -121,6 +123,18 @@ const SettingsScreen: React.FC = () => {
         await VmindSyncEngine.getInstance().clearQueue();
         setIsResetConfirmOpen(false);
         showToast("Sync queue cleared. Try refreshing data now.", "success");
+    };
+
+    const handleCleanupDuplicates = async () => {
+        if (confirm("Are you sure? This will delete all duplicate Concepts based on their Code. This action impacts the Server.")) {
+            try {
+                await cleanupDuplicateConcepts();
+                showToast("Duplicate concepts removed.", "success");
+            } catch (e: any) {
+                console.error(e);
+                showToast("Failed to cleanup duplicates.", "error");
+            }
+        }
     };
 
     // --- Background ---
@@ -500,8 +514,20 @@ const SettingsScreen: React.FC = () => {
                                     <Icon name="trash" className="w-4 h-4" />
                                     <span>Reset Sync Queue</span>
                                 </Button>
-                                <p className="text-xs text-text-subtle mt-2 ml-1">
+                                <p className="text-xs text-text-subtle mt-2 ml-1 mb-4">
                                     Use this if syncing gets stuck (e.g., "Push (8)"). It wipes pending changes from this device.
+                                </p>
+
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleCleanupDuplicates}
+                                    className="w-full h-auto py-3 flex items-center justify-center gap-2 border-error-200 dark:border-error-900 text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20"
+                                >
+                                    <Icon name="trash" className="w-4 h-4" />
+                                    <span>Cleanup Duplicate Concepts</span>
+                                </Button>
+                                <p className="text-xs text-text-subtle mt-2 ml-1">
+                                    Scans for concepts with identical 'Code' and deletes redundant copies.
                                 </p>
                             </div>
                         )}

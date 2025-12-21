@@ -11,6 +11,7 @@ import { useTableStore } from './stores/useTableStore';
 import { useNoteStore } from './stores/useNoteStore';
 import { useDictationNoteStore } from './stores/useDictationNoteStore';
 import { useContextLinkStore } from './stores/useContextLinkStore';
+import { useConceptStore } from './stores/useConceptStore';
 import { useSessionDataStore } from './stores/useSessionDataStore';
 import { useTagStore } from './stores/useTagStore';
 import { useGardenStore } from './stores/useGardenStore';
@@ -130,11 +131,12 @@ const fetchUserData = async (userId: string) => {
         profileRes,
         tablesRes,
         foldersRes,
-        // METADATA FIRST: Switch to Views
         notesRes,
         dictationNotesRes,
         contextLinksRes,
         studySetsRes,
+        conceptsRes,
+        conceptLevelsRes,
     ] = await Promise.all([
         supabase.from('profiles').select('user_profile').eq('id', userId).single(),
         supabase.from('tables').select('*, vocab_rows(count)').eq('user_id', userId),
@@ -142,8 +144,9 @@ const fetchUserData = async (userId: string) => {
         supabase.from('notes_metadata').select('*').eq('user_id', userId),
         supabase.from('dictation_metadata').select('*').eq('user_id', userId),
         supabase.from('context_links').select('*').eq('user_id', userId),
-        // NEW: Fetch study sets (lighter than profile JSON)
         supabase.from('study_sets').select('*').eq('user_id', userId),
+        supabase.from('concepts').select('*').eq('user_id', userId),
+        supabase.from('concept_levels').select('*').eq('user_id', userId),
     ]);
 
     if (profileRes.error && profileRes.status !== 406) throw profileRes.error;
@@ -153,6 +156,8 @@ const fetchUserData = async (userId: string) => {
     if (dictationNotesRes.error) throw dictationNotesRes.error;
     if (contextLinksRes.error) throw contextLinksRes.error;
     if (studySetsRes.error) throw studySetsRes.error;
+    if (conceptsRes.error) throw conceptsRes.error;
+    if (conceptLevelsRes.error) throw conceptLevelsRes.error;
 
     // --- MIGRATION TRIGGER ---
     // If study_sets is empty but profile has data, trigger migration
@@ -175,6 +180,8 @@ const fetchUserData = async (userId: string) => {
         dictationNotes: dictationNotesRes.data || [],
         contextLinks: contextLinksRes.data || [],
         studySets: studySetsRes.data || [],
+        concepts: conceptsRes.data || [],
+        conceptLevels: conceptLevelsRes.data || [],
     };
 };
 
@@ -366,6 +373,22 @@ export const AppContent: React.FC = () => {
             setNotes(data.notes.map((n: any) => ({ ...n, createdAt: new Date(n.created_at).getTime() })));
             setDictationNotes(data.dictationNotes.map((d: any) => ({ ...d, youtubeUrl: d.youtube_url, practiceHistory: d.practice_history || [] })));
             setContextLinks(data.contextLinks.map((l: any) => ({ ...l, rowId: l.row_id, sourceType: l.source_type, sourceId: l.source_id, createdAt: new Date(l.created_at).getTime() })));
+
+            // Hydrate Concepts
+            useConceptStore.getState().setInitialData({
+                concepts: (data as any).concepts.map((c: any) => ({
+                    ...c,
+                    parentId: c.parent_id,
+                    isFolder: c.is_folder,
+                    createdAt: c.created_at,
+                    modifiedAt: c.modified_at
+                })),
+                conceptLevels: (data as any).conceptLevels.map((l: any) => ({
+                    ...l,
+                    conceptId: l.concept_id,
+                    createdAt: l.created_at
+                }))
+            });
 
             if (loading) {
                 setLoading(false);

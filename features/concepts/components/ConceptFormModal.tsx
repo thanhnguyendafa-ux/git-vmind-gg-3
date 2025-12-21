@@ -27,6 +27,8 @@ const ConceptFormModal: React.FC<ConceptFormModalProps> = ({ concept, parentId, 
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const isCodeDuplicate = !isEditing && concepts.some(c => c.code === formData.code && c.id !== concept?.id);
+
     // Generate next available code
     const generateCode = () => {
         const existingCodes = concepts.map(c => parseInt(c.code)).filter(n => !isNaN(n));
@@ -120,6 +122,11 @@ const ConceptFormModal: React.FC<ConceptFormModalProps> = ({ concept, parentId, 
                                 placeholder="e.g., 1000"
                                 required
                             />
+                            {isCodeDuplicate && (
+                                <p className="mt-1 text-xs text-red-500 font-medium animate-shake">
+                                    This code is already in use by another concept.
+                                </p>
+                            )}
                             {!isEditing && (
                                 <button
                                     type="button"
@@ -210,7 +217,7 @@ const ConceptFormModal: React.FC<ConceptFormModalProps> = ({ concept, parentId, 
                         </button>
                         <button
                             type="submit"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || (isCodeDuplicate && !isEditing)}
                             className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSubmitting ? 'Saving...' : isEditing ? 'Update' : 'Create'}

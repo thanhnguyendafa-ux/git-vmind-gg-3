@@ -5,12 +5,13 @@ import Icon from '../../components/ui/Icon';
 import { generateForPrompt, generateImageFromText } from '../../services/geminiService';
 import { useAudioStore, SpeechRequest } from '../../stores/useAudioStore';
 import { useUIStore } from '../../stores/useUIStore';
+import { useConceptStore } from '../../stores/useConceptStore';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { getPriorityScore, getRankPoint, getLevel } from '../../utils/priorityScore';
 import ContextViewer from '../study/components/ContextViewer';
 import { useContextLinks } from '../../hooks/useContextLinks';
-import ConceptLevelSelector from '../concepts/ConceptLevelSelector';
+import MultiConceptPicker from '../concepts/components/MultiConceptPicker';
 
 
 interface WordDetailModalProps {
@@ -39,7 +40,10 @@ const WordDetailModal: React.FC<WordDetailModalProps> = ({ row, table, columns, 
     const [newColumnName, setNewColumnName] = useState('');
     const [isSavingNewColumn, setIsSavingNewColumn] = useState(false);
     const [activeTab, setActiveTab] = useState<'content' | 'stats'>('content');
+    const [isConceptPickerOpen, setIsConceptPickerOpen] = useState(false);
     const firstInputRef = useRef<HTMLTextAreaElement>(null);
+
+    const { conceptLevels, concepts } = useConceptStore();
 
     const contextLinks = useContextLinks(editableRow?.id);
 
@@ -52,8 +56,11 @@ const WordDetailModal: React.FC<WordDetailModalProps> = ({ row, table, columns, 
         return map;
     }, [aiPrompts]);
 
+    const prevRowIdRef = useRef<string | null>(null);
+
     useEffect(() => {
-        if (row) {
+        if (row && row.id !== prevRowIdRef.current) {
+            prevRowIdRef.current = row.id;
             setEditableRow(JSON.parse(JSON.stringify(row))); // Deep copy
             setGeneratingFields(new Set());
             setIsAddingColumn(false);
@@ -62,6 +69,8 @@ const WordDetailModal: React.FC<WordDetailModalProps> = ({ row, table, columns, 
             if (quickAddMode) {
                 setTimeout(() => firstInputRef.current?.focus(), 100);
             }
+            // Warm up concept store just in case
+            useConceptStore.getState();
         }
     }, [row, quickAddMode]);
 
@@ -381,13 +390,65 @@ const WordDetailModal: React.FC<WordDetailModalProps> = ({ row, table, columns, 
                             {/* Concept & Level Linker */}
                             {!quickAddMode && (
                                 <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
-                                    <h3 className="text-md font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
-                                        <Icon name="hierarchy" className="w-4 h-4" />
-                                        Concept & Level
-                                    </h3>
-                                    <ConceptLevelSelector
-                                        selectedLevelId={editableRow.conceptLevelId}
-                                        onChange={(levelId) => setEditableRow({ ...editableRow, conceptLevelId: levelId })}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-md font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                                            <Icon name="hierarchy" className="w-4 h-4" />
+                                            Concept & Level
+                                        </h3>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setIsConceptPickerOpen(true)}
+                                            className="text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                                        >
+                                            <Icon name="link" className="w-4 h-4 mr-2" />
+                                            Manage Concepts
+                                        </Button>
+                                    </div>
+
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 p-4 min-h-[80px] flex flex-wrap gap-2 items-center">
+                                        {((editableRow.conceptLevelIds?.length || 0) === 0 && !editableRow.conceptLevelId) ? (
+                                            <span className="text-sm text-slate-400 italic mx-auto">No concepts linked yet.</span>
+                                        ) : (
+                                            <>
+                                                {/* Single Link (Legacy) */}
+                                                {editableRow.conceptLevelId && !editableRow.conceptLevelIds?.includes(editableRow.conceptLevelId) && (
+                                                    <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-full text-xs font-medium">
+                                                        <Icon name="clock" className="w-3 h-3" />
+                                                        {conceptLevels.find(l => l.id === editableRow.conceptLevelId)?.name || 'Unknown Level'}
+                                                        <span className="opacity-60 text-[10px] uppercase ml-1">Legacy</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Multi Links */}
+                                                {editableRow.conceptLevelIds?.map(levelId => {
+                                                    const level = conceptLevels.find(l => l.id === levelId);
+                                                    const concept = concepts.find(c => c.id === level?.conceptId);
+                                                    if (!level) return null;
+                                                    return (
+                                                        <div key={levelId} className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-400 px-3 py-1.5 rounded-full text-xs font-medium group">
+                                                            <Icon name="book" className="w-3 h-3" />
+                                                            <span>{concept?.name || 'Concept'}: <b>{level.name}</b></span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </>
+                                        )
+                                        }
+                                    </div>
+
+                                    {/* Picker Portal */}
+                                    <MultiConceptPicker
+                                        isOpen={isConceptPickerOpen}
+                                        onClose={() => setIsConceptPickerOpen(false)}
+                                        targetRowIds={[editableRow.id]}
+                                        targetTableId={table.id}
+                                        onSuccess={(levelIds) => {
+                                            setEditableRow(prev => prev ? ({
+                                                ...prev,
+                                                conceptLevelIds: levelIds
+                                            }) : null);
+                                        }}
                                     />
                                 </div>
                             )}
