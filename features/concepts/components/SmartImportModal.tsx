@@ -237,6 +237,11 @@ const SmartImportModal: React.FC<SmartImportModalProps> = ({ onClose, onSuccess 
             // Option D: Hybrid Approach - Sync Progress Tracking
             setStep('SYNCING');
             const engine = VmindSyncEngine.getInstance();
+
+            // FIX: Force end batch mode to ensure the queue starts processing 
+            // even if the underlying TableScreen is keeping it in batch mode.
+            engine.endBatchMode();
+
             const startQueueLen = engine.getQueueLength();
 
             // Wait for sync with progress updates and timeout
