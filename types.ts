@@ -217,6 +217,7 @@ export interface VocabRow {
   conceptLevelIds?: string[]; // Multiple links to ConceptLevels
   /** @deprecated Use conceptLevelIds instead */
   conceptLevelId?: string;
+  conceptNotes?: Record<string, string>; // levelId -> justification note
   createdAt: number;
   modifiedAt: number;
 }
@@ -502,6 +503,7 @@ export interface Concept {
   description?: string;
   parentId?: string; // For nested concept hierarchies (folder structure)
   isFolder?: boolean; // True if this concept is a folder/container
+  color?: string; // For visual indicator (e.g., "hsl(240, 70%, 60%)")
   user_id?: string;
   createdAt: number;
   modifiedAt: number;

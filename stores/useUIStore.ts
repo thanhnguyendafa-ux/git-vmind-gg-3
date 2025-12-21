@@ -42,6 +42,10 @@ interface UIState {
   selectedConceptId: string | null;
   expandedConceptIds: string[];
 
+  // Knowledge Sidebar State
+  knowledgeSidebarOpen: boolean;
+  knowledgeSidebarRowId: string | null;
+
   // Library Module
   isLibraryMode: boolean;
 
@@ -94,6 +98,10 @@ interface UIState {
   setSelectedConceptId: (id: string | null) => void;
   setExpandedConceptIds: (ids: string[]) => void;
   toggleExpandedConceptId: (id: string) => void;
+
+  // Knowledge Sidebar Actions
+  openKnowledgeSidebar: (rowId: string) => void;
+  closeKnowledgeSidebar: () => void;
 }
 
 const DEFAULT_BG_SETTINGS: BackgroundSettings = {
@@ -144,6 +152,10 @@ export const useUIStore = create<UIState>()(
     // Concept Section State
     selectedConceptId: localStorage.getItem('vmind-selected-concept') || null,
     expandedConceptIds: JSON.parse(localStorage.getItem('vmind-expanded-concepts') || '[]'),
+
+    // Knowledge Sidebar State
+    knowledgeSidebarOpen: false,
+    knowledgeSidebarRowId: null,
 
     // Navigation Guard State
     pendingAction: null,
@@ -294,5 +306,9 @@ export const useUIStore = create<UIState>()(
       localStorage.setItem('vmind-expanded-concepts', JSON.stringify(next));
       return { expandedConceptIds: next };
     }),
+
+    // Knowledge Sidebar Actions
+    openKnowledgeSidebar: (rowId) => set({ knowledgeSidebarOpen: true, knowledgeSidebarRowId: rowId }),
+    closeKnowledgeSidebar: () => set({ knowledgeSidebarOpen: false, knowledgeSidebarRowId: null }),
   })
 );

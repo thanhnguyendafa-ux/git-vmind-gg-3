@@ -380,6 +380,7 @@ export const AppContent: React.FC = () => {
                     ...c,
                     parentId: c.parent_id,
                     isFolder: c.is_folder,
+                    color: c.color,
                     createdAt: c.created_at,
                     modifiedAt: c.modified_at
                 })),

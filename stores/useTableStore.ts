@@ -61,8 +61,10 @@ interface TableState {
 const getEngine = () => VmindSyncEngine.getInstance();
 
 const dbRowToVocabRow = (row: any): VocabRow => {
-    const { stats, table_id, user_id, row_id_num, conceptLevelId, conceptLevelIds, ...rest } = row;
-    const { last_studied, flashcard_status, flashcard_encounters, is_flashcard_reviewed, last_practice_date, scramble_encounters, scramble_ratings, theater_encounters, anki_repetitions, anki_ease_factor, anki_interval, anki_due_date, confi_viewed, ...restStats } = stats;
+    // Destructure using snake_case names from Supabase
+    const { stats, table_id, user_id, row_id_num, concept_level_id, concept_level_ids, concept_notes, ...rest } = row;
+    const { last_studied, flashcard_status, flashcard_encounters, is_flashcard_reviewed, last_practice_date, scramble_encounters, scramble_ratings, theater_encounters, anki_repetitions, anki_ease_factor, anki_interval, anki_due_date, confi_viewed, ...restStats } = stats || {};
+
     const statsCamel = {
         ...restStats,
         lastStudied: last_studied,
@@ -79,12 +81,14 @@ const dbRowToVocabRow = (row: any): VocabRow => {
         ankiDueDate: anki_due_date,
         confiViewed: confi_viewed,
     };
+
     return {
         ...rest,
         stats: statsCamel,
         rowIdNum: row_id_num,
-        conceptLevelId, // Keep for legacy
-        conceptLevelIds: conceptLevelIds || [] // Ensure array
+        conceptLevelId: concept_level_id,
+        conceptLevelIds: concept_level_ids || [],
+        conceptNotes: concept_notes || {}
     };
 };
 

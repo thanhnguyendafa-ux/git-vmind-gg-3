@@ -109,6 +109,14 @@ export class VmindSyncEngine {
         return VmindSyncEngine.instance;
     }
 
+    /**
+     * Returns the current number of items in the sync queue.
+     * Used for tracking sync progress in UI (e.g., Concept Factory loading state).
+     */
+    public getQueueLength(): number {
+        return this.queue.length;
+    }
+
     // --- IDB Helpers (Minimal Wrapper) ---
     private async initDB(): Promise<void> {
         return new Promise((resolve, reject) => {
@@ -593,6 +601,9 @@ export class VmindSyncEngine {
                 if (oldIds || rest.conceptLevelIds) {
                     dbRow.concept_level_ids = oldIds || rest.conceptLevelIds;
                 }
+                if (rest.conceptNotes) {
+                    dbRow.concept_notes = rest.conceptNotes;
+                }
 
                 const { error: upsertError } = await supabase.from('vocab_rows').upsert(dbRow);
                 if (upsertError) {
@@ -917,6 +928,7 @@ export class VmindSyncEngine {
                     parent_id: concept.parentId,
                     is_folder: concept.isFolder,
                     user_id: userId,
+                    color: concept.color,
                     created_at: concept.createdAt,
                     modified_at: concept.modifiedAt
                 };

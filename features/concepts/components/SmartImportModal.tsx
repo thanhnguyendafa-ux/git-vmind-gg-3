@@ -8,13 +8,14 @@ import { ImportParser, ParsedGrid } from '../utils/ImportParser';
 import ImportMapper, { ColumnMappingState, TargetField } from './ImportMapper';
 import { generateUUID } from '../../../utils/uuidUtils';
 import { VocabRow, FlashcardStatus } from '../../../types';
+import { VmindSyncEngine } from '../../../services/VmindSyncEngine';
 
 interface SmartImportModalProps {
     onClose: () => void;
     onSuccess: () => void;
 }
 
-type Step = 'PASTE' | 'MAP' | 'IMPORTING' | 'SUCCESS';
+type Step = 'PASTE' | 'MAP' | 'IMPORTING' | 'SYNCING' | 'SUCCESS';
 
 const SmartImportModal: React.FC<SmartImportModalProps> = ({ onClose, onSuccess }) => {
     const [step, setStep] = useState<Step>('PASTE');
@@ -231,13 +232,41 @@ const SmartImportModal: React.FC<SmartImportModalProps> = ({ onClose, onSuccess 
             });
 
             await tableStore.addRows(table.id, rowsToAdd);
-            log("Done! All records imported.");
+            log("Records prepared. Saving to cloud...");
 
-            // Wait a bit for UX
-            setTimeout(() => {
-                setStep('SUCCESS');
-                onSuccess();
-            }, 1000);
+            // Option D: Hybrid Approach - Sync Progress Tracking
+            setStep('SYNCING');
+            const engine = VmindSyncEngine.getInstance();
+            const startQueueLen = engine.getQueueLength();
+
+            // Wait for sync with progress updates and timeout
+            const syncComplete = await new Promise<boolean>((resolve) => {
+                let elapsed = 0;
+                const maxWait = 15000; // 15 seconds max
+                const checkInterval = 200;
+
+                const check = setInterval(() => {
+                    elapsed += checkInterval;
+                    const remaining = engine.getQueueLength();
+                    const synced = startQueueLen - remaining;
+
+                    if (remaining === 0) {
+                        clearInterval(check);
+                        log(`All ${startQueueLen} items synced to cloud!`);
+                        resolve(true);
+                    } else if (elapsed >= maxWait) {
+                        clearInterval(check);
+                        log(`Sync in progress (${remaining} items remaining). Data will sync in background.`);
+                        resolve(false);
+                    } else if (elapsed % 1000 === 0) {
+                        // Log progress every second
+                        log(`Syncing... ${synced}/${startQueueLen}`);
+                    }
+                }, checkInterval);
+            });
+
+            setStep('SUCCESS');
+            onSuccess();
 
         } catch (err: any) {
             console.error(err);
@@ -373,12 +402,23 @@ const SmartImportModal: React.FC<SmartImportModalProps> = ({ onClose, onSuccess 
                         </div>
                     )}
 
-                    {(step === 'IMPORTING' || step === 'SUCCESS') && (
+                    {(step === 'IMPORTING' || step === 'SYNCING' || step === 'SUCCESS') && (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
                             {step === 'IMPORTING' ? (
                                 <div className="flex flex-col items-center gap-4">
                                     <div className="w-16 h-16 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin" />
                                     <h3 className="text-xl font-bold text-text-main dark:text-white">Fabricating Knowledge...</h3>
+                                    <div className="w-full max-w-md bg-secondary-50 dark:bg-black/40 rounded-lg p-4 font-mono text-xs text-left h-48 overflow-auto border border-white/10">
+                                        {importLog.map((log, i) => (
+                                            <div key={i} className="text-text-subtle mb-1">&gt; {log}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : step === 'SYNCING' ? (
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin" />
+                                    <h3 className="text-xl font-bold text-text-main dark:text-white">Saving to Cloud...</h3>
+                                    <p className="text-text-subtle text-sm">Ensuring your data is safely stored</p>
                                     <div className="w-full max-w-md bg-secondary-50 dark:bg-black/40 rounded-lg p-4 font-mono text-xs text-left h-48 overflow-auto border border-white/10">
                                         {importLog.map((log, i) => (
                                             <div key={i} className="text-text-subtle mb-1">&gt; {log}</div>

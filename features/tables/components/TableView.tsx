@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { Table, VocabRow, Column } from '../../../types';
+import { Table, VocabRow, Column, Screen } from '../../../types';
 import Icon from '../../../components/ui/Icon';
 import { useTableView } from '../contexts/TableViewContext';
 import { getPriorityScore, getRankPoint, getLevel, getTotalAttempts, getSuccessRate } from '../../../utils/priorityScore';
@@ -9,6 +9,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import Popover from '../../../components/ui/Popover';
 import { useTableStore } from '../../../stores/useTableStore';
 import { useUIStore } from '../../../stores/useUIStore';
+import ConceptIndicatorCell from './ConceptIndicatorCell';
+import KnowledgeSidebar from '../../concepts/components/KnowledgeSidebar';
 
 // Helper for namespaced ID formatting (e.g., VOC001)
 const formatHumanId = (code: string | undefined, id: number) => {
@@ -39,7 +41,7 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
     const { state, dispatch } = useTableView();
     const { selectedRows, visibleColumns, visibleStats, grouping, sorts, columnWidths, rowHeight, isTextWrapEnabled, fontSize, isBandedRows, searchQuery, showRowId, selectedCell, dragTarget, isDraggingHandle, columnOrder, frozenColumnCount, isSelecting, selectionAnchor, selectedRangeIds } = state;
     const { batchUpdateRows } = useTableStore();
-    const { showToast } = useUIStore();
+    const { showToast, knowledgeSidebarOpen, knowledgeSidebarRowId, openKnowledgeSidebar } = useUIStore();
 
     const resizingColumnRef = React.useRef<{ id: string, startX: number, startWidth: number } | null>(null);
     const [menuForRow, setMenuForRow] = React.useState<string | null>(null);
@@ -148,6 +150,7 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
 
     const totalWidthPx = React.useMemo(() => {
         let w = 50 + 1; // Checkbox + border
+        w += 12 + 1; // Concept Indicator + border
         visibleOrderedCols.forEach(c => {
             const defaultWidth = c.id === SYSTEM_ID_COL_DEF.id ? 88 : 200;
             const widthPx = columnWidths[c.id] || defaultWidth;
@@ -491,11 +494,16 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
 
         // Sticky Logic: First column (Checkbox) is always 50px.
         const checkboxWidthPx = 50;
+        const indicatorWidthPx = 12; // Concept indicator width
         let headerStickyLeft = 0;
 
         // Checkbox always frozen
         const checkboxStickyHeaderStyle: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 50 };
         headerStickyLeft += checkboxWidthPx + 1; // +1 for border
+
+        // Indicator always frozen (after checkbox)
+        const indicatorStickyHeaderStyle: React.CSSProperties = { position: 'sticky', left: headerStickyLeft, zIndex: 50 };
+        headerStickyLeft += indicatorWidthPx + 1; // +1 for border
 
         return (
             <div className="bg-surface dark:bg-secondary-800 rounded-lg shadow-sm border border-border dark:border-secondary-700 h-full flex flex-col overflow-hidden">
@@ -533,6 +541,20 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
                             className={`px-4 py-2 flex items-center justify-center flex-shrink-0 bg-secondary-50 dark:bg-secondary-900 ${headerBorderClass}`}
                         >
                             <input type="checkbox" onChange={handleSelectAll} checked={rows.length > 0 && selectedRows.size === rows.length} className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500" />
+                        </div>
+
+                        {/* Concept Indicator Header */}
+                        <div
+                            style={{
+                                width: `${indicatorWidthPx}px`,
+                                ...indicatorStickyHeaderStyle,
+                                transform: 'translateZ(0)',
+                                WebkitTransform: 'translateZ(0)'
+                            }}
+                            className={`flex items-center justify-center flex-shrink-0 bg-secondary-50 dark:bg-secondary-900 ${headerBorderClass}`}
+                            title="Concept Links"
+                        >
+                            <Icon name="link" className="w-3 h-3 text-text-subtle" />
                         </div>
 
                         {/* Data Columns (Mixed ID + User Columns) */}
@@ -651,6 +673,9 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
                             const cbSticky: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 25 };
                             rowStickyLeft += checkboxWidthPx + 1; // +1 for border
 
+                            const indicatorSticky: React.CSSProperties = { position: 'sticky', left: rowStickyLeft, zIndex: 25 };
+                            rowStickyLeft += indicatorWidthPx + 1; // +1 for border
+
                             // Visual Banding & Background Logic
                             const isEvenRow = virtualItem.index % 2 !== 0;
 
@@ -683,6 +708,19 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
                                         className={`px-4 flex items-center justify-center flex-shrink-0 ${cellBorderClass} ${stickyBgClass}`}
                                     >
                                         <input type="checkbox" checked={isSelected} onClick={(e) => handleSelectRow(e, row.id)} onChange={() => { }} className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500 bg-surface dark:bg-secondary-700 border-secondary-300 dark:border-secondary-600" />
+                                    </div>
+
+                                    {/* Concept Indicator Cell */}
+                                    <div
+                                        style={{ width: `${indicatorWidthPx}px`, ...indicatorSticky }}
+                                        className={`flex items-center justify-center flex-shrink-0 ${cellBorderClass} ${stickyBgClass}`}
+                                    >
+                                        <ConceptIndicatorCell
+                                            row={row}
+                                            onDoubleClick={() => {
+                                                useUIStore.getState().setCurrentScreen(Screen.ConceptLinks);
+                                            }}
+                                        />
                                     </div>
 
                                     {/* Editable Cells */}
@@ -791,8 +829,16 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
     }
 
     return (
-        <div className="h-full overflow-hidden w-full">
+        <div className="h-full overflow-hidden w-full relative">
             {renderDataGrid()}
+
+            {/* Knowledge Sidebar */}
+            {knowledgeSidebarOpen && knowledgeSidebarRowId && (
+                <KnowledgeSidebar
+                    row={rows.find(r => r.id === knowledgeSidebarRowId)!}
+                    tableId={table.id}
+                />
+            )}
         </div>
     );
 };
