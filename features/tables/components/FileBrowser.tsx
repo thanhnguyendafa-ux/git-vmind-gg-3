@@ -29,24 +29,24 @@ interface FileBrowserProps {
 }
 
 const FileBrowser: React.FC<FileBrowserProps> = (props) => {
-    const { 
+    const {
         currentFolderId, setCurrentFolderId,
-        folders, tables, tablesWithoutFolder, 
+        folders, tables, tablesWithoutFolder,
         onMoveTable, onRenameTable, onDeleteTable, onDeleteFolder, onRenameFolder, onUpdateFolder, onSelectTable,
         onCreateTable, onCreateFolder, onNavigateStudy
     } = props;
-    
+
     const { theme, isLibraryMode, setIsLibraryMode, isDesktopSidebarOpen, toggleDesktopSidebar } = useUIStore();
     const { settings } = useUserStore();
-    
+
     // Internal View State
     const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid');
     const [sortMode, setSortMode] = React.useState<'name' | 'modified' | 'count'>('modified');
 
     // --- Derived Data ---
-    const currentFolder = React.useMemo(() => 
+    const currentFolder = React.useMemo(() =>
         currentFolderId ? folders.find(f => f.id === currentFolderId) : null
-    , [currentFolderId, folders]);
+        , [currentFolderId, folders]);
 
     const displayFolders = React.useMemo(() => {
         // Show folders only at Root Level
@@ -66,7 +66,7 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
             // Root View: Tables not in any folder
             items = tablesWithoutFolder as Table[];
         }
-        
+
         // Sorting
         return items.sort((a, b) => {
             if (sortMode === 'name') return a.name.localeCompare(b.name);
@@ -93,23 +93,23 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
     // --- Empty State ---
     if (displayFolders.length === 0 && displayTables.length === 0) {
         return (
-             <div className="flex flex-col h-full relative">
-                 {/* Empty State Header with Toggle */}
+            <div className="flex flex-col h-full relative">
+                {/* Empty State Header with Toggle */}
                 <div className="flex-shrink-0 px-6 py-4 flex justify-between items-center z-20">
-                     <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4">
                         {!isDesktopSidebarOpen && (
-                             <Button variant="ghost" size="sm" onClick={toggleDesktopSidebar} className="hidden md:flex h-8 w-8 p-0" title="Expand Sidebar">
+                            <Button variant="ghost" size="sm" onClick={toggleDesktopSidebar} className="hidden md:flex h-8 w-8 p-0" title="Expand Sidebar">
                                 <Icon name="sidebar" className="w-4 h-4" />
                             </Button>
                         )}
-                         <div className="bg-secondary-100 dark:bg-secondary-800 p-1 rounded-lg flex items-center">
+                        <div className="bg-secondary-100 dark:bg-secondary-800 p-1 rounded-lg flex items-center">
                             <button
                                 onClick={() => setIsLibraryMode(false)}
                                 className="px-3 py-1.5 rounded-md text-sm font-semibold transition-all bg-white dark:bg-secondary-600 shadow text-text-main dark:text-white"
                             >
                                 Workspace
                             </button>
-                             <button
+                            <button
                                 onClick={() => setIsLibraryMode(true)}
                                 className="px-3 py-1.5 rounded-md text-sm font-semibold transition-all text-text-subtle hover:text-text-main"
                             >
@@ -119,7 +119,7 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
                     </div>
                 </div>
 
-                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 animate-fadeIn">
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 animate-fadeIn">
                     <div className="bg-secondary-100 dark:bg-secondary-800 p-6 rounded-full mb-6">
                         <Icon name={currentFolderId ? "folder" : "home"} className="w-16 h-16 text-secondary-300 dark:text-secondary-600" />
                     </div>
@@ -127,8 +127,8 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
                         {currentFolderId ? 'Empty Folder' : 'Your Workspace is Empty'}
                     </h2>
                     <p className="text-text-subtle mb-8 max-w-sm">
-                        {currentFolderId 
-                            ? "This folder has no tables yet. Move tables here or create a new one." 
+                        {currentFolderId
+                            ? "This folder has no tables yet. Move tables here or create a new one."
                             : "Start your journey by creating a vocabulary table or organizing with folders."
                         }
                     </p>
@@ -157,14 +157,14 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
             {/* Header Bar */}
             <header className="flex-shrink-0 px-6 py-4 border-b border-white/20 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 bg-surface/60 dark:bg-secondary-900/60 backdrop-blur-md z-20">
                 <div className="flex items-center gap-4">
-                     {/* Sidebar Toggle (Desktop Only) */}
+                    {/* Sidebar Toggle (Desktop Only) */}
                     {!isDesktopSidebarOpen && (
-                         <Button variant="ghost" size="sm" onClick={toggleDesktopSidebar} className="hidden md:flex h-8 w-8 p-0" title="Expand Sidebar">
+                        <Button variant="ghost" size="sm" onClick={toggleDesktopSidebar} className="hidden md:flex h-8 w-8 p-0" title="Expand Sidebar">
                             <Icon name="sidebar" className="w-4 h-4" />
                         </Button>
                     )}
 
-                     {/* Library Toggle */}
+                    {/* Library Toggle */}
                     <div className="bg-secondary-100 dark:bg-secondary-800 p-1 rounded-lg flex items-center flex-shrink-0">
                         <button
                             onClick={() => setIsLibraryMode(false)}
@@ -172,7 +172,7 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
                         >
                             Workspace
                         </button>
-                         <button
+                        <button
                             onClick={() => setIsLibraryMode(true)}
                             className="px-3 py-1.5 rounded-md text-sm font-semibold transition-all text-text-subtle hover:text-text-main"
                         >
@@ -184,14 +184,14 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
 
                     {/* Breadcrumbs */}
                     <div className="flex items-center gap-2 text-lg font-medium overflow-hidden">
-                        <button 
-                            onClick={handleBreadcrumbClick} 
+                        <button
+                            onClick={handleBreadcrumbClick}
                             className={`flex items-center gap-1 transition-colors ${currentFolderId ? 'text-text-subtle hover:text-text-main' : 'text-text-main dark:text-secondary-100 font-bold'}`}
                         >
                             <Icon name="home" className="w-5 h-5" />
                             <span className="hidden sm:inline">Root</span>
                         </button>
-                        
+
                         {currentFolder && (
                             <>
                                 <Icon name="chevron-right" className="w-4 h-4 text-text-subtle flex-shrink-0" />
@@ -219,8 +219,8 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
                     <div className="h-6 w-px bg-secondary-300 dark:bg-secondary-600 mx-1"></div>
 
                     {/* Sort */}
-                     <select 
-                        value={sortMode} 
+                    <select
+                        value={sortMode}
                         onChange={(e) => setSortMode(e.target.value as any)}
                         className="bg-transparent text-sm font-semibold text-text-subtle hover:text-text-main focus:outline-none cursor-pointer"
                     >
@@ -231,13 +231,13 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
 
                     {/* View Toggle */}
                     <div className="flex bg-secondary-100 dark:bg-secondary-800 rounded-lg p-1">
-                        <button 
+                        <button
                             onClick={() => setViewMode('grid')}
                             className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-secondary-600 shadow text-primary-600' : 'text-text-subtle hover:text-text-main'}`}
                         >
                             <Icon name="grid" className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                             onClick={() => setViewMode('list')}
                             className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-secondary-600 shadow text-primary-600' : 'text-text-subtle hover:text-text-main'}`}
                         >
@@ -248,8 +248,8 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
             </header>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 animate-fadeIn">
-                
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-32 animate-fadeIn">
+
                 {/* SECTION 1: Folder Shelf (Root Only) */}
                 {!currentFolderId && displayFolders.length > 0 && (
                     <div className="mb-6">
@@ -257,7 +257,7 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
                         {viewMode === 'grid' ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                                 {displayFolders.map(folder => (
-                                    <FolderGridItem 
+                                    <FolderGridItem
                                         key={folder.id}
                                         folder={folder}
                                         onSelect={() => handleFolderClick(folder.id)}
@@ -289,14 +289,14 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
 
                 {/* SECTION 2: Data Grid */}
                 <div>
-                     <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider mb-3 px-1">
-                         {currentFolderId ? `Tables in "${currentFolder?.name}"` : "All Tables"}
+                    <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider mb-3 px-1">
+                        {currentFolderId ? `Tables in "${currentFolder?.name}"` : "All Tables"}
                     </h3>
 
                     {viewMode === 'grid' ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                             {displayTables.map(table => (
-                                <TableGridItem 
+                                <TableGridItem
                                     key={table.id}
                                     table={table}
                                     onSelect={() => onSelectTable(table.id)}
@@ -329,20 +329,20 @@ const FileBrowser: React.FC<FileBrowserProps> = (props) => {
                             ))}
                         </div>
                     )}
-                    
+
                     {displayTables.length === 0 && (
-                         <div className="p-8 text-center text-text-subtle italic border-2 border-dashed border-secondary-200 dark:border-secondary-700 rounded-xl">
-                             No tables here yet.
-                         </div>
+                        <div className="p-8 text-center text-text-subtle italic border-2 border-dashed border-secondary-200 dark:border-secondary-700 rounded-xl">
+                            No tables here yet.
+                        </div>
                     )}
                 </div>
 
             </div>
-            
+
             {/* Mobile Floating Action Button */}
             <div className="md:hidden fixed bottom-20 right-6 z-30 flex flex-col gap-3">
                 {!currentFolderId && (
-                     <Button onClick={onCreateFolder} size="lg" className="rounded-full shadow-lg w-12 h-12 p-0 flex items-center justify-center bg-secondary-200 dark:bg-secondary-700 text-text-main">
+                    <Button onClick={onCreateFolder} size="lg" className="rounded-full shadow-lg w-12 h-12 p-0 flex items-center justify-center bg-secondary-200 dark:bg-secondary-700 text-text-main">
                         <Icon name="folder" className="w-5 h-5" />
                     </Button>
                 )}

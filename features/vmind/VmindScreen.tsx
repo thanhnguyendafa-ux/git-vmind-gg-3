@@ -207,7 +207,7 @@ const VmindScreen: React.FC = () => {
             <AuroraBackground />
 
             {/* 1. Content Layer */}
-            <div className="relative z-10 h-full w-full overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-12 custom-scrollbar">
+            <div className="relative z-10 h-full w-full overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-24 custom-scrollbar">
                 <header className="mb-6 sm:mb-10 mt-2 animate-fadeIn max-w-4xl mx-auto">
                     <h1 className="text-2xl sm:text-4xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-emerald-600 dark:from-primary-400 dark:to-emerald-400 mb-1 sm:mb-2 text-center lg:text-left">
                         Learning Center

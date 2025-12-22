@@ -30,12 +30,12 @@ const TableContentArea: React.FC<TableContentAreaProps> = ({
     initialTagFilter,
     onClearFilter
 }) => {
-    const { 
-        activeTab, 
-        setRowToView, 
-        setRowToEdit, 
-        setPreviewRow, 
-        setRelationToEdit, 
+    const {
+        activeTab,
+        setRowToView,
+        setRowToEdit,
+        setPreviewRow,
+        setRelationToEdit,
         setRelationToDelete,
         setIsColumnEditorOpen,
         setIsBatchDeleteConfirmOpen,
@@ -66,14 +66,14 @@ const TableContentArea: React.FC<TableContentAreaProps> = ({
         }
     };
 
-    const handleAddNewRow = () => { 
-        const newRow: VocabRow = { 
-            id: crypto.randomUUID(), 
-            cols: {}, 
-            stats: { correct: 0, incorrect: 0, lastStudied: null, flashcardStatus: FlashcardStatus.New, flashcardEncounters: 0, isFlashcardReviewed: false, lastPracticeDate: null } 
-        }; 
+    const handleAddNewRow = () => {
+        const newRow: VocabRow = {
+            id: crypto.randomUUID(),
+            cols: {},
+            stats: { correct: 0, incorrect: 0, lastStudied: null, flashcardStatus: FlashcardStatus.New, flashcardEncounters: 0, isFlashcardReviewed: false, lastPracticeDate: null }
+        };
         setIsQuickAddMode(true);
-        setRowToEdit(newRow); 
+        setRowToEdit(newRow);
     };
 
     const handlePasteClick = () => {
@@ -83,25 +83,25 @@ const TableContentArea: React.FC<TableContentAreaProps> = ({
     if (activeTab === 'view') {
         return (
             <div className="h-full px-4 sm:px-6 pt-2 pb-0 animate-fadeIn">
-                <ViewTab 
-                    table={table} 
+                <ViewTab
+                    table={table}
                     isLoading={isLoadingPayload}
-                    sortableStats={sortableStats} 
-                    fillablePrompts={fillablePrompts} 
+                    sortableStats={sortableStats}
+                    fillablePrompts={fillablePrompts}
                     preFilteredRowIds={finalPreFilteredIds}
                     progressName={activeProgressName}
                     initialTagFilter={initialTagFilter}
                     onClearFilter={onClearFilter}
-                    onAddNewRow={handleAddNewRow} 
+                    onAddNewRow={handleAddNewRow}
                     onViewRow={setRowToView}
                     onEditRow={setRowToEdit}
                     onDeleteRow={handleDeleteRow}
                     onPreviewRow={setPreviewRow}
                     onManageColumns={() => setIsColumnEditorOpen(true)}
                     onConfigureAI={setColumnToConfigureAI}
-                    onConfigureLink={setLinkTemplateCol} 
+                    onConfigureLink={setLinkTemplateCol}
                     onBatchDelete={() => setIsBatchDeleteConfirmOpen(true)}
-                    onConfirmBatchGenerate={() => setIsBatchAiModalOpen(true)} 
+                    onConfirmBatchGenerate={() => setIsBatchAiModalOpen(true)}
                     onRunAiClick={handleRunAiClick}
                     onPasteData={setPasteData}
                     onPasteClick={handlePasteClick}
@@ -109,28 +109,28 @@ const TableContentArea: React.FC<TableContentAreaProps> = ({
             </div>
         );
     }
-    
+
     return (
-        <div className="absolute inset-0 overflow-y-auto p-4 sm:p-6 animate-fadeIn">
+        <div className="absolute inset-0 overflow-y-auto p-4 sm:p-6 pb-32 animate-fadeIn">
             {activeTab === 'relations' && (
-                <RelationsTab 
-                    table={table} 
+                <RelationsTab
+                    table={table}
                     onOpenNewRelation={() => setRelationToEdit({
-                        id: crypto.randomUUID(), 
-                        name: 'New Relation', 
-                        questionColumnIds: [], 
-                        answerColumnIds: [], 
+                        id: crypto.randomUUID(),
+                        name: 'New Relation',
+                        questionColumnIds: [],
+                        answerColumnIds: [],
                         compatibleModes: [StudyMode.Flashcards, StudyMode.MultipleChoice, StudyMode.Typing]
-                    })} 
-                    onOpenRelationSettings={(relation, tab) => setRelationToEdit(relation)} 
-                    setRelationToDelete={setRelationToDelete} 
+                    })}
+                    onOpenRelationSettings={(relation, tab) => setRelationToEdit(relation)}
+                    setRelationToDelete={setRelationToDelete}
                 />
             )}
             {activeTab === 'settings' && (
-                <SettingsTab 
-                    table={table} 
-                    onManageColumns={() => setIsColumnEditorOpen(true)} 
-                    onConfigureAI={setColumnToConfigureAI} 
+                <SettingsTab
+                    table={table}
+                    onManageColumns={() => setIsColumnEditorOpen(true)}
+                    onConfigureAI={setColumnToConfigureAI}
                     onUpdateTable={(t) => handleUpdateTable(t)}
                 />
             )}

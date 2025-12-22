@@ -1,0 +1,40 @@
+{
+    "name": "vmind-desktop",
+    "version": "1.0.0",
+    "description": "Vmind Desktop Application",
+    "main": "main.js",
+    "scripts": {
+        "pack": "electron-builder --dir",
+        "dist": "electron-builder"
+    },
+    "build": {
+        "appId": "com.vmind.app",
+        "productName": "Vmind",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "main.js",
+            {
+                "from": "../dist",
+                "to": "renderer",
+                "filter": [
+                    "**/*"
+                ]
+            }
+        ],
+        "win": {
+            "target": "nsis",
+            "verifyUpdateCodeSignature": false,
+            "signingHashAlgorithms": [
+                "sha256"
+            ]
+        }
+    },
+    "author": "Vmind",
+    "license": "ISC",
+    "devDependencies": {
+        "electron": "^28.0.0",
+        "electron-builder": "^24.13.3"
+    }
+}

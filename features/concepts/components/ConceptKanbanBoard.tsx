@@ -150,7 +150,7 @@ const ConceptKanbanBoard: React.FC<ConceptKanbanBoardProps> = ({
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
         >
-            <div className="h-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+            <div className="h-full overflow-x-auto overflow-y-hidden custom-scrollbar pb-24">
                 <div className="h-full flex gap-4 p-6">
                     {levels.map((level) => {
                         const allCards = getRowsByLevel(level.id);
