@@ -32,6 +32,10 @@ import RelationSettingsModal from '../tables/components/RelationSettingsModal';
 import LevelGalleryView from '../concepts/LevelGalleryView';
 import MultiConceptPicker from '../concepts/components/MultiConceptPicker';
 
+import { checkSessionHealth, HealthCheckIssue } from './utils/sessionHealthCheck';
+import ConfidenceHealthReportModal from './components/ConfidenceHealthReportModal';
+import IntegrityLogModal, { IntegrityLogEntry } from './components/IntegrityLogModal';
+
 const statusConfig: { [key in FlashcardStatus]: { label: string; color: string; hex: string; interval: number } } = {
     [FlashcardStatus.New]: { label: 'New', color: 'gray', hex: '#9ca3af', interval: 0 }, // gray-400
     [FlashcardStatus.Again]: { label: 'Again (Fail)', color: 'bg-error-500 hover:bg-error-600', hex: '#ef4444', interval: 3 }, // red-500
@@ -163,6 +167,12 @@ const ConfidenceSessionScreen: React.FC = () => {
     const [relationToEdit, setRelationToEdit] = useState<Relation | null>(null);
     const [isSessionLevelPickerOpen, setIsSessionLevelPickerOpen] = useState(false);
 
+    // Health Check State
+    const [healthIssues, setHealthIssues] = useState<HealthCheckIssue[]>([]);
+    const [hasCheckedHealth, setHasCheckedHealth] = useState(false);
+    const [integrityLog, setIntegrityLog] = useState<IntegrityLogEntry[]>([]);
+    const [showIntegrityLog, setShowIntegrityLog] = useState(false);
+
     // State for delete confirmation
     const [rowToDelete, setRowToDelete] = useState<string | null>(null);
 
@@ -171,12 +181,128 @@ const ConfidenceSessionScreen: React.FC = () => {
     const currentRowId = session.queue[session.currentIndex];
 
     useEffect(() => {
-        if (showSummary || relationToEdit || rowForDetailModal) return; // Stop timer when summary or modal is active
+        if (showSummary || relationToEdit || rowForDetailModal || healthIssues.length > 0) return; // Stop timer when summary or modal is active
         const timer = setInterval(() => {
             setElapsedSeconds(Math.floor((Date.now() - session.startTime) / 1000));
         }, 1000);
         return () => clearInterval(timer);
-    }, [session.startTime, showSummary, relationToEdit, rowForDetailModal]);
+    }, [session.startTime, showSummary, relationToEdit, rowForDetailModal, healthIssues.length]);
+
+    // NEW PRE-FLIGHT CHECK with Silent Healing
+    useEffect(() => {
+        if (hasCheckedHealth) return;
+        if (tables.length === 0) return;
+
+        const areTablesLoaded = session.tableIds.every(tid => tables.some(t => t.id === tid));
+        if (!areTablesLoaded) return;
+
+        const result = checkSessionHealth(session, tables);
+
+        if (result.issues.length > 0) {
+            // SILENT HEALING: Auto-remove problematic cards
+            const invalidIds = new Set(result.issues.map(i => i.rowId));
+            const newQueue = session.queue.filter(id => !invalidIds.has(id));
+            const newCardStates = { ...session.cardStates };
+            invalidIds.forEach(id => delete newCardStates[id]);
+
+            let newIndex = session.currentIndex;
+            if (newQueue.length === 0) {
+                newIndex = 0;
+            } else if (newIndex >= newQueue.length) {
+                newIndex = 0;
+            } else {
+                const currentId = session.queue[session.currentIndex];
+                const newPos = newQueue.indexOf(currentId);
+                newIndex = newPos !== -1 ? newPos : 0;
+            }
+
+            // Persistence: Sync fixed state back to store
+            updateActiveConfidenceSession({
+                queue: newQueue,
+                currentIndex: newIndex,
+                cardStates: newCardStates
+            });
+
+            // Log for Integrity Log Modal
+            const logEntries = result.issues.map(issue => {
+                let reasonText = 'Unexpected data error';
+                if (issue.reason === 'missing_answer') reasonText = 'Missing answer';
+                else if (issue.reason === 'missing_question') reasonText = 'Missing question content';
+
+                return {
+                    rowId: issue.rowId,
+                    term: issue.term,
+                    reason: reasonText
+                };
+            });
+            setIntegrityLog(logEntries);
+
+            showToast(`${result.issues.length} cards with data issues were skipped.`, "info");
+        }
+
+        setHasCheckedHealth(true);
+    }, [session, tables, hasCheckedHealth]);
+
+    const handleAutoSkipIssues = async () => {
+        const invalidIds = new Set(healthIssues.map(i => i.rowId));
+
+        // 1. Filter Queue
+        const newQueue = session.queue.filter(id => !invalidIds.has(id));
+        const newCardStates = { ...session.cardStates };
+        invalidIds.forEach(id => delete newCardStates[id]);
+
+        // 2. Adjust Index
+        let newIndex = session.currentIndex;
+        if (newQueue.length === 0) {
+            newIndex = 0;
+        } else if (newIndex >= newQueue.length) {
+            newIndex = 0;
+        } else {
+            // If we removed items BEFORE current index, we must shift index back?
+            // Actually simplest is just to ensure it points to something valid or 0.
+            // If the CURRENT item was removed, we just land on the new item at that index.
+            // If we removed items *before* current index, we might jump ahead contextually, 
+            // but simpler is safer: just clamp.
+            // Refinement: We should probably restart at 0 or closest valid.
+            // Let's just find the index of the current item (if it exists) or 0.
+            const currentId = session.queue[session.currentIndex];
+            const newPos = newQueue.indexOf(currentId);
+            newIndex = newPos !== -1 ? newPos : 0;
+        }
+
+        // 3. Persist
+        const { confidenceProgresses } = useSessionDataStore.getState();
+        const originalProgress = confidenceProgresses.find(p => p.id === session.progressId);
+
+        if (originalProgress) {
+            const updatedProgress: ConfidenceProgress = {
+                ...originalProgress,
+                queue: newQueue,
+                currentIndex: newIndex,
+                cardStates: newCardStates
+            };
+            await saveConfidenceProgress(updatedProgress);
+        }
+
+        // 4. Update State
+        const updatedSession = {
+            ...session,
+            queue: newQueue,
+            currentIndex: newIndex,
+            cardStates: newCardStates
+        };
+        setSession(updatedSession);
+        updateActiveConfidenceSession(updatedSession);
+
+        setHealthIssues([]);
+        showToast(`Skipped ${healthIssues.length} invalid cards.`, "success");
+
+        // If queue becomes empty after skip
+        if (newQueue.length === 0) {
+            showToast("Queue is empty after skipping.", "info");
+            handleConcludeSession();
+        }
+    };
 
     // Handle Escape key to exit fullscreen
     useEffect(() => {
@@ -912,6 +1038,20 @@ const ConfidenceSessionScreen: React.FC = () => {
                             {isSyncing ? <Icon name="spinner" className="w-4 h-4 animate-spin" /> : <Icon name="arrow-down-tray" className="w-4 h-4" />}
                         </button>
 
+                        {/* Integrity Log Button */}
+                        {integrityLog.length > 0 && (
+                            <button
+                                onClick={() => setShowIntegrityLog(true)}
+                                className="p-1 rounded-md text-text-subtle hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors relative"
+                                title={`Integrity Log (${integrityLog.length} cards skipped)`}
+                            >
+                                <Icon name="clipboard-list" className="w-4 h-4" />
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                    {integrityLog.length}
+                                </span>
+                            </button>
+                        )}
+
                         {/* Desktop: Extended Controls */}
                         <div className="hidden md:flex items-center gap-2">
                             <button
@@ -1269,7 +1409,6 @@ const ConfidenceSessionScreen: React.FC = () => {
                 isOpen={showMasteryDialog}
                 onClose={() => setShowMasteryDialog(false)}
                 title="Mastery Achievement!"
-                showCloseButton={false}
             >
                 <div className="p-6 flex flex-col items-center text-center">
                     <div className="mb-6 p-5 bg-purple-500/10 rounded-full animate-bounce">
@@ -1360,6 +1499,28 @@ const ConfidenceSessionScreen: React.FC = () => {
 
             {/* Hide timer when summary is shown or editing relation */}
             {!showSummary && !relationToEdit && <FocusTimer displaySeconds={elapsedSeconds} />}
+            {/* Health Report Modal */}
+            {healthIssues.length > 0 && (
+                <ConfidenceHealthReportModal
+                    issues={healthIssues}
+                    onAutoSkip={handleAutoSkipIssues}
+                    onClose={() => {
+                        // "Go Back" means exit session
+                        triggerGlobalAction(() => {
+                            useSessionStore.setState({ activeConfidenceSession: null });
+                            setCurrentScreen(Screen.Confidence);
+                        });
+                    }}
+                />
+            )}
+
+            {/* Integrity Log Modal */}
+            {showIntegrityLog && (
+                <IntegrityLogModal
+                    entries={integrityLog}
+                    onClose={() => setShowIntegrityLog(false)}
+                />
+            )}
         </div>
     );
 };

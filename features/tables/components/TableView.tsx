@@ -11,6 +11,7 @@ import { useTableStore } from '../../../stores/useTableStore';
 import { useUIStore } from '../../../stores/useUIStore';
 import ConceptIndicatorCell from './ConceptIndicatorCell';
 import KnowledgeSidebar from '../../concepts/components/KnowledgeSidebar';
+import { validateRow } from '../../../utils/rowValidator';
 
 // Helper for namespaced ID formatting (e.g., VOC001)
 const formatHumanId = (code: string | undefined, id: number) => {
@@ -53,6 +54,25 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
     const isSyncingTop = React.useRef(false);
     const isSyncingBottom = React.useRef(false);
     const [showTopScroll, setShowTopScroll] = React.useState(false);
+
+    // Validation Results Map (rowId -> validation result)
+    const validationResults = React.useMemo(() => {
+        const results = new Map();
+        // Only validate if table has relations
+        if (table.relations.length === 0) return results;
+
+        // Use the first relation for validation (in real scenarios, you'd pick the active one)
+        const primaryRelation = table.relations[0];
+
+        rows.forEach(row => {
+            const result = validateRow(row, primaryRelation, table);
+            if (!result.isValid) {
+                results.set(row.id, result);
+            }
+        });
+
+        return results;
+    }, [rows, table]);
 
     // Ordered Columns Calculation (Unified: User Columns + System Columns)
     const visibleOrderedCols = React.useMemo(() => {
@@ -754,20 +774,40 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
                                         }
 
                                         if (isSystemId) {
+                                            // Check if row has validation issues
+                                            const validationResult = validationResults.get(row.id);
+                                            const hasIssues = validationResult && !validationResult.isValid;
+
                                             return (
-                                                <div key={col.id} style={{ width: `${colWidth}px`, ...cellStickyStyle }} className={`px-2 flex items-center justify-center flex-shrink-0 text-center ${cellBorderClass} ${cellBg}`}>
+                                                <div key={col.id} style={{ width: `${colWidth}px`, ...cellStickyStyle }} className={`px-2 flex items-center justify-center flex-shrink-0 text-center ${cellBorderClass} ${cellBg} relative`}>
                                                     <span className="font-mono text-xs text-text-subtle font-bold select-none">{row.rowIdNum ? formatHumanId(table.shortCode, row.rowIdNum) : '—'}</span>
+                                                    {hasIssues && (
+                                                        <div className="absolute -right-1 -top-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center" title="This row has validation issues">
+                                                            <Icon name="exclamation-circle" className="w-2 h-2 text-white" />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         }
+
+                                        // Check if this specific cell has a validation issue
+                                        const validationResult = validationResults.get(row.id);
+                                        const cellIssue = validationResult?.issues.find(issue => issue.columnId === col.id);
+                                        const hasCellIssue = !!cellIssue;
+
+                                        // Highlight cell if it has an issue
+                                        const cellHighlightClass = hasCellIssue
+                                            ? 'bg-orange-50 dark:bg-orange-900/20 border-l-2 border-l-orange-400'
+                                            : '';
 
                                         return (
                                             <div
                                                 key={col.id}
                                                 style={{ width: `${colWidth}px`, ...cellStickyStyle }}
-                                                className={`px-2 flex items-center relative flex-shrink-0 ${isFrozen ? '' : cellBorderClass} ${isDragAffected ? 'bg-primary-50/50 dark:bg-primary-900/40' : ''} ${cellBg} ${rangeBgClass}`}
+                                                className={`px-2 flex items-center relative flex-shrink-0 ${isFrozen ? '' : cellBorderClass} ${isDragAffected ? 'bg-primary-50/50 dark:bg-primary-900/40' : ''} ${cellBg} ${rangeBgClass} ${cellHighlightClass}`}
                                                 onMouseDown={(e) => handleCellMouseDown(e, row.id, col.id)}
                                                 onMouseEnter={() => handleCellMouseEnter(row.id, col.id)}
+                                                title={hasCellIssue ? `Issue: ${cellIssue.reason === 'missing' ? 'Missing value' : 'Formula error'}` : undefined}
                                             >
                                                 {isDragAffected && (
                                                     <div className="absolute inset-y-0 left-0 border-l border-dashed border-primary-500 pointer-events-none z-30"></div>

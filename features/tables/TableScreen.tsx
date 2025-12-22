@@ -24,8 +24,8 @@ const sortableStats = [
     { key: 'stat:lastPracticeDate', label: 'Last Practiced' },
     { key: 'stat:wasQuit', label: 'Was Quit' },
     { key: 'stat:inQueueCount', label: 'In Queue' },
-    { key: 'stat:successRate', label: 'Success %' }, 
-    { key: 'stat:encounters', label: 'Encounters' }, 
+    { key: 'stat:successRate', label: 'Success %' },
+    { key: 'stat:encounters', label: 'Encounters' },
     { key: 'stat:lastStudied', label: 'Last Studied' },
     { key: 'stat:ankiRepetitions', label: 'Anki Reps' },
     { key: 'stat:ankiEaseFactor', label: 'Anki EF' },
@@ -40,17 +40,17 @@ const InnerTableScreen: React.FC<{ onBack: () => void; backLabel?: string }> = (
     const { setCurrentScreen } = useUIStore();
     const { setStudySetupSourceTableId, ankiDeckFilter, clearAnkiDeckFilter, confidenceProgressFilter, clearConfidenceProgressFilter } = useSessionStore();
     const { ankiProgresses, confidenceProgresses } = useSessionDataStore();
-    
+
     const { handleUpdateTable } = useTableOperations(table);
     const { pendingChangeCount, handleManualSave } = useTableTransaction(table.id);
-    
+
     // --- Data Loading ---
     const loadingTableIds = useTableStore(state => state.loadingTableIds);
     const fetchTablePayload = useTableStore(state => state.fetchTablePayload);
-    
+
     React.useEffect(() => {
         if (!isGuest) {
-             fetchTablePayload(table.id);
+            fetchTablePayload(table.id);
         }
     }, [table.id, isGuest]);
 
@@ -58,7 +58,7 @@ const InnerTableScreen: React.FC<{ onBack: () => void; backLabel?: string }> = (
 
     // --- Filter Logic ---
     const tableNames = useTableStore(useShallow(state => state.tables.map(t => ({ id: t.id, name: t.name }))));
-    
+
     const isAnkiFilterActive = ankiDeckFilter && ankiDeckFilter.tableId === table.id;
     const { preFilteredRowIds: ankiPreFilteredRowIds, ankiDeckName } = React.useMemo(() => {
         if (!isAnkiFilterActive) return { preFilteredRowIds: null, ankiDeckName: undefined };
@@ -77,9 +77,21 @@ const InnerTableScreen: React.FC<{ onBack: () => void; backLabel?: string }> = (
     }, [isAnkiFilterActive, ankiDeckFilter, ankiProgresses, table.rows]);
 
     const isConfidenceFilterActive = confidenceProgressFilter && confidenceProgressFilter.tableId === table.id;
+    const { integrityFilter, setIntegrityFilter } = useUIStore();
+
+    // Integrity Bridge Logic: If an integrity filter exists for this table, use it
+    const isIntegrityFilterActive = integrityFilter && integrityFilter.tableId === table.id;
+
     const { preFilteredRowIds: fcPreFilteredRowIds, progressName: fcProgressName, initialTagFilter } = React.useMemo(() => {
+        if (isIntegrityFilterActive) {
+            return {
+                preFilteredRowIds: new Set(integrityFilter.rowIds),
+                progressName: "Integrity Issues",
+                initialTagFilter: null
+            };
+        }
         if (!isConfidenceFilterActive) return { preFilteredRowIds: null, progressName: undefined, initialTagFilter: null };
-        
+
         const progress = confidenceProgresses.find(p => p.id === confidenceProgressFilter.progressId);
         if (!progress) return { preFilteredRowIds: null, progressName: undefined, initialTagFilter: null };
 
@@ -99,11 +111,15 @@ const InnerTableScreen: React.FC<{ onBack: () => void; backLabel?: string }> = (
             progressName: progress.name,
             initialTagFilter: userFilterTags.size > 0 ? userFilterTags : null,
         };
-    }, [isConfidenceFilterActive, confidenceProgressFilter, confidenceProgresses, tableNames]);
+    }, [isConfidenceFilterActive, confidenceProgressFilter, confidenceProgresses, tableNames, isIntegrityFilterActive, integrityFilter]);
 
     const finalPreFilteredIds = ankiPreFilteredRowIds || fcPreFilteredRowIds;
-    const activeProgressName = ankiDeckName || fcProgressName;
-    const onClearFilter = isAnkiFilterActive ? clearAnkiDeckFilter : (isConfidenceFilterActive ? clearConfidenceProgressFilter : undefined);
+    const activeProgressName = isIntegrityFilterActive ? "Integrity Issues" : (ankiDeckName || fcProgressName);
+
+    const baseClearFilter = isAnkiFilterActive ? clearAnkiDeckFilter : (isConfidenceFilterActive ? clearConfidenceProgressFilter : undefined);
+    const onClearFilter = isIntegrityFilterActive
+        ? () => setIntegrityFilter(null)
+        : baseClearFilter;
 
     const defaultVisibleStats = React.useMemo(() => {
         if (isAnkiFilterActive) {
@@ -123,7 +139,7 @@ const InnerTableScreen: React.FC<{ onBack: () => void; backLabel?: string }> = (
             case 'Theater': setCurrentScreen(Screen.TheaterSetup); break;
         }
     };
-    
+
     const fillablePrompts = React.useMemo(() => {
         return (table.aiPrompts || []).map(prompt => ({ prompt, fillableCells: [] as any[] })); // Placeholder, logic moved to ModalsContainer or computed there
     }, [table.aiPrompts]);
@@ -155,9 +171,9 @@ const InnerTableScreen: React.FC<{ onBack: () => void; backLabel?: string }> = (
                         />
                     </div>
                 </div>
-                
+
                 <div className="flex-1 relative overflow-hidden">
-                    <TableContentArea 
+                    <TableContentArea
                         table={table}
                         isLoadingPayload={isLoadingPayload}
                         sortableStats={sortableStats}
@@ -168,7 +184,7 @@ const InnerTableScreen: React.FC<{ onBack: () => void; backLabel?: string }> = (
                         onClearFilter={onClearFilter}
                     />
                 </div>
-                
+
                 <TableModalsContainer />
             </div>
         </TableViewProvider>
@@ -183,10 +199,10 @@ const TableScreen: React.FC<{ tableId: string; onBack?: () => void; backLabel?: 
     if (!table) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-text-subtle">
-                 <Icon name="error-circle" className="w-12 h-12 text-secondary-300 dark:text-secondary-600 mb-2"/>
-                 <p className="text-lg font-semibold">Table not found.</p>
-                 <p className="text-sm">It may have been deleted.</p>
-                 <button onClick={handleBack} className="mt-4 text-primary-500 hover:underline">Go Back</button>
+                <Icon name="error-circle" className="w-12 h-12 text-secondary-300 dark:text-secondary-600 mb-2" />
+                <p className="text-lg font-semibold">Table not found.</p>
+                <p className="text-sm">It may have been deleted.</p>
+                <button onClick={handleBack} className="mt-4 text-primary-500 hover:underline">Go Back</button>
             </div>
         );
     }

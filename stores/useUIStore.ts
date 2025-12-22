@@ -49,6 +49,9 @@ interface UIState {
   // Library Module
   isLibraryMode: boolean;
 
+  // Integrity Bridge State
+  integrityFilter: { tableId: string; rowIds: string[] } | null;
+
   // Global Navigation Guard
   pendingAction: (() => void) | null;
   isBlockingOverlayVisible: boolean;
@@ -102,6 +105,9 @@ interface UIState {
   // Knowledge Sidebar Actions
   openKnowledgeSidebar: (rowId: string) => void;
   closeKnowledgeSidebar: () => void;
+
+  // Integrity Bridge Actions
+  setIntegrityFilter: (filter: { tableId: string; rowIds: string[] } | null) => void;
 }
 
 const DEFAULT_BG_SETTINGS: BackgroundSettings = {
@@ -310,5 +316,9 @@ export const useUIStore = create<UIState>()(
     // Knowledge Sidebar Actions
     openKnowledgeSidebar: (rowId) => set({ knowledgeSidebarOpen: true, knowledgeSidebarRowId: rowId }),
     closeKnowledgeSidebar: () => set({ knowledgeSidebarOpen: false, knowledgeSidebarRowId: null }),
+
+    // Integrity Bridge Actions
+    integrityFilter: null,
+    setIntegrityFilter: (integrityFilter) => set({ integrityFilter }),
   })
 );
