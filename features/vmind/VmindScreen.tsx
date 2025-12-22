@@ -140,17 +140,19 @@ const VmindScreen: React.FC = () => {
         // Glassmorphism classes updated for responsive grid
         const cardBaseClasses = `
         group relative flex flex-col items-center text-center 
-        p-6 sm:p-8 h-full w-full
-        rounded-[2.5rem] transition-all duration-500
+        p-4 sm:p-6 lg:p-5 h-full w-full
+        rounded-[2rem] sm:rounded-[2.5rem] transition-all duration-500
         bg-white/70 dark:bg-black/20 backdrop-blur-2xl border border-white/40 dark:border-white/5
         shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none
         hover:-translate-y-2 hover:shadow-[0_30px_70px_rgba(0,0,0,0.1)] dark:hover:bg-white/5
         active:scale-95
-        animate-slideInUp aspect-square justify-center
+        animate-slideInUp justify-center
+        aspect-square lg:aspect-auto lg:h-full lg:min-h-[120px] lg:max-h-[min(180px,25vh)]
     `;
 
         const iconBoxClasses = `
-        w-16 h-16 sm:w-20 sm:h-20 rounded-[1.75rem] flex items-center justify-center mb-4 sm:mb-6
+        w-14 h-14 sm:w-16 sm:h-16 lg:w-[clamp(2.5rem,6vh,4rem)] lg:h-[clamp(2.5rem,6vh,4rem)] 
+        rounded-[1.25rem] sm:rounded-[1.75rem] flex items-center justify-center mb-3 sm:mb-4 lg:mb-3
         bg-gradient-to-br ${styles.gradient} text-white
         shadow-2xl ${styles.shadow}
         transform transition-all duration-500 group-hover:scale-110 group-hover:rotate-6
@@ -170,22 +172,22 @@ const VmindScreen: React.FC = () => {
                 {/* Icon Jewel */}
                 <div className={`relative z-10 ${iconBoxClasses}`}>
                     {/* Glow layer */}
-                    <div className={`absolute inset-0 rounded-[1.75rem] blur-xl opacity-40 group-hover:opacity-60 transition-opacity bg-gradient-to-br ${styles.gradient}`} />
+                    <div className={`absolute inset-0 rounded-[1.25rem] sm:rounded-[1.75rem] blur-xl opacity-40 group-hover:opacity-60 transition-opacity bg-gradient-to-br ${styles.gradient}`} />
 
                     {typeof IconComponent === 'string' ? (
-                        <Icon name={IconComponent} className="w-8 h-8 sm:w-10 sm:h-10 relative z-10 drop-shadow-lg" variant="filled" />
+                        <Icon name={IconComponent} className="w-6 h-6 sm:w-8 sm:h-8 lg:w-[clamp(1.25rem,3vh,2rem)] lg:h-[clamp(1.25rem,3vh,2rem)] relative z-10 drop-shadow-lg" variant="filled" />
                     ) : (
-                        <IconComponent className="w-8 h-8 sm:w-10 sm:h-10 relative z-10 drop-shadow-lg" />
+                        <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 lg:w-[clamp(1.25rem,3vh,2rem)] lg:h-[clamp(1.25rem,3vh,2rem)] relative z-10 drop-shadow-lg" />
                     )}
                 </div>
 
                 {/* Content */}
                 <div className="relative z-10 flex flex-col items-center w-full">
-                    <h3 className={`font-serif font-bold text-base sm:text-xl mb-1.5 tracking-tight w-full ${mode.enabled ? 'text-text-main dark:text-white' : 'text-text-subtle'}`}>
+                    <h3 className={`font-serif font-bold text-sm sm:text-base lg:text-lg mb-1 tracking-tight w-full ${mode.enabled ? 'text-text-main dark:text-white' : 'text-text-subtle'}`}>
                         {mode.name}
                     </h3>
                     {mode.description && (
-                        <p className="hidden sm:block text-xs sm:text-sm text-text-subtle leading-relaxed opacity-80 font-medium">
+                        <p className="hidden lg:block text-[10px] sm:text-xs text-text-subtle leading-relaxed opacity-80 font-medium line-clamp-2 max-w-[90%]">
                             {mode.description}
                         </p>
                     )}
@@ -202,13 +204,20 @@ const VmindScreen: React.FC = () => {
     };
 
     return (
-        <div className="relative h-full w-full overflow-hidden">
+        <div className="relative h-full w-full overflow-hidden" style={{ maxHeight: 'calc(100vh - 64px)' }}>
             {/* 0. The Atmosphere (Background Layer) */}
             <AuroraBackground />
 
             {/* 1. Content Layer */}
-            <div className="relative z-10 h-full w-full overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-24 custom-scrollbar">
-                <header className="mb-6 sm:mb-10 mt-2 animate-fadeIn max-w-4xl mx-auto">
+            <div
+                className="relative z-10 h-full w-full overflow-y-auto lg:overflow-hidden p-4 sm:p-6 pb-24 lg:pb-0 lg:flex lg:flex-col custom-scrollbar"
+                style={{
+                    // @ts-ignore
+                    '--vmind-v-space': 'clamp(0.5rem, 3vh, 2.5rem)',
+                    '--vmind-card-padding': 'clamp(1rem, 2.5vh, 2rem)'
+                }}
+            >
+                <header className="mb-4 sm:mb-6 lg:mb-[var(--vmind-v-space)] mt-2 animate-fadeIn max-w-4xl mx-auto flex-shrink-0">
                     <h1 className="text-2xl sm:text-4xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-emerald-600 dark:from-primary-400 dark:to-emerald-400 mb-1 sm:mb-2 text-center lg:text-left">
                         Learning Center
                     </h1>
@@ -217,38 +226,38 @@ const VmindScreen: React.FC = () => {
                     </p>
                 </header>
 
-                <main className="max-w-7xl mx-auto">
-                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+                <main className="max-w-7xl mx-auto w-full flex-1 min-h-0 flex flex-col justify-center">
+                    <div className="flex flex-col lg:flex-row gap-6 lg:gap-12 h-full">
                         {/* Left Column: Study Modes */}
-                        <section className="flex-1 space-y-4 sm:space-y-6">
-                            <div className="flex items-center gap-2 mb-4 sm:mb-6 animate-fadeIn" style={{ animationDelay: '100ms' }}>
+                        <section className="flex-1 space-y-3 sm:space-y-4 lg:space-y-[var(--vmind-v-space)] flex flex-col mt-auto mb-auto">
+                            <div className="flex items-center gap-2 mb-2 sm:mb-4 animate-fadeIn flex-shrink-0" style={{ animationDelay: '100ms' }}>
                                 <div className="p-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
                                     <Icon name="brain" className="w-4 h-4 sm:w-5 sm:h-5" variant="filled" />
                                 </div>
-                                <h2 className="text-lg sm:text-xl font-bold text-text-main dark:text-secondary-100">
+                                <h2 className="text-base sm:text-lg lg:text-xl font-bold text-text-main dark:text-secondary-100">
                                     Study Architecture
                                 </h2>
                             </div>
-                            {/* Responsive Jewel Grid: 2 cols on mobile, 2 on desktop column */}
-                            <div className="grid grid-cols-2 gap-3 sm:gap-6">
+                            {/* Responsive Jewel Grid: Restricted height on desktop */}
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6 flex-1 min-h-0 items-center">
                                 {studyModesGroup.map((mode, idx) => renderModeCard(mode, idx, 0))}
                             </div>
                         </section>
 
                         {/* Middle Divider (Desktop only) */}
-                        <div className="hidden lg:block w-px bg-white/10 self-stretch" />
+                        <div className="hidden lg:block w-px bg-white/10 self-stretch my-8" />
 
                         {/* Right Column: Tools & Resources */}
-                        <section className="flex-1 space-y-4 sm:space-y-6">
-                            <div className="flex items-center gap-2 mb-4 sm:mb-6 animate-fadeIn" style={{ animationDelay: '300ms' }}>
+                        <section className="flex-1 space-y-3 sm:space-y-4 lg:space-y-[var(--vmind-v-space)] flex flex-col mt-auto mb-auto">
+                            <div className="flex items-center gap-2 mb-2 sm:mb-4 animate-fadeIn flex-shrink-0" style={{ animationDelay: '300ms' }}>
                                 <div className="p-1.5 rounded-lg bg-info-100 dark:bg-info-900/30 text-info-600 dark:text-info-400">
                                     <Icon name="sparkles" className="w-4 h-4 sm:w-5 sm:h-5" variant="filled" />
                                 </div>
-                                <h2 className="text-lg sm:text-xl font-bold text-text-main dark:text-secondary-100">
+                                <h2 className="text-base sm:text-lg lg:text-xl font-bold text-text-main dark:text-secondary-100">
                                     Knowledge Tools
                                 </h2>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 sm:gap-6">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6 flex-1 min-h-0 items-center">
                                 {otherModesGroup.map((mode, idx) => renderModeCard(mode, idx, studyModesGroup.length))}
                             </div>
                         </section>
