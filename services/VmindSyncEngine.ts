@@ -688,6 +688,7 @@ export class VmindSyncEngine {
                     transcript: note.transcript,
                     practice_history: note.practiceHistory,
                     is_starred: note.isStarred,
+                    full_transcript: note.fullTranscript,
                     user_id: userId
                 };
                 const { error } = await supabase.from('dictation_notes').upsert(noteForDb);

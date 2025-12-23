@@ -39,6 +39,7 @@ const DictationSessionScreen: React.FC = () => {
     const [loopCount, setLoopCount] = useState<number>(1);
     const [playbackRate, setPlaybackRate] = useState<number>(1);
     const [practiceMode, setPracticeMode] = useState<'individual' | 'linked'>('individual');
+    const [isPlayerVisible, setIsPlayerVisible] = useState(false);
     const [playerError, setPlayerError] = useState<string | null>(null);
 
     const playerRef = useRef<any>(null);
@@ -76,8 +77,8 @@ const DictationSessionScreen: React.FC = () => {
             loadYouTubeAPI().then(() => {
                 if (!playerRef.current) {
                     playerRef.current = new window.YT.Player('yt-player-session', {
-                        height: '0', // Hide player visuals
-                        width: '0',
+                        height: '360',
+                        width: '640',
                         videoId: videoId,
                         host: 'https://www.youtube.com', // Explicit host often helps
                         playerVars: {
@@ -120,14 +121,23 @@ const DictationSessionScreen: React.FC = () => {
         };
     }, [videoId, startTime, showToast]);
 
-    const playCurrentSegment = () => {
+    // Auto-Sync: Play segment whenever the index changes (e.g. user clicks Transcript Index)
+    useEffect(() => {
+        // Small delay to ensure state transitions (like practiceMode or activeEntry) are stable
+        const timeout = setTimeout(() => {
+            playCurrentSegment(true); // true = silent if player not ready
+        }, 100);
+        return () => clearTimeout(timeout);
+    }, [activeIndex, practiceMode, loopCount, playbackRate]);
+
+    const playCurrentSegment = (isAutoTrigger = false) => {
         if (playerError) {
-            showToast(playerError, "error");
+            if (!isAutoTrigger) showToast(playerError, "error");
             return;
         }
 
         if (!playerRef.current || !currentEntry || !playerRef.current.seekTo) {
-            showToast("Video player is loading...", "info");
+            if (!isAutoTrigger) showToast("Video player is loading...", "info");
             return;
         }
 
@@ -204,7 +214,6 @@ const DictationSessionScreen: React.FC = () => {
 
     return (
         <div className="flex flex-col md:flex-row h-[100dvh] bg-background dark:bg-secondary-900 pb-[env(safe-area-inset-bottom)]">
-            <div id="yt-player-session" className="absolute w-0 h-0"></div>
             <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto">
                 <header className="flex-shrink-0 flex justify-between items-center mb-4">
                     <div>
@@ -218,6 +227,15 @@ const DictationSessionScreen: React.FC = () => {
                                 <button onClick={() => setPracticeMode('individual')} className={`px-2 py-1 rounded-full ${practiceMode === 'individual' ? 'bg-white dark:bg-secondary-600 shadow' : ''}`}>Individual</button>
                                 <button onClick={() => setPracticeMode('linked')} className={`px-2 py-1 rounded-full ${practiceMode === 'linked' ? 'bg-white dark:bg-secondary-600 shadow' : ''}`}>Linked</button>
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setIsPlayerVisible(!isPlayerVisible)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${isPlayerVisible ? 'bg-primary-100 text-primary-700 border border-primary-300' : 'bg-secondary-200 dark:bg-secondary-700 text-text-subtle border border-transparent'}`}
+                            >
+                                <Icon name={isPlayerVisible ? 'eye' : 'eye-off'} className="w-4 h-4" />
+                                {isPlayerVisible ? 'Video ON' : 'Video OFF'}
+                            </button>
                         </div>
                         <span className="font-mono text-sm text-text-subtle">{new Date(elapsedSeconds * 1000).toISOString().substr(14, 5)}</span>
                         <button onClick={handleFinish} className="bg-primary-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-primary-700">Finish</button>
@@ -233,10 +251,35 @@ const DictationSessionScreen: React.FC = () => {
 
                 <div className="flex-1 flex flex-col items-center justify-center">
                     <div className="w-full max-w-2xl bg-surface dark:bg-secondary-800 border border-secondary-200/80 dark:border-secondary-700/50 rounded-xl shadow-lg p-6">
-                        <button onClick={playCurrentSegment} className={`w-40 h-40 mx-auto flex items-center justify-center rounded-full mb-6 shadow-lg transition-transform hover:scale-105 ${playerError ? 'bg-secondary-400 cursor-not-allowed' : 'bg-primary-500 hover:bg-primary-600'}`}>
-                            {activeSnippet && <Icon name="link" className="w-8 h-8 absolute top-4 right-4 text-white/50" />}
-                            <Icon name={playerError ? 'error-circle' : 'play'} className="w-16 h-16 text-white" />
-                        </button>
+
+                        <div className="relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                            {/* The actual YouTube iframe will be placed here by the API */}
+                            <div id="yt-player-session" className="w-full h-full"></div>
+
+                            {!isPlayerVisible && (
+                                <div className="absolute inset-0 bg-surface dark:bg-secondary-800 flex items-center justify-center">
+                                    <button
+                                        onClick={() => playCurrentSegment()}
+                                        className={`w-40 h-40 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 ${playerError ? 'bg-secondary-400 cursor-not-allowed' : 'bg-primary-500 hover:bg-primary-600'}`}
+                                    >
+                                        {activeSnippet && <Icon name="link" className="w-8 h-8 absolute top-4 right-4 text-white/50" />}
+                                        <Icon name={playerError ? 'error-circle' : 'play'} className="w-16 h-16 text-white" />
+                                    </button>
+                                </div>
+                            )}
+
+                            {isPlayerVisible && (
+                                <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pb-4 opacity-0 hover:opacity-100 transition-opacity bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); playCurrentSegment(); }}
+                                        className="pointer-events-auto bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-6 py-2 rounded-full font-bold flex items-center gap-2"
+                                    >
+                                        <Icon name="play" className="w-5 h-5" />
+                                        Replay Segment
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="flex items-center justify-center gap-6 mb-4">
                             <div>

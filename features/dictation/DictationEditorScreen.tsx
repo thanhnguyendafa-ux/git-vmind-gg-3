@@ -5,11 +5,13 @@ import { Screen, TranscriptEntry, DictationNote, VocabRow, Table, Relation, Stud
 import Icon from '../../components/ui/Icon';
 import { useSessionStore } from '../../stores/useSessionStore';
 import { useUIStore } from '../../stores/useUIStore';
-import { extractVideoID, parseTimestampedTranscript, extractStartTime } from '../../utils/youtubeUtils';
 import { useDictationNoteStore } from '../../stores/useDictationNoteStore';
 import { useTableStore } from '../../stores/useTableStore';
 import Modal from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { extractVideoID, parseTimestampedTranscript, extractStartTime, loadYouTubeAPI } from '../../utils/youtubeUtils';
+import { formatTimestamp } from '../../services/youtubeTranscriptService';
+
 
 const CreateDictationLinkModal: React.FC<{
     isOpen: boolean;
@@ -79,7 +81,9 @@ const CreateDictationLinkModal: React.FC<{
         const newRow: VocabRow = {
             id: crypto.randomUUID(),
             cols: { [columnIdForText]: mergedText },
-            stats: { correct: 0, incorrect: 0, lastStudied: null, flashcardStatus: FlashcardStatus.New, flashcardEncounters: 0, isFlashcardReviewed: false, lastPracticeDate: null }
+            stats: { correct: 0, incorrect: 0, lastStudied: null, flashcardStatus: FlashcardStatus.New, flashcardEncounters: 0, isFlashcardReviewed: false, lastPracticeDate: null },
+            createdAt: Date.now(),
+            modifiedAt: Date.now()
         };
 
         const newRelation: Relation = {
@@ -97,8 +101,8 @@ const CreateDictationLinkModal: React.FC<{
 
         const latestVersionOfTable = useTableStore.getState().tables.find(t => t.id === tableToUpdate!.id);
 
-        const finalTableUpdate = { 
-            ...(latestVersionOfTable || tableToUpdate), 
+        const finalTableUpdate = {
+            ...(latestVersionOfTable || tableToUpdate),
             rows: [...(latestVersionOfTable?.rows || tableToUpdate.rows), newRow],
             relations: [...(latestVersionOfTable?.relations || tableToUpdate.relations), newRelation]
         };
@@ -115,7 +119,7 @@ const CreateDictationLinkModal: React.FC<{
                     <h4 className="text-sm font-semibold text-text-subtle mb-1">Merged Text Preview</h4>
                     <p className="text-sm p-2 bg-secondary-100 dark:bg-secondary-700/50 rounded-md max-h-24 overflow-y-auto">{mergedText}</p>
                 </div>
-                 <div>
+                <div>
                     <label className="block text-sm font-medium text-text-subtle mb-1">Target Table</label>
                     <select value={targetTableId} onChange={e => setTargetTableId(e.target.value)} className="w-full bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md px-3 py-2 text-sm">
                         {!matchingTable && <option value="new_from_title">Create new table: "{dictationNoteTitle}"</option>}
@@ -127,18 +131,18 @@ const CreateDictationLinkModal: React.FC<{
                         </p>
                     )}
                 </div>
-                 {selectedTable && (
+                {selectedTable && (
                     <div>
                         <label className="block text-sm font-medium text-text-subtle mb-1">Target Column for Merged Text</label>
                         <select value={targetColumnId} onChange={e => setTargetColumnId(e.target.value)} className="w-full bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md px-3 py-2 text-sm">
                             {selectedTable.columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
-                 )}
-                 <div className="flex justify-end gap-2 pt-4">
-                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                     <Button onClick={handleCreateLink}>Create Link</Button>
-                 </div>
+                )}
+                <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleCreateLink}>Create Link</Button>
+                </div>
             </div>
         </Modal>
     );
@@ -146,12 +150,12 @@ const CreateDictationLinkModal: React.FC<{
 
 const DictationEditorScreen: React.FC = () => {
     const { editingDictationNote, setEditingDictationNote } = useSessionStore();
-    
+
     // Retrieve the saved state from the store to verify changes before pushing
-    const savedNote = useDictationNoteStore(useShallow(state => 
+    const savedNote = useDictationNoteStore(useShallow(state =>
         state.dictationNotes.find(n => n.id === editingDictationNote?.id)
     ));
-    
+
     const { updateDictationNote, deleteDictationNote } = useDictationNoteStore();
     const { setCurrentScreen, showToast } = useUIStore();
 
@@ -159,12 +163,21 @@ const DictationEditorScreen: React.FC = () => {
     const [youtubeUrl, setYoutubeUrl] = useState(editingDictationNote?.youtubeUrl || '');
     const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
     const [previewStartTime, setPreviewStartTime] = useState<number>(0);
-    
-    const [rawTranscript, setRawTranscript] = useState('');
-    
+
+    const [importText, setImportText] = useState("");
+    const [isImportVisible, setIsImportVisible] = useState(false);
+
+    // UI Local States
+    const [currentTime, setCurrentTime] = useState(0);
     const [selectedStart, setSelectedStart] = useState<number | null>(null);
     const [selectedEnd, setSelectedEnd] = useState<number | null>(null);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+
+    // Surgical Cut Markers
+    const [markedStartTime, setMarkedStartTime] = useState<number | null>(null);
+    const [markedEndTime, setMarkedEndTime] = useState<number | null>(null);
+
+    const playerRef = useRef<any>(null);
 
     useEffect(() => {
         if (localNote) {
@@ -174,25 +187,174 @@ const DictationEditorScreen: React.FC = () => {
         }
     }, [localNote]);
 
+    // Initialize YouTube Player API for programmatic control
+    useEffect(() => {
+        let isMounted = true;
+        let player: any = null;
+
+        const initialize = async () => {
+            if (!previewVideoId) return;
+
+            try {
+                // Use unified loading utility
+                await loadYouTubeAPI();
+
+                // Add a small delay to ensure DOM is ready and any previous player is fully cleaned up
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                if (!isMounted) return;
+
+                // Double check container exists
+                const container = document.getElementById('yt-player-editor');
+                if (!container) {
+                    console.warn('YouTube player container not found, retrying...');
+                    return;
+                }
+
+                // Ensure YT.Player constructor is available
+                if (!window.YT || !window.YT.Player) {
+                    console.warn('YT.Player not available yet');
+                    return;
+                }
+
+                player = new window.YT.Player('yt-player-editor', {
+                    videoId: previewVideoId,
+                    playerVars: {
+                        enablejsapi: 1,
+                        origin: window.location.origin,
+                        start: previewStartTime
+                    },
+                    events: {
+                        onReady: () => {
+                            if (isMounted) {
+                                console.log('YouTube Player ready for time marking');
+                            }
+                        },
+                        onError: (e: any) => {
+                            console.error('YouTube Player Error:', e.data);
+                        }
+                    }
+                });
+                playerRef.current = player;
+            } catch (err) {
+                console.error('Failed to initialize YouTube player:', err);
+            }
+        };
+
+        initialize();
+
+        return () => {
+            isMounted = false;
+            if (player) {
+                try {
+                    player.destroy();
+                } catch (e) { /* ignore */ }
+            }
+        };
+    }, [previewVideoId, previewStartTime]);
+
     const handleParseTranscript = () => {
-        if (!rawTranscript.trim()) {
+        if (!importText.trim()) {
             showToast("Please paste the transcript text first.", "error");
             return;
         }
-        
-        const parsed = parseTimestampedTranscript(rawTranscript);
+        const parsed = parseTimestampedTranscript(importText);
         if (parsed.length === 0) {
             showToast("Could not find valid timestamps. Please check the format.", "error");
             return;
         }
-        
-        const updatedNote = { ...localNote!, youtubeUrl, transcript: parsed };
+
+        // Surgical Cut Flow: We save to fullTranscript (Master) and prompt the user to Cut
+        const updatedNote = {
+            ...localNote!,
+            youtubeUrl,
+            fullTranscript: parsed, // Save as Master
+            transcript: localNote?.transcript || [] // Don't clear active yet
+        };
         setLocalNote(updatedNote);
         updateDictationNote(updatedNote);
-        setRawTranscript(''); // Clear input
-        showToast(`Imported ${parsed.length} lines successfully!`, "success");
+        setImportText(''); // Clear input
+        showToast(`✅ Master transcript loaded (${parsed.length} lines). Use markers to Cut!`, "success");
     };
-    
+
+    const handleMarkA = () => {
+        if (!playerRef.current?.getCurrentTime) {
+            showToast("Video player is not ready.", "error");
+            return;
+        }
+        const time = Math.floor(playerRef.current.getCurrentTime());
+        setMarkedStartTime(time);
+        showToast(`📍 Mark A set at ${formatTimestamp(time)}`, "info");
+    };
+
+    const handleMarkB = () => {
+        if (!playerRef.current?.getCurrentTime) {
+            showToast("Video player is not ready.", "error");
+            return;
+        }
+        const time = Math.floor(playerRef.current.getCurrentTime());
+        setMarkedEndTime(time);
+        showToast(`📍 Mark B set at ${formatTimestamp(time)}`, "info");
+    };
+
+    const handleSurgicalCut = () => {
+        if (!localNote?.fullTranscript || localNote.fullTranscript.length === 0) {
+            showToast("Please import a Master Transcript first.", "error");
+            return;
+        }
+
+        if (markedStartTime === null || markedEndTime === null) {
+            showToast("Please mark both Point A and Point B on the video.", "error");
+            return;
+        }
+
+        const start = Math.min(markedStartTime, markedEndTime);
+        const end = Math.max(markedStartTime, markedEndTime);
+
+        // Filter Master Transcript by time range
+        const matchingEntries = localNote.fullTranscript.filter(entry =>
+            entry.start >= start && entry.start <= end
+        );
+
+        if (matchingEntries.length === 0) {
+            showToast("No transcript entries found in this range.", "error");
+            return;
+        }
+
+        // Auto-Merge Logic: Combine all matching entries into ONE line
+        const mergedText = matchingEntries.map(e => e.text).join(' ').trim();
+        const firstEntry = matchingEntries[0];
+        const lastEntry = matchingEntries[matchingEntries.length - 1];
+
+        const mergedEntry: TranscriptEntry = {
+            text: mergedText,
+            start: firstEntry.start,
+            duration: (lastEntry.start + (lastEntry.duration || 0)) - firstEntry.start
+        };
+
+        const updatedNote = {
+            ...localNote,
+            transcript: [...(localNote.transcript || []), mergedEntry] // Append the single merged entry
+        };
+        setLocalNote(updatedNote);
+        updateDictationNote(updatedNote);
+        showToast(`✂️ Merged ${matchingEntries.length} lines into 1 study segment!`, "success");
+    };
+
+    const handleClearSession = () => {
+        if (!localNote) return;
+        const updatedNote = { ...localNote, transcript: [] };
+        setLocalNote(updatedNote);
+        updateDictationNote(updatedNote);
+        showToast("Current study session cleared.", "info");
+    };
+
+    const handleResetMarkers = () => {
+        setMarkedStartTime(null);
+        setMarkedEndTime(null);
+        showToast("Markers reset.", "info");
+    };
+
     const handleSave = () => {
         if (localNote) {
             updateDictationNote({ ...localNote, youtubeUrl });
@@ -203,9 +365,9 @@ const DictationEditorScreen: React.FC = () => {
 
     const handleDelete = () => {
         if (localNote) {
-             deleteDictationNote(localNote.id);
-             setEditingDictationNote(null);
-             setCurrentScreen(Screen.Dictation);
+            deleteDictationNote(localNote.id);
+            setEditingDictationNote(null);
+            setCurrentScreen(Screen.Dictation);
         }
     };
 
@@ -254,19 +416,19 @@ const DictationEditorScreen: React.FC = () => {
             const mergedSegments = newTranscript.slice(selectedStart, selectedEnd + 1);
 
             if (mergedSegments.length === 0) return;
-            
+
             const mergedText = mergedSegments.map(s => s.text).join(' ');
             const firstEntry = mergedSegments[0];
             const lastEntry = mergedSegments[mergedSegments.length - 1];
-            
+
             const newEntry: TranscriptEntry = {
                 text: mergedText,
                 start: firstEntry.start,
                 duration: (lastEntry.start + lastEntry.duration) - firstEntry.start
             };
-            
+
             newTranscript.splice(selectedStart, selectedEnd - selectedStart + 1, newEntry);
-            
+
             const updatedNote = { ...localNote, transcript: newTranscript };
             setLocalNote(updatedNote);
             updateDictationNote(updatedNote);
@@ -274,25 +436,25 @@ const DictationEditorScreen: React.FC = () => {
             setSelectedEnd(null);
         }
     };
-    
+
     const handleSplit = () => {
         if (localNote && selectedStart !== null && selectedStart === selectedEnd) {
-             const newTranscript = [...localNote.transcript!];
-             const entryToSplit = newTranscript[selectedStart];
-             
-             const words = entryToSplit.text.split(' ');
-             const midPoint = Math.ceil(words.length / 2);
-             const text1 = words.slice(0, midPoint).join(' ');
-             const text2 = words.slice(midPoint).join(' ');
-             
-             const duration1 = entryToSplit.duration / 2;
-             const duration2 = entryToSplit.duration / 2;
-             
-             const entry1 = { text: text1, start: entryToSplit.start, duration: duration1 };
-             const entry2 = { text: text2, start: entryToSplit.start + duration1, duration: duration2 };
-             
-             newTranscript.splice(selectedStart, 1, entry1, entry2);
-             
+            const newTranscript = [...localNote.transcript!];
+            const entryToSplit = newTranscript[selectedStart];
+
+            const words = entryToSplit.text.split(' ');
+            const midPoint = Math.ceil(words.length / 2);
+            const text1 = words.slice(0, midPoint).join(' ');
+            const text2 = words.slice(midPoint).join(' ');
+
+            const duration1 = entryToSplit.duration / 2;
+            const duration2 = entryToSplit.duration / 2;
+
+            const entry1 = { text: text1, start: entryToSplit.start, duration: duration1 };
+            const entry2 = { text: text2, start: entryToSplit.start + duration1, duration: duration2 };
+
+            newTranscript.splice(selectedStart, 1, entry1, entry2);
+
             const updatedNote = { ...localNote, transcript: newTranscript };
             setLocalNote(updatedNote);
             updateDictationNote(updatedNote);
@@ -326,7 +488,7 @@ const DictationEditorScreen: React.FC = () => {
 
     return (
         <div className="p-4 sm:p-6 mx-auto animate-fadeIn flex flex-col h-screen">
-             <header className="flex items-center justify-between mb-6 flex-shrink-0">
+            <header className="flex items-center justify-between mb-6 flex-shrink-0">
                 <div className="flex items-center gap-3">
                     <button onClick={() => { setEditingDictationNote(null); setCurrentScreen(Screen.Dictation); }} className="p-2 rounded-full hover:bg-secondary-200 dark:hover:bg-secondary-700 text-text-subtle">
                         <Icon name="arrowLeft" className="w-6 h-6" />
@@ -341,11 +503,11 @@ const DictationEditorScreen: React.FC = () => {
                     />
                 </div>
                 <div className="flex items-center gap-2">
-                     <button onClick={toggleStar} title={localNote.isStarred ? "Mark as incomplete" : "Mark as complete"} className={`p-2 rounded-full hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors ${localNote.isStarred ? 'text-warning-500' : 'text-secondary-400'}`}>
+                    <button onClick={toggleStar} title={localNote.isStarred ? "Mark as incomplete" : "Mark as complete"} className={`p-2 rounded-full hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors ${localNote.isStarred ? 'text-warning-500' : 'text-secondary-400'}`}>
                         <Icon name={localNote.isStarred ? "star" : "star-outline"} variant={localNote.isStarred ? 'filled' : 'outline'} className="w-6 h-6" />
-                     </button>
-                     <button onClick={handleDelete} className="text-error-500 hover:bg-error-50 dark:hover:bg-error-900/20 px-3 py-2 rounded-md font-semibold text-sm">Delete</button>
-                     <Button onClick={handleSave}>Done</Button>
+                    </button>
+                    <button onClick={handleDelete} className="text-error-500 hover:bg-error-50 dark:hover:bg-error-900/20 px-3 py-2 rounded-md font-semibold text-sm">Delete</button>
+                    <Button onClick={handleSave}>Done</Button>
                 </div>
             </header>
 
@@ -368,47 +530,65 @@ const DictationEditorScreen: React.FC = () => {
                             placeholder="https://www.youtube.com/watch?v=..."
                         />
                         {previewVideoId && (
-                            <div className="mt-4 aspect-video rounded-lg overflow-hidden bg-black">
-                                <iframe
-                                    width="100%"
-                                    height="100%"
-                                    src={`https://www.youtube.com/embed/${previewVideoId}?playsinline=1&start=${previewStartTime}`}
-                                    title="YouTube video player"
-                                    frameBorder="0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                ></iframe>
-                            </div>
+                            <>
+                                <div id="yt-player-editor" className="mt-4 aspect-video rounded-lg overflow-hidden bg-black"></div>
+                                <div className="mt-4 flex gap-2">
+                                    <Button
+                                        variant="secondary"
+                                        onClick={handleMarkA}
+                                        className="flex-1 flex flex-col items-center py-3 h-auto"
+                                    >
+                                        <span className="text-[10px] uppercase font-bold text-text-subtle mb-1">Point A</span>
+                                        <span className="text-sm font-mono">{markedStartTime !== null ? formatTimestamp(markedStartTime) : '--:--'}</span>
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={handleMarkB}
+                                        className="flex-1 flex flex-col items-center py-3 h-auto"
+                                    >
+                                        <span className="text-[10px] uppercase font-bold text-text-subtle mb-1">Point B</span>
+                                        <span className="text-sm font-mono">{markedEndTime !== null ? formatTimestamp(markedEndTime) : '--:--'}</span>
+                                    </Button>
+                                </div>
+                                <Button
+                                    onClick={handleSurgicalCut}
+                                    className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white border-none"
+                                    disabled={markedStartTime === null || markedEndTime === null}
+                                >
+                                    ➕ Add to Study Session
+                                </Button>
+                            </>
                         )}
                     </div>
-                    
-                    {/* Transcript Input */}
+
+                    {/* Transcript Input - Promoted to main UI */}
                     <div className="bg-surface dark:bg-secondary-800 p-4 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700">
-                        <h3 className="font-bold text-text-main dark:text-secondary-100 mb-2 text-sm">Import Transcript</h3>
-                        <p className="text-xs text-text-subtle mb-3">
-                            Paste transcript from YouTube. Format:<br/>
-                            <code>1:05</code><br/>
-                            <code>Text line...</code>
+                        <h3 className="font-bold text-text-main dark:text-secondary-100 mb-2 text-sm flex items-center gap-2">
+                            📜 Import Transcript
+                        </h3>
+                        <p className="text-[10px] text-text-subtle mb-3 uppercase tracking-wider font-semibold">
+                            Open YouTube → Transcript → Copy All → Paste Below
                         </p>
-                        <textarea 
-                            className="w-full h-32 bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md p-2 text-xs font-mono mb-3"
+                        <textarea
+                            className="w-full h-40 bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md p-2 text-xs font-mono mb-3 focus:ring-1 focus:ring-primary-500 outline-none resize-none"
                             placeholder={`1:18\nChina could soon...`}
-                            value={rawTranscript}
-                            onChange={(e) => setRawTranscript(e.target.value)}
+                            value={importText}
+                            onChange={(e) => setImportText(e.target.value)}
                         />
-                        <Button onClick={handleParseTranscript} className="w-full" disabled={!rawTranscript.trim()}>
-                            Import
+                        <Button onClick={handleParseTranscript} className="w-full" disabled={!importText.trim()}>
+                            🚀 Import Clipboard
                         </Button>
                     </div>
 
                     <div className="bg-surface dark:bg-secondary-800 p-4 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 flex-1">
                         <h3 className="font-bold text-text-main dark:text-secondary-100 mb-2">Tools</h3>
-                         <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <Button size="sm" variant="secondary" onClick={handleMerge} disabled={selectedStart === null || selectedEnd === null || selectedStart === selectedEnd}>Merge Selected</Button>
                             <Button size="sm" variant="secondary" onClick={handleSplit} disabled={selectedStart === null || selectedEnd === null || selectedStart !== selectedEnd}>Split Segment</Button>
                             <Button size="sm" variant="primary" onClick={handleOpenLinkModal} disabled={selectedStart === null}>Link to Table</Button>
+                            <Button size="sm" variant="secondary" onClick={handleClearSession} disabled={!localNote.transcript || localNote.transcript.length === 0} className="text-secondary-500">🗑️ Clear Session</Button>
                         </div>
-                         <p className="text-xs text-text-subtle mt-4">
+                        <p className="text-xs text-text-subtle mt-4">
                             <strong>Tip:</strong> Hold Shift to select multiple segments.
                         </p>
                     </div>
@@ -430,41 +610,41 @@ const DictationEditorScreen: React.FC = () => {
                             transcript.map((entry, index) => {
                                 const isSelected = selectedStart !== null && selectedEnd !== null && index >= selectedStart && index <= selectedEnd;
                                 return (
-                                <div
-                                    key={index}
-                                    onClick={(e) => handleSegmentClick(index, e)}
-                                    className={`p-3 rounded-md cursor-pointer border transition-all ${isSelected ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 ring-1 ring-primary-500' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}
-                                >
-                                    <div className="flex gap-3">
-                                        <span className="text-xs font-mono text-text-subtle mt-1.5 select-none flex-shrink-0 w-12">
-                                            {new Date(entry.start * 1000).toISOString().substr(14, 5)}
-                                        </span>
-                                        <textarea
-                                            value={entry.text}
-                                            onChange={(e) => handleTextChange(index, e.target.value)}
-                                            onBlur={handleTextBlur}
-                                            onClick={(e) => {
-                                                // Don't bubble up to the container if we are interacting with the textarea, 
-                                                // BUT we usually want selection logic to happen too.
-                                                // If we stopPropagation, clicking here WON'T select the row for merging tools.
-                                                // If we want to edit AND select, we let it bubble.
-                                                // However, text selection inside textarea might be tricky if the parent also handles clicks.
-                                                // Since the parent `div` click handles `selectedStart/End`, letting it bubble is fine.
-                                                // The textarea handles its own focus.
-                                            }}
-                                            className="flex-grow bg-transparent border-none outline-none focus:ring-0 focus:bg-secondary-100/50 dark:focus:bg-secondary-700/50 rounded p-1 text-sm text-text-main dark:text-secondary-100 resize-none overflow-hidden leading-relaxed"
-                                            rows={Math.max(1, Math.ceil(entry.text.length / 60))}
-                                            style={{ minHeight: '24px' }}
-                                        />
+                                    <div
+                                        key={index}
+                                        onClick={(e) => handleSegmentClick(index, e)}
+                                        className={`p-3 rounded-md cursor-pointer border transition-all ${isSelected ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 ring-1 ring-primary-500' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}
+                                    >
+                                        <div className="flex gap-3">
+                                            <span className="text-xs font-mono text-text-subtle mt-1.5 select-none flex-shrink-0 w-12">
+                                                {new Date(entry.start * 1000).toISOString().substr(14, 5)}
+                                            </span>
+                                            <textarea
+                                                value={entry.text}
+                                                onChange={(e) => handleTextChange(index, e.target.value)}
+                                                onBlur={handleTextBlur}
+                                                onClick={(e) => {
+                                                    // Don't bubble up to the container if we are interacting with the textarea, 
+                                                    // BUT we usually want selection logic to happen too.
+                                                    // If we stopPropagation, clicking here WON'T select the row for merging tools.
+                                                    // If we want to edit AND select, we let it bubble.
+                                                    // However, text selection inside textarea might be tricky if the parent also handles clicks.
+                                                    // Since the parent `div` click handles `selectedStart/End`, letting it bubble is fine.
+                                                    // The textarea handles its own focus.
+                                                }}
+                                                className="flex-grow bg-transparent border-none outline-none focus:ring-0 focus:bg-secondary-100/50 dark:focus:bg-secondary-700/50 rounded p-1 text-sm text-text-main dark:text-secondary-100 resize-none overflow-hidden leading-relaxed"
+                                                rows={Math.max(1, Math.ceil(entry.text.length / 60))}
+                                                style={{ minHeight: '24px' }}
+                                            />
+                                        </div>
                                     </div>
-                                </div>
                                 )
                             })
                         )}
                     </div>
                 </div>
             </div>
-            
+
             <CreateDictationLinkModal
                 isOpen={isLinkModalOpen}
                 onClose={() => setIsLinkModalOpen(false)}

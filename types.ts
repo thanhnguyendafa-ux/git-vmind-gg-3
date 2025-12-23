@@ -377,7 +377,8 @@ export interface DictationNote {
   id: string;
   title: string;
   youtubeUrl: string;
-  transcript?: TranscriptEntry[];
+  transcript?: TranscriptEntry[]; // User-edited or selected segment
+  fullTranscript?: TranscriptEntry[]; // Complete auto-fetched transcript from YouTube
   practiceHistory: DictationPracticeRecord[];
   isStarred?: boolean; // New field: Indicates if the transcript is verified/complete
 }
