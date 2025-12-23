@@ -177,6 +177,8 @@ const DictationEditorScreen: React.FC = () => {
     const [markedStartTime, setMarkedStartTime] = useState<number | null>(null);
     const [markedEndTime, setMarkedEndTime] = useState<number | null>(null);
 
+    const [isImportOpen, setIsImportOpen] = useState(!editingDictationNote?.fullTranscript || editingDictationNote.fullTranscript.length === 0);
+
     const playerRef = useRef<any>(null);
 
     useEffect(() => {
@@ -513,7 +515,7 @@ const DictationEditorScreen: React.FC = () => {
 
             <div className="flex flex-col md:flex-row gap-6 flex-1 overflow-hidden">
                 {/* Left Panel: Video & Config */}
-                <div className="w-full md:w-1/3 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
+                <div className="w-full md:w-1/3 flex-shrink-0 flex flex-col gap-4 overflow-y-auto hide-scrollbar">
                     <div className="bg-surface dark:bg-secondary-800 p-4 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700">
                         <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">YouTube URL</label>
                         <input
@@ -531,56 +533,71 @@ const DictationEditorScreen: React.FC = () => {
                         />
                         {previewVideoId && (
                             <>
-                                <div id="yt-player-editor" className="mt-4 aspect-video rounded-lg overflow-hidden bg-black"></div>
-                                <div className="mt-4 flex gap-2">
+                                <div id="yt-player-editor" className="mt-4 aspect-video rounded-lg overflow-hidden bg-black shadow-md relative z-10"></div>
+                                <div className="mt-4 grid grid-cols-2 gap-3">
                                     <Button
                                         variant="secondary"
                                         onClick={handleMarkA}
-                                        className="flex-1 flex flex-col items-center py-3 h-auto"
+                                        className="flex flex-col items-center py-4 h-auto active:scale-95 transition-transform border-2 border-transparent hover:border-primary-500/20"
                                     >
-                                        <span className="text-[10px] uppercase font-bold text-text-subtle mb-1">Point A</span>
-                                        <span className="text-sm font-mono">{markedStartTime !== null ? formatTimestamp(markedStartTime) : '--:--'}</span>
+                                        <span className="text-xs uppercase font-extrabold text-primary-600 dark:text-primary-400 mb-1 tracking-wider">Point A</span>
+                                        <span className="text-lg font-mono font-bold text-text-main dark:text-secondary-100">{markedStartTime !== null ? formatTimestamp(markedStartTime) : '--:--'}</span>
                                     </Button>
                                     <Button
                                         variant="secondary"
                                         onClick={handleMarkB}
-                                        className="flex-1 flex flex-col items-center py-3 h-auto"
+                                        className="flex flex-col items-center py-4 h-auto active:scale-95 transition-transform border-2 border-transparent hover:border-primary-500/20"
                                     >
-                                        <span className="text-[10px] uppercase font-bold text-text-subtle mb-1">Point B</span>
-                                        <span className="text-sm font-mono">{markedEndTime !== null ? formatTimestamp(markedEndTime) : '--:--'}</span>
+                                        <span className="text-xs uppercase font-extrabold text-primary-600 dark:text-primary-400 mb-1 tracking-wider">Point B</span>
+                                        <span className="text-lg font-mono font-bold text-text-main dark:text-secondary-100">{markedEndTime !== null ? formatTimestamp(markedEndTime) : '--:--'}</span>
                                     </Button>
                                 </div>
                                 <Button
                                     onClick={handleSurgicalCut}
-                                    className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white border-none"
+                                    className="w-full mt-3 py-4 bg-gradient-to-r from-indigo-600 to-primary-600 hover:from-indigo-700 hover:to-primary-700 text-white font-bold shadow-lg shadow-primary-500/20 active:scale-[0.98] transition-all"
                                     disabled={markedStartTime === null || markedEndTime === null}
                                 >
-                                    ➕ Add to Study Session
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Icon name="plus" className="w-5 h-5" />
+                                        <span>Add to Session</span>
+                                    </div>
                                 </Button>
                             </>
                         )}
                     </div>
 
                     {/* Transcript Input - Promoted to main UI */}
-                    <div className="bg-surface dark:bg-secondary-800 p-4 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700">
-                        <h3 className="font-bold text-text-main dark:text-secondary-100 mb-2 text-sm flex items-center gap-2">
-                            📜 Import Transcript
-                        </h3>
-                        <p className="text-[10px] text-text-subtle mb-3 uppercase tracking-wider font-semibold">
-                            Open YouTube → Transcript → Copy All → Paste Below
-                        </p>
-                        <textarea
-                            className="w-full h-40 bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md p-2 text-xs font-mono mb-3 focus:ring-1 focus:ring-primary-500 outline-none resize-none"
-                            placeholder={`1:18\nChina could soon...`}
-                            value={importText}
-                            onChange={(e) => setImportText(e.target.value)}
-                        />
-                        <Button onClick={handleParseTranscript} className="w-full" disabled={!importText.trim()}>
-                            🚀 Import Clipboard
-                        </Button>
+                    {/* Transcript Input - Collapsible */}
+                    <div className="bg-surface dark:bg-secondary-800 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 overflow-hidden">
+                        <div
+                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition-colors"
+                            onClick={() => setIsImportOpen(!isImportOpen)}
+                        >
+                            <h3 className="font-bold text-text-main dark:text-secondary-100 text-sm flex items-center gap-2">
+                                📜 Import Transcript
+                            </h3>
+                            <Icon name={isImportOpen ? "chevron-up" : "chevron-down"} className="w-4 h-4 text-text-subtle" />
+                        </div>
+
+                        {isImportOpen && (
+                            <div className="p-4 pt-0 animate-fadeIn">
+                                <p className="text-[10px] text-text-subtle mb-3 uppercase tracking-wider font-semibold">
+                                    Open YouTube → Transcript → Copy All → Paste Below
+                                </p>
+                                <textarea
+                                    className="w-full h-40 bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md p-2 text-xs font-mono mb-3 focus:ring-1 focus:ring-primary-500 outline-none resize-none"
+                                    placeholder={`1:18\nChina could soon...`}
+                                    value={importText}
+                                    onChange={(e) => setImportText(e.target.value)}
+                                />
+                                <Button onClick={handleParseTranscript} className="w-full" disabled={!importText.trim()}>
+                                    🚀 Import Clipboard
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="bg-surface dark:bg-secondary-800 p-4 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 flex-1">
+                    <div className="hidden md:block bg-surface dark:bg-secondary-800 p-4 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 flex-1">
                         <h3 className="font-bold text-text-main dark:text-secondary-100 mb-2">Tools</h3>
                         <div className="flex flex-wrap gap-2">
                             <Button size="sm" variant="secondary" onClick={handleMerge} disabled={selectedStart === null || selectedEnd === null || selectedStart === selectedEnd}>Merge Selected</Button>
@@ -600,7 +617,8 @@ const DictationEditorScreen: React.FC = () => {
                         <h3 className="font-bold text-text-main dark:text-secondary-100">Transcript</h3>
                         <span className="text-xs text-text-subtle">{transcript.length} segments</span>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    {/* Add padding bottom for mobile to account for fixed bar */}
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-24 md:pb-2">
                         {transcript.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-text-subtle p-4 text-center">
                                 <p>No transcript loaded.</p>
@@ -643,6 +661,59 @@ const DictationEditorScreen: React.FC = () => {
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* Mobile Bottom Action Bar */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface/95 dark:bg-secondary-900/95 backdrop-blur-md border-t border-secondary-200 dark:border-secondary-700 p-3 z-50 flex items-center justify-between pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleMerge}
+                    disabled={selectedStart === null || selectedEnd === null || selectedStart === selectedEnd}
+                    className="flex flex-col items-center gap-1 h-auto py-1 px-2 min-w-[3.5rem]"
+                >
+                    <Icon name="git-merge" className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">Merge</span>
+                </Button>
+
+                <div className="w-px h-8 bg-secondary-200 dark:bg-secondary-700 mx-1"></div>
+
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleSplit}
+                    disabled={selectedStart === null || selectedEnd === null || selectedStart !== selectedEnd}
+                    className="flex flex-col items-center gap-1 h-auto py-1 px-2 min-w-[3.5rem]"
+                >
+                    <Icon name="git-split" className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">Split</span>
+                </Button>
+
+                <div className="w-px h-8 bg-secondary-200 dark:bg-secondary-700 mx-1"></div>
+
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleOpenLinkModal}
+                    disabled={selectedStart === null}
+                    className="flex flex-col items-center gap-1 h-auto py-1 px-2 min-w-[3.5rem] text-primary-600 dark:text-primary-400"
+                >
+                    <Icon name="link" className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">Link</span>
+                </Button>
+
+                <div className="w-px h-8 bg-secondary-200 dark:bg-secondary-700 mx-1"></div>
+
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleClearSession}
+                    disabled={!localNote.transcript || localNote.transcript.length === 0}
+                    className="flex flex-col items-center gap-1 h-auto py-1 px-2 min-w-[3.5rem] text-error-500"
+                >
+                    <Icon name="trash" className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">Clear</span>
+                </Button>
             </div>
 
             <CreateDictationLinkModal

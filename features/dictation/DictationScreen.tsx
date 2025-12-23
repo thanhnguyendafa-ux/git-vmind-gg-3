@@ -17,7 +17,7 @@ const DictationScreen: React.FC = () => {
     const createDictationNote = useDictationNoteStore(state => state.createDictationNote);
     const deleteDictationNote = useDictationNoteStore(state => state.deleteDictationNote);
 
-    const { 
+    const {
         setEditingDictationNote,
         handleStartDictationSession
     } = useSessionStore();
@@ -35,7 +35,7 @@ const DictationScreen: React.FC = () => {
             setNewNoteTitle('');
         }
     }
-    
+
     const handleSelectNote = (note: DictationNote) => {
         setEditingDictationNote(note);
         setCurrentScreen(Screen.DictationEditor);
@@ -56,55 +56,99 @@ const DictationScreen: React.FC = () => {
                     <span>New Note</span>
                 </button>
             </header>
-            
-            <main className="space-y-4">
+
+            <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
                 {dictationNotes.length > 0 ? (
                     dictationNotes.map(note => {
                         const lastPractice = note.practiceHistory.length > 0 ? note.practiceHistory[note.practiceHistory.length - 1] : null;
+                        const videoId = note.youtubeUrl ? (note.youtubeUrl.includes('v=') ? note.youtubeUrl.split('v=')[1]?.split('&')[0] : note.youtubeUrl.split('/').pop()) : null;
+                        const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
 
                         return (
-                        <div key={note.id} className="bg-surface dark:bg-secondary-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow flex flex-col relative group">
-                            {note.isStarred && (
-                                <div className="absolute top-2 right-2 z-10">
-                                    <Icon name="star" variant="filled" className="w-5 h-5 text-warning-500" />
-                                </div>
-                            )}
-                            <div className="p-4 cursor-pointer flex-grow hover:bg-secondary-50 dark:hover:bg-secondary-800/50 rounded-t-xl" onClick={() => handleStartDictationSession(note)}>
-                                <h3 className="font-bold text-text-main dark:text-secondary-100 truncate pr-6">{note.title}</h3>
-                                <div className="flex items-center gap-4 text-xs text-text-subtle mt-1">
-                                    <div className="flex items-center gap-1.5">
-                                        <Icon name="youtube" className="w-4 h-4" />
-                                        <span>{note.transcript?.length ?? 0} segments</span>
-                                    </div>
-                                    {lastPractice && (
-                                        <div className="flex items-center gap-1.5">
-                                            <Icon name="check-circle" className="w-4 h-4 text-success-500" />
-                                            <span>{(lastPractice.accuracy * 100).toFixed(0)}% last score</span>
+                            <div key={note.id} className="bg-surface dark:bg-secondary-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 flex flex-col relative group overflow-hidden border border-secondary-200 dark:border-secondary-700 hover:-translate-y-1">
+                                {/* Card Image / Header */}
+                                <div
+                                    className="h-32 bg-secondary-200 dark:bg-secondary-700 bg-cover bg-center relative cursor-pointer group-hover:opacity-90 transition-opacity"
+                                    style={thumbnailUrl ? { backgroundImage: `url(${thumbnailUrl})` } : {}}
+                                    onClick={() => handleStartDictationSession(note)}
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                    {note.isStarred && (
+                                        <div className="absolute top-2 right-2 z-10 bg-surface/80 dark:bg-black/50 backdrop-blur-sm p-1 rounded-full shadow-sm">
+                                            <Icon name="star" variant="filled" className="w-4 h-4 text-warning-500" />
                                         </div>
                                     )}
+                                    <div className="absolute bottom-2 left-3 right-3">
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-white/90 uppercase tracking-wider mb-1">
+                                            <div className="bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                <Icon name="youtube" className="w-3 h-3" />
+                                                <span>{note.transcript?.length ?? 0} Segments</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Play Overlay */}
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[2px]">
+                                        <div className="w-12 h-12 bg-primary-600/90 text-white rounded-full flex items-center justify-center shadow-lg transform scale-95 group-hover:scale-110 transition-transform">
+                                            <Icon name="play" variant="filled" className="w-6 h-6 ml-1" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 flex-grow flex flex-col justify-between">
+                                    <div>
+                                        <h3
+                                            className="font-bold text-text-main dark:text-secondary-100 line-clamp-2 leading-tight mb-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                                            onClick={() => handleStartDictationSession(note)}
+                                        >
+                                            {note.title}
+                                        </h3>
+
+                                        {lastPractice ? (
+                                            <div className="flex items-center gap-1.5 text-xs text-secondary-500 dark:text-secondary-400">
+                                                <Icon name="check-circle" className="w-3.5 h-3.5 text-success-500" />
+                                                <span className="font-medium text-success-600 dark:text-success-400">{(lastPractice.accuracy * 100).toFixed(0)}% Score</span>
+                                                <span className="text-secondary-300 dark:text-secondary-600">•</span>
+                                                <span className="truncate">Last: {new Date(lastPractice.timestamp).toLocaleDateString()}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 text-xs text-secondary-400 dark:text-secondary-500 italic">
+                                                <Icon name="history" className="w-3.5 h-3.5" />
+                                                <span>No practice yet</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-secondary-100 dark:border-secondary-700/50 p-2 flex items-center justify-between bg-secondary-50/50 dark:bg-secondary-800/50">
+                                    <button
+                                        onClick={() => handleSelectNote(note)}
+                                        className="p-2 text-secondary-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                                        title="Edit"
+                                    >
+                                        <Icon name="pencil" className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setNoteToDelete(note)}
+                                        className="p-2 text-secondary-400 hover:text-error-600 hover:bg-error-50 dark:hover:bg-error-900/20 rounded-lg transition-colors"
+                                        title="Delete"
+                                    >
+                                        <Icon name="trash" className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
-                            <div className="bg-secondary-50 dark:bg-secondary-800/50 border-t border-secondary-200/80 dark:border-secondary-700/50 p-2 flex justify-end items-center gap-2 rounded-b-xl">
-                                <button onClick={() => handleSelectNote(note)} className="font-semibold text-sm text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700 px-3 py-1.5 rounded-md flex items-center gap-1.5">
-                                    <Icon name="pencil" className="w-4 h-4"/>
-                                    Edit
-                                </button>
-                                <button onClick={() => setNoteToDelete(note)} className="font-semibold text-sm text-error-600 dark:text-error-400 hover:bg-error-500/10 px-3 py-1.5 rounded-md flex items-center gap-1.5">
-                                    <Icon name="trash" className="w-4 h-4"/>
-                                    Delete
-                                </button>
-                                <button onClick={() => handleStartDictationSession(note)} className="bg-primary-600 text-white font-semibold text-sm px-4 py-1.5 rounded-md hover:bg-primary-700 flex items-center gap-1.5">
-                                    <Icon name="play" className="w-4 h-4" />
-                                    Practice
-                                </button>
-                            </div>
-                        </div>
-                    )})
+                        )
+                    })
                 ) : (
-                    <div className="text-center py-16">
-                        <Icon name="youtube" className="w-16 h-16 text-secondary-300 dark:text-secondary-700 mx-auto mb-4" />
-                        <h2 className="text-xl font-semibold text-secondary-700 dark:text-secondary-300">No Dictation Notes</h2>
-                        <p className="text-text-subtle mt-2">Click "New Note" to create your first dictation exercise from a YouTube video.</p>
+                    <div className="col-span-full text-center py-24 bg-surface dark:bg-secondary-800 rounded-3xl border-2 border-dashed border-secondary-200 dark:border-secondary-700">
+                        <div className="w-20 h-20 bg-secondary-100 dark:bg-secondary-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Icon name="youtube" className="w-10 h-10 text-secondary-400 dark:text-secondary-500" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-text-main dark:text-secondary-100 mb-2">Create Your First Lesson</h2>
+                        <p className="text-text-subtle max-w-md mx-auto mb-8">Import any YouTube video to create a custom dictation exercise. Master listening comprehension by slicing content into study segments.</p>
+                        <button onClick={() => setIsCreateModalOpen(true)} className="bg-primary-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-primary-700 shadow-lg shadow-primary-500/30 hover:-translate-y-1 transition-all">
+                            Start New Dictation
+                        </button>
                     </div>
                 )}
             </main>

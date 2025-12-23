@@ -213,15 +213,20 @@ const DictationSessionScreen: React.FC = () => {
     const resultStyle = results[activeIndex] === 'correct' ? 'border-success-500' : (results[activeIndex] === 'incorrect' ? 'border-error-500' : 'border-secondary-300 dark:border-secondary-600');
 
     return (
-        <div className="flex flex-col md:flex-row h-[100dvh] bg-background dark:bg-secondary-900 pb-[env(safe-area-inset-bottom)]">
-            <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto">
+        <div className="flex flex-col md:flex-row h-[100dvh] bg-background dark:bg-secondary-900 pb-[env(safe-area-inset-bottom)] overflow-hidden">
+            <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto hide-scrollbar">
                 <header className="flex-shrink-0 flex justify-between items-center mb-4">
-                    <div>
-                        <h1 className="text-xl font-bold text-text-main dark:text-secondary-100 truncate">{note.title}</h1>
-                        <p className="text-sm text-text-subtle">Entry {activeIndex + 1} of {transcript.length}</p>
+                    <div className="flex items-center gap-3 overflow-hidden">
+                        <button onClick={() => { handleFinishDictationSession(activeDictationSession, { correct: 0, total: 0 }); }} className="md:hidden p-2 -ml-2 rounded-full hover:bg-secondary-200 dark:hover:bg-secondary-700 text-text-subtle">
+                            <Icon name="arrowLeft" className="w-6 h-6" />
+                        </button>
+                        <div className="overflow-hidden">
+                            <h1 className="text-xl font-bold text-text-main dark:text-secondary-100 truncate pr-2">{note.title}</h1>
+                            <p className="text-sm text-text-subtle">Entry {activeIndex + 1} of {transcript.length}</p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                        <div className="hidden md:flex items-center gap-2">
                             <span className="text-xs font-semibold text-text-subtle">Mode:</span>
                             <div className="flex rounded-full bg-secondary-200 dark:bg-secondary-700 p-1 text-xs font-semibold">
                                 <button onClick={() => setPracticeMode('individual')} className={`px-2 py-1 rounded-full ${practiceMode === 'individual' ? 'bg-white dark:bg-secondary-600 shadow' : ''}`}>Individual</button>
@@ -234,11 +239,11 @@ const DictationSessionScreen: React.FC = () => {
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${isPlayerVisible ? 'bg-primary-100 text-primary-700 border border-primary-300' : 'bg-secondary-200 dark:bg-secondary-700 text-text-subtle border border-transparent'}`}
                             >
                                 <Icon name={isPlayerVisible ? 'eye' : 'eye-off'} className="w-4 h-4" />
-                                {isPlayerVisible ? 'Video ON' : 'Video OFF'}
+                                <span className="hidden sm:inline">{isPlayerVisible ? 'Video ON' : 'Video OFF'}</span>
                             </button>
                         </div>
-                        <span className="font-mono text-sm text-text-subtle">{new Date(elapsedSeconds * 1000).toISOString().substr(14, 5)}</span>
-                        <button onClick={handleFinish} className="bg-primary-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-primary-700">Finish</button>
+                        <span className="font-mono text-sm text-text-subtle hidden sm:inline">{new Date(elapsedSeconds * 1000).toISOString().substr(14, 5)}</span>
+                        <button onClick={handleFinish} className="bg-primary-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-primary-700 hidden md:block">Finish</button>
                     </div>
                 </header>
 
@@ -249,21 +254,26 @@ const DictationSessionScreen: React.FC = () => {
                     </div>
                 )}
 
-                <div className="flex-1 flex flex-col items-center justify-center">
-                    <div className="w-full max-w-2xl bg-surface dark:bg-secondary-800 border border-secondary-200/80 dark:border-secondary-700/50 rounded-xl shadow-lg p-6">
+                <div className="flex-1 flex flex-col items-center justify-start md:justify-center pb-20 md:pb-0">
+                    <div className="w-full max-w-2xl bg-surface dark:bg-secondary-800 border border-secondary-200/80 dark:border-secondary-700/50 rounded-xl shadow-lg p-4 sm:p-6 mb-4">
 
-                        <div className="relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                        <div className={`relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-black flex items-center justify-center transition-all duration-300 ${isPlayerVisible ? 'h-auto' : 'h-16 md:h-auto'}`}>
                             {/* The actual YouTube iframe will be placed here by the API */}
                             <div id="yt-player-session" className="w-full h-full"></div>
 
                             {!isPlayerVisible && (
-                                <div className="absolute inset-0 bg-surface dark:bg-secondary-800 flex items-center justify-center">
+                                <div className="absolute inset-0 bg-surface dark:bg-secondary-800 flex items-center justify-center border border-secondary-200 dark:border-secondary-700 rounded-lg">
                                     <button
                                         onClick={() => playCurrentSegment()}
-                                        className={`w-40 h-40 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 ${playerError ? 'bg-secondary-400 cursor-not-allowed' : 'bg-primary-500 hover:bg-primary-600'}`}
+                                        className={`w-full h-full flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] ${playerError ? 'bg-secondary-100 cursor-not-allowed' : 'bg-surface dark:bg-secondary-800 hover:bg-secondary-50'}`}
                                     >
-                                        {activeSnippet && <Icon name="link" className="w-8 h-8 absolute top-4 right-4 text-white/50" />}
-                                        <Icon name={playerError ? 'error-circle' : 'play'} className="w-16 h-16 text-white" />
+                                        <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center shadow-sm">
+                                            <Icon name={playerError ? 'error-circle' : 'play'} variant="filled" className="w-5 h-5 ml-0.5" />
+                                        </div>
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-sm font-bold text-text-main dark:text-secondary-100">Play Audio</span>
+                                            <span className="text-xs text-text-subtle">{activeSnippet ? 'Linked Segment' : `Segment ${activeIndex + 1}`}</span>
+                                        </div>
                                     </button>
                                 </div>
                             )}
@@ -281,22 +291,20 @@ const DictationSessionScreen: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="flex items-center justify-center gap-6 mb-4">
+                        <div className="flex items-center justify-center gap-4 mb-4">
                             <div>
-                                <label htmlFor="loop-select-session" className="block text-xs font-medium text-secondary-600 dark:text-secondary-400 mb-1 text-center">Loop</label>
-                                <select id="loop-select-session" value={loopCount} onChange={e => setLoopCount(Number(e.target.value))} className="bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md px-2 py-1.5 text-sm">
-                                    <option value="1">1x</option>
-                                    <option value="3">3x</option>
-                                    <option value="5">5x</option>
-                                    <option value="-1">∞</option>
+                                <select id="loop-select-session" value={loopCount} onChange={e => setLoopCount(Number(e.target.value))} className="bg-secondary-100 dark:bg-secondary-700 border-none rounded-lg px-3 py-2 text-xs font-semibold focus:ring-0">
+                                    <option value="1">Loop: 1x</option>
+                                    <option value="3">Loop: 3x</option>
+                                    <option value="5">Loop: 5x</option>
+                                    <option value="-1">Loop: ∞</option>
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="speed-select-session" className="block text-xs font-medium text-secondary-600 dark:text-secondary-400 mb-1 text-center">Speed</label>
-                                <select id="speed-select-session" value={playbackRate} onChange={e => setPlaybackRate(Number(e.target.value))} className="bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md px-2 py-1.5 text-sm">
+                                <select id="speed-select-session" value={playbackRate} onChange={e => setPlaybackRate(Number(e.target.value))} className="bg-secondary-100 dark:bg-secondary-700 border-none rounded-lg px-3 py-2 text-xs font-semibold focus:ring-0">
                                     <option value="0.5">0.5x</option>
                                     <option value="0.75">0.75x</option>
-                                    <option value="1">1x (Normal)</option>
+                                    <option value="1">1x Speed</option>
                                     <option value="1.5">1.5x</option>
                                 </select>
                             </div>
@@ -308,52 +316,73 @@ const DictationSessionScreen: React.FC = () => {
                             disabled={hasChecked}
                             placeholder="Type what you hear..."
                             rows={activeSnippet ? 5 : 3}
-                            className={`w-full bg-secondary-100 dark:bg-secondary-700 border-2 rounded-lg px-4 py-3 text-lg transition-all duration-300 ${resultStyle}`}
+                            className={`w-full bg-secondary-100 dark:bg-secondary-700 border-2 rounded-lg px-4 py-3 text-lg transition-all duration-300 ${resultStyle} focus:ring-primary-500 focus:border-primary-500`}
                         />
                         {!hasChecked ? (
-                            <button onClick={handleCheck} disabled={!userInputs[activeIndex]} className="mt-2 w-full bg-primary-600 text-white font-bold py-3 rounded-lg hover:bg-primary-700 disabled:opacity-50">Check Answer</button>
+                            <button onClick={handleCheck} disabled={!userInputs[activeIndex]} className="mt-4 w-full bg-primary-600 text-white font-bold py-3.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 shadow-lg shadow-primary-500/20 transition-all active:scale-[0.98]">Check Answer</button>
                         ) : (
-                            <div className="mt-2 space-y-2 animate-fadeIn">
-                                {showAnswer && <div className="p-3 bg-secondary-100 dark:bg-secondary-700/50 rounded-md text-sm text-secondary-600 dark:text-secondary-300">{activeSnippet ? activeSnippet.fullText : currentEntry.text}</div>}
-                                <div className="flex items-center justify-center gap-4 text-sm font-semibold">
-                                    <button onClick={() => setShowAnswer(!showAnswer)} className="text-primary-600 hover:underline">{showAnswer ? 'Hide' : 'Show'} Answer</button>
-                                    <button onClick={() => showToast('AI Explain feature is coming soon!', 'info')} className="text-primary-600 hover:underline flex items-center gap-1"><Icon name="sparkles" className="w-4 h-4" /> Explain</button>
-                                    <button onClick={handleSaveJournalClick} disabled={isJournaled} className="text-primary-600 hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <div className="mt-4 space-y-3 animate-fadeIn">
+                                {showAnswer && (
+                                    <div className="p-4 bg-secondary-50 dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-700 rounded-lg text-sm text-text-main dark:text-secondary-100 leading-relaxed">
+                                        {activeSnippet ? activeSnippet.fullText : currentEntry.text}
+                                    </div>
+                                )}
+                                <div className="flex items-center justify-between gap-2 text-sm font-semibold pt-2">
+                                    <button onClick={() => setShowAnswer(!showAnswer)} className="flex-1 py-2 text-primary-600 bg-primary-50 dark:bg-primary-900/10 rounded-lg hover:bg-primary-100 transition-colors">{showAnswer ? 'Hide' : 'Show'} Answer</button>
+                                    <button onClick={handleSaveJournalClick} disabled={isJournaled} className="flex-1 py-2 text-text-main bg-secondary-100 dark:bg-secondary-700 rounded-lg hover:bg-secondary-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                         <Icon name="book" className="w-4 h-4" /> {isJournaled ? 'Saved' : 'Save'}
                                     </button>
                                 </div>
                             </div>
                         )}
-                        <div className="flex justify-between items-center mt-4">
-                            <button onClick={() => navigate(activeIndex - 1)} disabled={activeIndex === 0} className="p-2 rounded-full disabled:opacity-30 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700"><Icon name="arrowLeft" className="w-8 h-8" /></button>
-                            <span className="font-semibold text-secondary-600 dark:text-secondary-300">{activeIndex + 1} / {transcript.length}</span>
-                            <button onClick={handleNext} disabled={activeIndex >= transcript.length - 1} className="p-2 rounded-full disabled:opacity-30 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200 dark:hover:bg-secondary-700"><Icon name="arrowRight" className="w-8 h-8" /></button>
+                        <div className="flex justify-between items-center mt-6">
+                            <button onClick={() => navigate(activeIndex - 1)} disabled={activeIndex === 0} className="p-3 rounded-full disabled:opacity-30 bg-secondary-100 dark:bg-secondary-700 text-text-main hover:bg-secondary-200"><Icon name="arrowLeft" className="w-5 h-5" /></button>
+                            <span className="font-mono font-bold text-text-subtle text-sm tracking-widest">{activeIndex + 1} / {transcript.length}</span>
+                            <button onClick={handleNext} disabled={activeIndex >= transcript.length - 1} className="p-3 rounded-full disabled:opacity-30 bg-primary-100 text-primary-700 hover:bg-primary-200"><Icon name="arrowRight" className="w-5 h-5" /></button>
                         </div>
                     </div>
                 </div>
             </main>
-            <aside className="w-full md:w-80 flex-shrink-0 bg-surface dark:bg-secondary-800 border-t md:border-t-0 md:border-l border-secondary-200 dark:border-secondary-700 flex flex-col">
-                <div className="p-3 border-b border-secondary-200 dark:border-secondary-700 flex justify-between items-center">
-                    <h3 className="font-semibold text-sm">Transcript Index</h3>
-                    <button onClick={() => setIsTranscriptVisible(!isTranscriptVisible)} title="Toggle transcript visibility" className="p-1 text-text-subtle"><Icon name={isTranscriptVisible ? 'eye-off' : 'eye'} className="w-5 h-5" /></button>
+
+            {/* Drawer/Sidebar - Collapsible on Mobile */}
+            <aside
+                className={`fixed inset-x-0 bottom-0 z-40 bg-surface dark:bg-secondary-800 border-t border-secondary-200 dark:border-secondary-700 shadow-[0_-5px_30px_rgba(0,0,0,0.1)] transition-all duration-300 transform md:relative md:w-80 md:inset-auto md:border-t-0 md:border-l md:shadow-none flex flex-col ${isTranscriptVisible ? 'h-[40vh] md:h-full translate-y-0' : 'h-12 md:h-full md:w-0 md:border-none translate-y-0'}`}
+            >
+                <div
+                    onClick={() => setIsTranscriptVisible(!isTranscriptVisible)}
+                    className="p-3 flex justify-between items-center cursor-pointer md:cursor-default active:bg-secondary-50 md:active:bg-transparent"
+                >
+                    <div className="flex items-center gap-2">
+                        {/* Mobile Drag Handle Indicator */}
+                        <div className="md:hidden w-10 h-1 bg-secondary-300 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2"></div>
+                        <h3 className="font-semibold text-sm mt-2 md:mt-0 flex items-center gap-2">
+                            <Icon name="list" className="w-4 h-4" />
+                            Transcript Index
+                        </h3>
+                    </div>
+                    <button title="Toggle transcript visibility" className="p-1 text-text-subtle hidden md:block"><Icon name={isTranscriptVisible ? 'eye-off' : 'eye'} className="w-5 h-5" /></button>
+                    <span className="md:hidden text-xs text-text-subtle mt-2 md:mt-0">{isTranscriptVisible ? 'Tap to collapse' : 'Tap to expand'}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto">
-                    {transcript.map((entry, index) => {
-                        const isLinkedStart = practiceMode === 'linked' && linkedSnippetsMap.has(index);
-                        return (
-                            <div key={index} onClick={() => navigate(index)} className={`p-3 cursor-pointer border-l-4 flex items-start gap-2 ${activeIndex === index ? 'bg-secondary-100 dark:bg-secondary-900/50 border-primary-500' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}>
-                                {isLinkedStart && <Icon name="link" className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" title="Linked Snippet" />}
-                                <div className="flex-grow">
-                                    <div className="flex items-center gap-2 text-xs font-mono text-text-subtle">
-                                        <Icon name={results[index] === 'correct' ? 'check-circle' : (results[index] === 'incorrect' ? 'error-circle' : 'circle-outline')} className={`w-4 h-4 ${results[index] === 'correct' ? 'text-success-500' : (results[index] === 'incorrect' ? 'text-error-500' : 'text-secondary-400')}`} />
-                                        <span>{new Date(entry.start * 1000).toISOString().substr(14, 5)}</span>
+
+                {isTranscriptVisible && (
+                    <div className="flex-1 overflow-y-auto bg-background/50 dark:bg-secondary-900/50">
+                        {transcript.map((entry, index) => {
+                            const isLinkedStart = practiceMode === 'linked' && linkedSnippetsMap.has(index);
+                            return (
+                                <div key={index} onClick={() => navigate(index)} className={`p-3 cursor-pointer border-l-4 flex items-start gap-3 transition-colors ${activeIndex === index ? 'bg-white dark:bg-secondary-800 border-primary-500 shadow-sm' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}>
+                                    {isLinkedStart && <Icon name="link" className="w-3.5 h-3.5 text-primary-500 mt-1 flex-shrink-0" title="Linked Snippet" />}
+                                    <div className="flex-grow">
+                                        <div className="flex items-center gap-2 text-xs font-mono text-text-subtle mb-0.5">
+                                            <Icon name={results[index] === 'correct' ? 'check-circle' : (results[index] === 'incorrect' ? 'error-circle' : 'circle-outline')} className={`w-3.5 h-3.5 ${results[index] === 'correct' ? 'text-success-500' : (results[index] === 'incorrect' ? 'text-error-500' : 'text-secondary-400')}`} />
+                                            <span>{new Date(entry.start * 1000).toISOString().substr(14, 5)}</span>
+                                        </div>
+                                        <p className="text-xs text-secondary-600 dark:text-secondary-400 line-clamp-2 leading-relaxed">{entry.text}</p>
                                     </div>
-                                    {isTranscriptVisible && <p className="text-xs text-secondary-600 dark:text-secondary-300 mt-1 pl-6">{entry.text}</p>}
                                 </div>
-                            </div>
-                        )
-                    })}
-                </div>
+                            )
+                        })}
+                    </div>
+                )}
             </aside>
         </div>
     );
