@@ -41,6 +41,8 @@ const DictationSessionScreen: React.FC = () => {
     const [practiceMode, setPracticeMode] = useState<'individual' | 'linked'>('individual');
     const [isPlayerVisible, setIsPlayerVisible] = useState(false);
     const [playerError, setPlayerError] = useState<string | null>(null);
+    const [isPlayerReady, setIsPlayerReady] = useState(false);
+    const [isBlindMode, setIsBlindMode] = useState(true);
 
     const playerRef = useRef<any>(null);
     const segmentTimeoutRef = useRef<number | null>(null);
@@ -88,7 +90,10 @@ const DictationSessionScreen: React.FC = () => {
                             'rel': 0
                         },
                         events: {
-                            'onReady': (event: any) => { event.target.setVolume(100); },
+                            'onReady': (event: any) => {
+                                event.target.setVolume(100);
+                                setIsPlayerReady(true);
+                            },
                             'onError': (event: any) => {
                                 const code = event.data;
                                 let msg = "Video error.";
@@ -128,7 +133,7 @@ const DictationSessionScreen: React.FC = () => {
             playCurrentSegment(true); // true = silent if player not ready
         }, 100);
         return () => clearTimeout(timeout);
-    }, [activeIndex, practiceMode, loopCount, playbackRate]);
+    }, [activeIndex, practiceMode, loopCount, playbackRate, isPlayerReady]);
 
     const playCurrentSegment = (isAutoTrigger = false) => {
         if (playerError) {
@@ -136,8 +141,8 @@ const DictationSessionScreen: React.FC = () => {
             return;
         }
 
-        if (!playerRef.current || !currentEntry || !playerRef.current.seekTo) {
-            if (!isAutoTrigger) showToast("Video player is loading...", "info");
+        if (!playerRef.current || !currentEntry || !isPlayerReady || !playerRef.current.seekTo) {
+            if (!isAutoTrigger && !isPlayerReady) showToast("Video player is loading...", "info");
             return;
         }
 
@@ -268,10 +273,16 @@ const DictationSessionScreen: React.FC = () => {
                                         className={`w-full h-full flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] ${playerError ? 'bg-secondary-100 cursor-not-allowed' : 'bg-surface dark:bg-secondary-800 hover:bg-secondary-50'}`}
                                     >
                                         <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center shadow-sm">
-                                            <Icon name={playerError ? 'error-circle' : 'play'} variant="filled" className="w-5 h-5 ml-0.5" />
+                                            {isPlayerReady || playerError ? (
+                                                <Icon name={playerError ? 'error-circle' : 'play'} variant="filled" className="w-5 h-5 ml-0.5" />
+                                            ) : (
+                                                <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                                            )}
                                         </div>
                                         <div className="flex flex-col items-start">
-                                            <span className="text-sm font-bold text-text-main dark:text-secondary-100">Play Audio</span>
+                                            <span className="text-sm font-bold text-text-main dark:text-secondary-100">
+                                                {playerError ? 'Player Error' : (isPlayerReady ? 'Play Audio' : 'Loading Player...')}
+                                            </span>
                                             <span className="text-xs text-text-subtle">{activeSnippet ? 'Linked Segment' : `Segment ${activeIndex + 1}`}</span>
                                         </div>
                                     </button>
@@ -322,15 +333,31 @@ const DictationSessionScreen: React.FC = () => {
                             <button onClick={handleCheck} disabled={!userInputs[activeIndex]} className="mt-4 w-full bg-primary-600 text-white font-bold py-3.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 shadow-lg shadow-primary-500/20 transition-all active:scale-[0.98]">Check Answer</button>
                         ) : (
                             <div className="mt-4 space-y-3 animate-fadeIn">
-                                {showAnswer && (
-                                    <div className="p-4 bg-secondary-50 dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-700 rounded-lg text-sm text-text-main dark:text-secondary-100 leading-relaxed">
+                                {showAnswer ? (
+                                    <div className="p-4 bg-primary-50 dark:bg-primary-900/10 border border-primary-200 dark:border-primary-800/50 rounded-lg text-sm text-text-main dark:text-secondary-100 leading-relaxed animate-fadeIn">
+                                        <div className="text-[10px] uppercase font-bold text-primary-600 mb-1 tracking-wider">Correct Transcript</div>
                                         {activeSnippet ? activeSnippet.fullText : currentEntry.text}
                                     </div>
+                                ) : (
+                                    <div className="p-6 border-2 border-dashed border-secondary-300 dark:border-secondary-700 rounded-lg flex flex-col items-center justify-center bg-secondary-50/50 dark:bg-secondary-900/30 transition-all">
+                                        <Icon name="eye-off" className="w-6 h-6 text-secondary-400 mb-2" />
+                                        <p className="text-xs font-medium text-text-subtle italic">Answer hidden to prevent spoilers</p>
+                                    </div>
                                 )}
-                                <div className="flex items-center justify-between gap-2 text-sm font-semibold pt-2">
-                                    <button onClick={() => setShowAnswer(!showAnswer)} className="flex-1 py-2 text-primary-600 bg-primary-50 dark:bg-primary-900/10 rounded-lg hover:bg-primary-100 transition-colors">{showAnswer ? 'Hide' : 'Show'} Answer</button>
-                                    <button onClick={handleSaveJournalClick} disabled={isJournaled} className="flex-1 py-2 text-text-main bg-secondary-100 dark:bg-secondary-700 rounded-lg hover:bg-secondary-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                                        <Icon name="book" className="w-4 h-4" /> {isJournaled ? 'Saved' : 'Save'}
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                                    <button
+                                        onClick={() => setShowAnswer(!showAnswer)}
+                                        className={`w-full sm:flex-1 py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${showAnswer ? 'text-text-subtle bg-secondary-100 dark:bg-secondary-700' : 'text-primary-700 bg-primary-100 hover:bg-primary-200 shadow-sm'}`}
+                                    >
+                                        <Icon name={showAnswer ? 'eye-off' : 'eye'} className="w-5 h-5" />
+                                        {showAnswer ? 'Hide Answer' : 'Show Answer'}
+                                    </button>
+                                    <button
+                                        onClick={handleSaveJournalClick}
+                                        disabled={isJournaled}
+                                        className="w-full sm:flex-1 py-3.5 px-4 text-text-main bg-secondary-100 dark:bg-secondary-800 rounded-xl font-bold hover:bg-secondary-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                                    >
+                                        <Icon name="book" className="w-5 h-5" /> {isJournaled ? 'Saved to Journal' : 'Save to Journal'}
                                     </button>
                                 </div>
                             </div>
@@ -350,18 +377,35 @@ const DictationSessionScreen: React.FC = () => {
             >
                 <div
                     onClick={() => setIsTranscriptVisible(!isTranscriptVisible)}
-                    className="p-3 flex justify-between items-center cursor-pointer md:cursor-default active:bg-secondary-50 md:active:bg-transparent"
+                    className="p-3 flex flex-col md:flex-row md:justify-between md:items-center cursor-pointer md:cursor-default active:bg-secondary-50 md:active:bg-transparent"
                 >
-                    <div className="flex items-center gap-2">
-                        {/* Mobile Drag Handle Indicator */}
-                        <div className="md:hidden w-10 h-1 bg-secondary-300 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2"></div>
-                        <h3 className="font-semibold text-sm mt-2 md:mt-0 flex items-center gap-2">
-                            <Icon name="list" className="w-4 h-4" />
-                            Transcript Index
-                        </h3>
+                    {/* Mobile Drag Handle Indicator */}
+                    <div className="md:hidden w-10 h-1 bg-secondary-300 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2"></div>
+
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-sm mt-2 md:mt-0 flex items-center gap-2">
+                                <Icon name="list" className="w-4 h-4" />
+                                Transcript Index
+                            </h3>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                            {/* Blind Mode Toggle - Thumb friendly hit area for iPhone 12 */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsBlindMode(!isBlindMode);
+                                }}
+                                title={isBlindMode ? "Show all text" : "Hide text (Blind Mode)"}
+                                className={`flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-full transition-all ${isBlindMode ? 'bg-primary-100 text-primary-600' : 'bg-secondary-100 dark:bg-secondary-700 text-text-subtle'}`}
+                            >
+                                <Icon name={isBlindMode ? 'eye-off' : 'eye'} className="w-5 h-5 md:w-4 md:h-4" />
+                            </button>
+                            <button title="Toggle transcript visibility" className="p-1 text-text-subtle hidden md:block"><Icon name={isTranscriptVisible ? 'eye-off' : 'eye'} className="w-5 h-5" /></button>
+                        </div>
                     </div>
-                    <button title="Toggle transcript visibility" className="p-1 text-text-subtle hidden md:block"><Icon name={isTranscriptVisible ? 'eye-off' : 'eye'} className="w-5 h-5" /></button>
-                    <span className="md:hidden text-xs text-text-subtle mt-2 md:mt-0">{isTranscriptVisible ? 'Tap to collapse' : 'Tap to expand'}</span>
+                    <span className="md:hidden text-[10px] text-text-subtle mt-1 text-center">{isTranscriptVisible ? 'Tap to collapse' : 'Tap to expand'}</span>
                 </div>
 
                 {isTranscriptVisible && (
@@ -376,7 +420,9 @@ const DictationSessionScreen: React.FC = () => {
                                             <Icon name={results[index] === 'correct' ? 'check-circle' : (results[index] === 'incorrect' ? 'error-circle' : 'circle-outline')} className={`w-3.5 h-3.5 ${results[index] === 'correct' ? 'text-success-500' : (results[index] === 'incorrect' ? 'text-error-500' : 'text-secondary-400')}`} />
                                             <span>{new Date(entry.start * 1000).toISOString().substr(14, 5)}</span>
                                         </div>
-                                        <p className="text-xs text-secondary-600 dark:text-secondary-400 line-clamp-2 leading-relaxed">{entry.text}</p>
+                                        <p className={`text-xs leading-relaxed transition-all duration-500 ${isBlindMode && results[index] === 'untouched' ? 'filter blur-[5px] hover:blur-[2px] opacity-40 select-none cursor-help' : 'text-secondary-600 dark:text-secondary-400 line-clamp-2'}`}>
+                                            {entry.text}
+                                        </p>
                                     </div>
                                 </div>
                             )
