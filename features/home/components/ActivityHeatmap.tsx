@@ -5,13 +5,15 @@ import { useUIStore } from '../../../stores/useUIStore';
 
 // Configuration for the SVG Grid (Coordinate System)
 // These now represent units in the viewBox, not literal screen pixels.
-const CELL_SIZE = 12; // Increased from 10
-const CELL_GAP = 3;  // Increased from 2
+// Configuration for the SVG Grid (Coordinate System)
+// Optimized for Mobile Fit (iPhone 12 width ~390px)
+const CELL_SIZE = 5;
+const CELL_GAP = 1.2;
 const WEEK_WIDTH = CELL_SIZE + CELL_GAP;
 const DAY_HEIGHT = CELL_SIZE + CELL_GAP;
 const TOTAL_WEEKS = 53;
-const LABEL_HEIGHT = 20; // Increased from 15
-const RIGHT_PADDING = 20; // Increased from 15
+const LABEL_HEIGHT = 16;
+const RIGHT_PADDING = 10;
 const CHART_HEIGHT = (7 * DAY_HEIGHT) + LABEL_HEIGHT;
 const CHART_WIDTH = (TOTAL_WEEKS * WEEK_WIDTH) + RIGHT_PADDING;
 
@@ -58,7 +60,10 @@ export const ActivityHeatmap: React.FC<{ activity: UserStats['activity']; title?
             if (currentMonth !== lastMonth) {
                 // Add label if it's not the very first week (unless it's Jan 1st, but usually we skip edge to avoid clipping)
                 // FIX: Also check against TOTAL_WEEKS - 2 to prevent label clipping on the far right
-                if (w > 0 && w < (TOTAL_WEEKS - 2)) {
+                // On mobile, show every other month to prevent label overlap
+                const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+                const shouldShowLabel = !isMobile || (currentMonth % 2 === 0);
+                if (w > 0 && w < (TOTAL_WEEKS - 2) && shouldShowLabel) {
                     labels.push({
                         text: currentDate.toLocaleDateString('en-US', { month: 'short' }),
                         x: w * WEEK_WIDTH
@@ -155,9 +160,9 @@ export const ActivityHeatmap: React.FC<{ activity: UserStats['activity']; title?
     }, [checkScroll]);
 
     return (
-        <div className="w-full flex flex-col gap-4 animate-fadeIn">
+        <div className="w-full flex flex-col gap-2 animate-fadeIn">
             {/* Header & Legend */}
-            <div className="flex justify-between items-end px-1">
+            <div className="flex justify-between items-end px-1 mb-2">
                 {title && <h2 className="text-sm font-bold text-slate-800 dark:text-emerald-400 opacity-0 h-0 w-0 overflow-hidden">{title}</h2>}
 
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-emerald-400/50 ml-auto">
@@ -183,26 +188,11 @@ export const ActivityHeatmap: React.FC<{ activity: UserStats['activity']; title?
             {/* 
                 SVG Container - Fully Responsive with Discovery Fades
             */}
-            <div className="relative group/heatmap">
-                {/* Left Fade Indicator */}
-                <div className={`
-                    absolute left-0 top-0 bottom-0 w-12 z-20 pointer-events-none transition-opacity duration-300
-                    bg-gradient-to-r ${isDark ? 'from-[#051A14]' : 'from-white'} to-transparent
-                    ${canScrollLeft ? 'opacity-100' : 'opacity-0'}
-                `} />
-
-                {/* Right Fade Indicator */}
-                <div className={`
-                    absolute right-0 top-0 bottom-0 w-12 z-20 pointer-events-none transition-opacity duration-300
-                    bg-gradient-to-l ${isDark ? 'from-[#051A14]' : 'from-white'} to-transparent
-                    ${canScrollRight ? 'opacity-100' : 'opacity-0'}
-                `} />
-
+            <div className="relative group/heatmap w-full">
                 <div
-                    ref={scrollContainerRef}
-                    className="w-full relative overflow-x-auto overflow-y-hidden no-scrollbar cursor-grab active:cursor-grabbing"
+                    className="w-full relative overflow-hidden cursor-default"
                 >
-                    <div className="min-w-[800px] w-full py-2">
+                    <div className="w-full">
                         <svg
                             viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
                             className="w-full h-auto block drop-shadow-sm"
@@ -214,10 +204,11 @@ export const ActivityHeatmap: React.FC<{ activity: UserStats['activity']; title?
                                     <text
                                         key={i}
                                         x={label.x}
-                                        y={0}
-                                        className="text-[9px] font-bold"
+                                        y={-2}
+                                        className="font-bold"
                                         fill={textColor}
-                                        style={{ fontSize: '9px', fontFamily: 'var(--font-sans)' }}
+                                        // Increased base font size to 10px so it reads like ~6px when scaled down on mobile
+                                        style={{ fontSize: '9px', fontFamily: 'var(--font-sans)', textAnchor: 'start' }}
                                     >
                                         {label.text}
                                     </text>

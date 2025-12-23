@@ -105,24 +105,24 @@ const PushPullControls: React.FC = () => {
     );
 };
 
-const GardenerStatPill: React.FC<{ icon: string; label: string; value: string | number; delay?: number; onClick?: () => void }> = ({ icon, label, value, delay = 0, onClick }) => (
+const GardenerStatPill: React.FC<{ icon: string; label: string; value: string | number; delay?: number; onClick?: () => void; compact?: boolean }> = ({ icon, label, value, delay = 0, onClick, compact }) => (
     <div
         onClick={onClick}
         style={{ animation: 'fadeIn 0.8s ease-out backwards', animationDelay: `${delay}ms` }}
         className={`
-            flex items-center gap-3 px-5 py-4 rounded-[2rem]
+            flex items-center gap-3 ${compact ? 'px-3 py-3 rounded-xl' : 'px-5 py-4 rounded-[2rem]'}
             bg-white/40 dark:bg-black/20 backdrop-blur-xl
             border border-white/60 dark:border-white/5
             w-full transition-all group active:scale-95
             ${onClick ? 'cursor-pointer hover:bg-white/60 dark:hover:bg-black/30' : ''}
         `}
     >
-        <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-            <Icon name={icon} className="w-5 h-5" />
+        <div className={`${compact ? 'p-2' : 'p-3'} rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform`}>
+            <Icon name={icon} className={`${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
         </div>
         <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-800/50 dark:text-emerald-400/50">{label}</p>
-            <p className="text-xl font-serif font-bold text-slate-800 dark:text-emerald-50 leading-none mt-1 truncate">{value}</p>
+            <p className={`${compact ? 'text-lg' : 'text-xl'} font-serif font-bold text-slate-800 dark:text-emerald-50 leading-none mt-1 truncate`}>{value}</p>
         </div>
     </div>
 );
@@ -198,7 +198,7 @@ const HomeScreen: React.FC = () => {
             <div className="absolute inset-0 z-0 opacity-[0.04] pointer-events-none bg-noise mix-blend-overlay"></div>
 
             {/* 2. The Content Layer */}
-            <div className="relative z-10 h-full w-full overflow-y-auto overflow-x-hidden p-6 sm:p-10 pb-32">
+            <div className="relative z-10 h-full w-full overflow-y-auto overflow-x-hidden p-6 sm:p-10 pb-40 sm:pb-32">
 
                 {/* Header: Poetic & Tactical */}
                 <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-fadeIn">
@@ -227,41 +227,46 @@ const HomeScreen: React.FC = () => {
                     </div>
                 </header>
 
-                {/* --- THE SANCTUARY GRID --- */}
+                {/* --- THE SANCTUARY GRID (DESKTOP EQUILIBRIUM) --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                    {/* LEFT COLUMN: The Focus (8 cols) */}
-                    <div className="lg:col-span-8 space-y-8">
-
-                        {/* THE GARDEN: Absolute Hero */}
-                        <div className="relative group">
+                    {/* 1. CENTER (Mobile Order 1 / Desktop Order 2): THE GARDEN - HERO */}
+                    <div className="lg:col-span-6 lg:order-2 order-1 h-full">
+                        <div className="relative group h-full">
                             <div className="absolute -inset-4 bg-emerald-500/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                            <div className="h-[400px] sm:h-[500px] overflow-visible">
+                            <div className="h-[400px] lg:h-[600px] overflow-visible transition-all duration-500">
                                 <RestorationGarden isAwake={isAwake} className="h-full w-full" />
-                            </div>
-                        </div>
-
-                        {/* GARDENER'S LEDGER (Grid inside Column) */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <GardenerStatPill icon="droplets" label="Rainwater (Today)" value={formatShortDuration(activityData.today)} delay={100} />
-                            <GardenerStatPill icon="sun" label="Sunlight (Week)" value={formatShortDuration(activityData.thisWeek)} delay={200} />
-                            <GardenerStatPill icon="sparkles" label="Fully Bloomed" value={wordsMastered} delay={300} />
-                            <GardenerStatPill icon="tree" label="Total Seeds" value={totalWords.toLocaleString()} delay={400} />
-                        </div>
-
-                        {/* ACTIONABLE WIDGETS */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="animate-fadeIn" style={{ animationDelay: '500ms' }}>
-                                <RecentStudiesCard />
-                            </div>
-                            <div className="animate-fadeIn" style={{ animationDelay: '600ms' }}>
-                                <ActivityPulseWidget />
                             </div>
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN: The Pulse (4 cols) */}
-                    <div className="lg:col-span-4 space-y-6">
+                    {/* 2. LEFT COLUMN (Mobile Order 2 / Desktop Order 1): STATS & WIDGETS */}
+                    <div className="lg:col-span-3 lg:order-1 order-2 space-y-4 lg:space-y-6">
+
+                        {/* Compact Stats Grid for Sidebar */}
+                        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+                            <GardenerStatPill compact icon="droplets" label="Rainwater" value={formatShortDuration(activityData.today)} delay={100} />
+                            <GardenerStatPill compact icon="sun" label="Sunlight" value={formatShortDuration(activityData.thisWeek)} delay={200} />
+                            <GardenerStatPill compact icon="sparkles" label="Bloomed" value={wordsMastered} delay={300} />
+                            <GardenerStatPill compact icon="tree" label="Seeds" value={totalWords.toLocaleString()} delay={400} />
+                        </div>
+
+                        <div className="animate-fadeIn" style={{ animationDelay: '500ms' }}>
+                            <RecentStudiesCard />
+                        </div>
+
+                        <div className="animate-fadeIn lg:hidden" style={{ animationDelay: '600ms' }}>
+                            <ActivityPulseWidget />
+                        </div>
+                    </div>
+
+                    {/* 3. RIGHT COLUMN (Mobile Order 3 / Desktop Order 3): PULSE & NOTIFICATIONS */}
+                    <div className="lg:col-span-3 lg:order-3 order-3 space-y-6">
+
+                        {/* On Desktop, Pulse Widget moves here or stays left? Let's put it here for balance if needed, or hide if redundant */}
+                        <div className="hidden lg:block animate-fadeIn" style={{ animationDelay: '600ms' }}>
+                            <ActivityPulseWidget />
+                        </div>
 
                         <div className="animate-fadeIn" style={{ animationDelay: '200ms' }}>
                             <StreakCard />
@@ -272,7 +277,10 @@ const HomeScreen: React.FC = () => {
                                 <Icon name="chart-bar" className="w-4 h-4" />
                                 Growth Pattern
                             </h3>
-                            <TimeSpentBarChart />
+                            {/* Constrain height on sidebar */}
+                            <div className="h-48 lg:h-auto overflow-hidden">
+                                <TimeSpentBarChart />
+                            </div>
                         </div>
 
                         <div className="animate-fadeIn" style={{ animationDelay: '400ms' }}>
@@ -287,7 +295,7 @@ const HomeScreen: React.FC = () => {
                 </div>
 
                 {/* --- FULL WIDTH SECTION: THE SEASON MAP --- */}
-                <div className="mt-6 animate-fadeIn" style={{ animationDelay: '500ms' }}>
+                <div className="mt-6 mb-8 animate-fadeIn" style={{ animationDelay: '500ms' }}>
                     <Card className="p-8 md:p-10">
                         <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800/50 dark:text-emerald-400/50 mb-8 flex items-center gap-2 px-2">
                             <Icon name="calendar" className="w-4 h-4" />
