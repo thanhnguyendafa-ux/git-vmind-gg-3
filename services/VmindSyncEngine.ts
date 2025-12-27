@@ -669,16 +669,28 @@ export class VmindSyncEngine {
 
                 delete dataForDb.modifiedAt; delete dataForDb.createdAt; delete dataForDb.rows; delete dataForDb.rowCount; delete dataForDb.shortCode;
 
-                if (dataForDb.imageConfig) { dataForDb.image_config = dataForDb.imageConfig; delete dataForDb.imageConfig; }
-                if (dataForDb.audioConfig) { dataForDb.audio_config = dataForDb.audioConfig; delete dataForDb.audioConfig; }
-                if (dataForDb.columnAudioConfig) { dataForDb.column_audio_config = dataForDb.columnAudioConfig; delete dataForDb.columnAudioConfig; }
-                if (dataForDb.aiPrompts) { dataForDb.ai_prompts = dataForDb.aiPrompts; delete dataForDb.aiPrompts; }
-                if (dataForDb.isPublic !== undefined) { dataForDb.is_public = dataForDb.isPublic; delete dataForDb.isPublic; }
-                if (dataForDb.ankiConfig) { dataForDb.anki_config = dataForDb.ankiConfig; delete dataForDb.ankiConfig; }
-                if (dataForDb.tagIds) { dataForDb.tag_ids = dataForDb.tagIds; delete dataForDb.tagIds; }
-                if (dataForDb.videoConfig) { dataForDb.video_config = dataForDb.videoConfig; delete dataForDb.videoConfig; }
-                if (dataForDb.viewConfig) { dataForDb.view_settings = dataForDb.viewConfig; delete dataForDb.viewConfig; }
-                if (dataForDb.columnUrlTemplates) { dataForDb.column_url_templates = dataForDb.columnUrlTemplates; delete dataForDb.columnUrlTemplates; }
+                if (dataForDb.imageConfig !== undefined) dataForDb.image_config = dataForDb.imageConfig;
+                delete dataForDb.imageConfig;
+                if (dataForDb.audioConfig !== undefined) dataForDb.audio_config = dataForDb.audioConfig;
+                delete dataForDb.audioConfig;
+                if (dataForDb.columnAudioConfig !== undefined) dataForDb.column_audio_config = dataForDb.columnAudioConfig;
+                delete dataForDb.columnAudioConfig;
+                if (dataForDb.aiPrompts !== undefined) dataForDb.ai_prompts = dataForDb.aiPrompts;
+                delete dataForDb.aiPrompts;
+                if (dataForDb.isPublic !== undefined) dataForDb.is_public = dataForDb.isPublic;
+                delete dataForDb.isPublic;
+                if (dataForDb.ankiConfig !== undefined) dataForDb.anki_config = dataForDb.ankiConfig;
+                delete dataForDb.ankiConfig;
+                if (dataForDb.tagIds !== undefined) dataForDb.tag_ids = dataForDb.tagIds;
+                delete dataForDb.tagIds;
+                if (dataForDb.videoConfig !== undefined) dataForDb.video_config = dataForDb.videoConfig;
+                delete dataForDb.videoConfig;
+                if (dataForDb.videoColumnIds !== undefined) dataForDb.video_column_ids = dataForDb.videoColumnIds;
+                delete dataForDb.videoColumnIds;
+                if (dataForDb.viewConfig !== undefined) dataForDb.view_settings = dataForDb.viewConfig;
+                delete dataForDb.viewConfig;
+                if (dataForDb.columnUrlTemplates !== undefined) dataForDb.column_url_templates = dataForDb.columnUrlTemplates;
+                delete dataForDb.columnUrlTemplates;
                 delete dataForDb.tags;
                 dataForDb.user_id = userId;
                 const { error: tableError } = await supabase.from('tables').upsert(dataForDb);
