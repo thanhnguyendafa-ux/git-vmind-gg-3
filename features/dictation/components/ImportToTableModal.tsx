@@ -18,6 +18,8 @@ interface ImportToTableModalProps {
     segmentIndex?: number;
 }
 
+const CANONICAL_NAME = "ExtractedVideoAB";
+
 const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
     isOpen, onClose, transcriptText, videoUrl, translation,
     dictationNoteId, segmentIndex
@@ -50,14 +52,42 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
         setTargetVideoColId('');
         setTargetMeaningColId('');
 
-        // 1. Video Column (Priority: Config -> Name)
+        // 1. Video Column Detection (3-tier priority system)
+        let detectedVideoColId = '';
+
+        // Priority 1: videoConfig (if set and column still exists)
         if (selectedTable.videoConfig?.videoColumnId) {
-            setTargetVideoColId(selectedTable.videoConfig.videoColumnId);
-        } else {
-            // Fallback for legacy tables or if config is missing but name matches
-            const vidCol = selectedTable.columns.find(c => /video|link|youtube/i.test(c.name));
-            if (vidCol) setTargetVideoColId(vidCol.id);
+            const configCol = selectedTable.columns.find(c => c.id === selectedTable.videoConfig.videoColumnId);
+            if (configCol) {
+                detectedVideoColId = configCol.id;
+            }
         }
+
+        // Priority 2: Canonical name "ExtractedVideoAB"
+        if (!detectedVideoColId) {
+            const canonicalCol = selectedTable.columns.find(c => c.name === CANONICAL_NAME);
+            if (canonicalCol) {
+                detectedVideoColId = canonicalCol.id;
+                // Auto-sync config if missing
+                if (!selectedTable.videoConfig || selectedTable.videoConfig.videoColumnId !== canonicalCol.id) {
+                    updateTable({
+                        ...selectedTable,
+                        videoConfig: {
+                            videoColumnId: canonicalCol.id,
+                            sourceColumnId: canonicalCol.id
+                        }
+                    });
+                }
+            }
+        }
+
+        // Priority 3: Regex fallback (legacy support)
+        if (!detectedVideoColId) {
+            const legacyCol = selectedTable.columns.find(c => /video|link|clip|youtube/i.test(c.name));
+            if (legacyCol) detectedVideoColId = legacyCol.id;
+        }
+
+        setTargetVideoColId(detectedVideoColId);
 
         // 2. Text Column (Priority: First Text Column)
         const textCols = selectedTable.columns.filter(c =>
@@ -80,9 +110,21 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
 
     const handleCreateVideoColumn = async () => {
         if (!selectedTable) return;
+
+        // CRITICAL: Check for canonical name first to prevent duplicates
+        const existing = selectedTable.columns.find(c => c.name === CANONICAL_NAME);
+        if (existing) {
+            setTargetVideoColId(existing.id);
+            showToast(`Using existing '${CANONICAL_NAME}' column`, "info");
+            return;
+        }
+
         setIsCreatingCol(true);
         try {
-            const newCol: Column = { id: crypto.randomUUID(), name: 'Video Clips' };
+            const newCol: Column = {
+                id: crypto.randomUUID(),
+                name: CANONICAL_NAME // Changed from 'Video Clips'
+            };
             const updatedTable: Table = {
                 ...selectedTable,
                 columns: [...selectedTable.columns, newCol],
@@ -93,7 +135,7 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
             };
             await updateTable(updatedTable);
             setTargetVideoColId(newCol.id);
-            showToast("Video column created!", "success");
+            showToast(`'${CANONICAL_NAME}' column created!`, "success");
         } catch (error) {
             showToast("Failed to create column", "error");
         } finally {
@@ -269,8 +311,14 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
                                             className="text-[10px] text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
                                         >
                                             <Icon name="plus" className="w-3 h-3" />
-                                            {isCreatingCol ? 'Creating...' : 'Create new Video Clip column'}
+                                            {isCreatingCol ? 'Creating...' : `Create '${CANONICAL_NAME}' column`}
                                         </button>
+                                    )}
+                                    {targetVideoColId && (
+                                        <div className="text-[9px] text-success-600 dark:text-success-400 flex items-center gap-1">
+                                            <Icon name="check-circle" className="w-3 h-3" />
+                                            Column ready
+                                        </div>
                                     )}
                                 </div>
 

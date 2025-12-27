@@ -616,7 +616,7 @@ const TableView: React.FC<TableViewProps> = ({ table, rows, groupedRows, sortabl
                                     onDrop={(e) => handleDrop(e, col.id)}
                                 >
                                     <div onClick={() => handleSort(col.id)} className="flex items-center gap-1.5 cursor-pointer flex-grow truncate hover:text-text-main transition-colors select-none">
-                                        <span className="truncate">{col.name}</span>
+                                        <span className="truncate max-w-[140px]" title={col.name}>{col.name}</span>
                                         {currentSort ? (<Icon name={currentSort.direction === 'asc' ? 'arrow-up' : 'arrow-down'} className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" />) : (<Icon name="arrows-up-down" className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 opacity-30 group-hover:opacity-100 transition-opacity flex-shrink-0" />)}
                                     </div>
 

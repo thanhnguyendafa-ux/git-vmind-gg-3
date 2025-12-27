@@ -42,20 +42,21 @@ export const useTableOperations = (table: Table) => {
         }
         return success;
     };
-    
-    const handleSaveColumns = (newColumns: Column[], newAudioConfig: Record<string, { language: string }>, newImageConfig: Table['imageConfig']) => {
+
+    const handleSaveColumns = (newColumns: Column[], newAudioConfig: Record<string, { language: string }>, newImageConfig: Table['imageConfig'], newVideoConfig: Table['videoConfig']) => {
         const deletedColIds = new Set(table.columns.filter(c => !newColumns.some(nc => nc.id === c.id)).map(c => c.id));
         const updatedRows = table.rows.map(row => {
             const newCols = { ...row.cols };
             deletedColIds.forEach((id: string) => delete newCols[id]);
             return { ...row, cols: newCols };
         });
-        
-        handleUpdateTable({ 
-            columns: newColumns, 
+
+        handleUpdateTable({
+            columns: newColumns,
             rows: updatedRows,
             columnAudioConfig: newAudioConfig,
-            imageConfig: newImageConfig
+            imageConfig: newImageConfig,
+            videoConfig: newVideoConfig
         });
         showToast('Table structure updated.', 'success');
     };
@@ -88,7 +89,7 @@ export const useTableOperations = (table: Table) => {
             showToast(`Imported ${newRows.length} new rows.`, 'success');
         }
     };
-    
+
     const handleSaveLinkTemplate = async (colId: string, template: string) => {
         const newTemplates = { ...(table.columnUrlTemplates || {}), [colId]: template };
         await updateTable({ ...table, columnUrlTemplates: newTemplates });

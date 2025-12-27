@@ -199,32 +199,25 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                                 );
                             } else if (isVideoColumn && text && !isDesignMode) {
                                 const videoId = extractVideoID(text);
-                                const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : '';
+                                const start = extractStartTime(text);
+                                const end = extractEndTime(text);
+
+                                // Import EmbeddedVideoPlayer at top
+                                const EmbeddedVideoPlayer = React.lazy(() => import('./EmbeddedVideoPlayer'));
+
                                 contentNode = (
-                                    <div className="flex flex-col items-center gap-2 w-full">
-                                        {videoId ? (
-                                            <div
-                                                onClick={(e) => { e.stopPropagation(); setZoomedImgSrc(text); }}
-                                                className="relative w-full max-w-[200px] aspect-video flex-shrink-0 cursor-pointer group bg-black rounded-lg border border-secondary-200 dark:border-secondary-700 overflow-hidden shadow-md"
-                                            >
-                                                <img
-                                                    src={thumbnailUrl}
-                                                    alt="Video Thumbnail"
-                                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                                                />
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center group-hover:bg-primary-500/80 group-hover:border-primary-400 transition-all">
-                                                        <Icon name="play" className="w-5 h-5 text-white ml-0.5" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-[10px] text-error-500 bg-error-50 dark:bg-error-900/20 px-2 py-1 rounded truncate max-w-full">
-                                                Invalid Video URL: {text}
-                                            </div>
-                                        )}
-                                        {onPlayAudio && <button onClick={handlePlay} className={`p-2 rounded-full transition-colors flex-shrink-0 ${isPlayingThis ? 'text-primary-500 bg-primary-100 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}><Icon name={isPlayingThis ? "volume-up" : "volume-down"} className="w-4 h-4" /></button>}
-                                    </div>
+                                    <React.Suspense fallback={
+                                        <div className="w-full max-w-[200px] aspect-video bg-secondary-100 dark:bg-secondary-800 rounded-lg flex items-center justify-center">
+                                            <Icon name="spinner" className="w-6 h-6 animate-spin text-secondary-400" />
+                                        </div>
+                                    }>
+                                        <EmbeddedVideoPlayer
+                                            videoId={videoId}
+                                            startTime={start}
+                                            endTime={end}
+                                            isMobile={isMobile}
+                                        />
+                                    </React.Suspense>
                                 );
                             } else {
                                 contentNode = (
