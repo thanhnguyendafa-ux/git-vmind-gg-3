@@ -115,13 +115,17 @@ const ConfidenceSessionScreen: React.FC = () => {
         isConfidenceAutoplayEnabled,
         toggleConfidenceAutoplay,
         setCurrentScreen,
-        triggerGlobalAction
+        triggerGlobalAction,
+        syncStatus,
+        syncQueue
     } = useUIStore(useShallow(state => ({
         showToast: state.showToast,
         isConfidenceAutoplayEnabled: state.isConfidenceAutoplayEnabled,
         toggleConfidenceAutoplay: state.toggleConfidenceAutoplay,
         setCurrentScreen: state.setCurrentScreen,
-        triggerGlobalAction: state.triggerGlobalAction
+        triggerGlobalAction: state.triggerGlobalAction,
+        syncStatus: state.syncStatus,
+        syncQueue: state.syncQueue
     })));
 
     // Extracted audio store actions for use in effects
@@ -1026,6 +1030,25 @@ const ConfidenceSessionScreen: React.FC = () => {
                         <div className="flex items-center gap-1 px-2 py-1 bg-secondary-100 dark:bg-secondary-800 rounded-md text-xs font-mono text-text-subtle ml-2" title={`Total views: ${currentRow?.stats.confiViewed || 0}`}>
                             <Icon name="eye" className="w-3 h-3" />
                             <span>{currentRow?.stats.confiViewed || 0}</span>
+                        </div>
+
+                        {/* Cloud Sync Status Indicator */}
+                        <div className="flex items-center gap-1.5 ml-1 mr-2 px-2 py-1 rounded-md transition-all duration-300">
+                            {syncStatus === 'saving' || syncQueue.length > 0 ? (
+                                <div className="flex items-center gap-1.5 text-primary-500 animate-pulse">
+                                    <Icon name="spinner" className="w-3.5 h-3.5 animate-spin" />
+                                    <span className="text-[10px] font-bold uppercase hidden md:inline">Syncing...</span>
+                                </div>
+                            ) : syncStatus === 'saved' ? (
+                                <div className="flex items-center gap-1.5 text-success-500 animate-fadeIn">
+                                    <Icon name="cloud-check" className="w-3.5 h-3.5" variant="filled" />
+                                    <span className="text-[10px] font-bold uppercase hidden md:inline">Saved</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 text-text-subtle/40">
+                                    <Icon name="cloud" className="w-3.5 h-3.5" />
+                                </div>
+                            )}
                         </div>
 
                         {/* Check Now / Sync Button */}

@@ -316,6 +316,36 @@ export class VmindSyncEngine {
             return;
         }
 
+        // --- DEDUPLICATION LOGIC (Incremental Sync Optimization) ---
+        // If an item for the same entity is already pending, update its payload instead of adding a new one.
+        // This prevents the queue from exploding during rapid interactions (e.g. Confidence Session).
+        const existingItemIndex = this.queue.findIndex(item => {
+            if (item.status !== 'pending' || item.type !== type || item.userId !== userId) return false;
+
+            // Study Set Matching
+            if (type === 'UPSERT_STUDY_SET' && item.payload.progress?.id === payload.progress?.id) return true;
+
+            // Row Matching
+            if (type === 'UPSERT_ROW' && item.payload.tableId === payload.tableId && item.payload.row?.id === payload.row?.id) return true;
+
+            // Profile Matching (usually only one)
+            if (type === 'UPSERT_PROFILE') return true;
+
+            // Note Matching
+            if ((type === 'UPSERT_NOTE' || type === 'UPSERT_DICTATION') && item.payload.note?.id === payload.note?.id) return true;
+
+            return false;
+        });
+
+        if (existingItemIndex !== -1) {
+            const existingItem = this.queue[existingItemIndex];
+            existingItem.payload = payload;
+            existingItem.timestamp = Date.now(); // Bump timestamp to keep order somewhat fresh if needed, but keeping position is better for sequential integrity.
+            await this.saveToDB(existingItem);
+            this.broadcastQueueState();
+            return;
+        }
+
         const action: SyncAction = {
             id: generateUUID(),
             type,
@@ -330,6 +360,13 @@ export class VmindSyncEngine {
         this.queue.push(action);
         await this.saveToDB(action);
         this.broadcastQueueState();
+
+        // --- NEW: AUTO-TRIGGER SYNC ---
+        // If the engine is not paused, locked, or batching, start processing immediately.
+        // This enables "Live Sync" feel during Confidence Sessions.
+        if (!this.isPaused && !this.isLocked && !this.isBatching) {
+            this.triggerSync();
+        }
     }
 
     public triggerSync() {
