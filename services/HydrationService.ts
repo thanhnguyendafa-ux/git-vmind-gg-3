@@ -37,6 +37,8 @@ export const normalizeServerTable = (serverObj: any): Table => {
         rowCount: serverObj.vocab_rows?.[0]?.count ?? serverObj.rowCount ?? 0,
         relations: relations,
         imageConfig: serverObj.image_config ?? serverObj.imageConfig,
+        videoConfig: serverObj.video_config ?? serverObj.videoConfig, // Map video_config from DB
+        videoColumnIds: serverObj.video_column_ids ?? serverObj.videoColumnIds, // Map video_column_ids from DB
         columnAudioConfig: serverObj.column_audio_config ?? serverObj.columnAudioConfig,
         aiPrompts: serverObj.ai_prompts ?? serverObj.aiPrompts,
         description: serverObj.description,

@@ -12,6 +12,8 @@ import { playSpeech, detectLanguageFromText } from '../../../../../services/audi
 import { useAudioStore } from '../../../../../stores/useAudioStore';
 import { extractVideoID, extractStartTime, extractEndTime } from '../../../../../utils/youtubeUtils';
 
+const EmbeddedVideoPlayer = React.lazy(() => import('./EmbeddedVideoPlayer'));
+
 interface CardFaceProps {
     face: 'front' | 'back';
     design: CardFaceDesign | undefined;
@@ -256,31 +258,30 @@ const CardFace: React.FC<CardFaceProps> = ({
                                 );
                             } else {
                                 // Video Logic
-                                const isConfiguredVideo = table.videoConfig?.videoColumnId === col.id;
+                                // NEW: Support multiple video columns via videoColumnIds array
+                                const isVideoColumn = (table.videoColumnIds && table.videoColumnIds.includes(col.id)) || table.videoConfig?.videoColumnId === col.id;
                                 const videoId = extractVideoID(text);
-                                const shouldRenderVideo = (isConfiguredVideo || videoId) && text && !isDesignMode;
+                                const shouldRenderVideo = (isVideoColumn || videoId) && text && !isDesignMode;
 
                                 if (shouldRenderVideo && videoId) {
+                                    const start = extractStartTime(text);
+                                    const end = extractEndTime(text);
+
                                     contentNode = (
                                         <div className="flex flex-col items-center gap-3 w-full">
-                                            <div className="w-full aspect-video rounded-xl overflow-hidden shadow-lg border border-secondary-200 dark:border-secondary-700 bg-black relative">
-                                                {(() => {
-                                                    const start = extractStartTime(text);
-                                                    const end = extractEndTime(text);
-                                                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0${start ? `&start=${Math.floor(start)}` : ''}${end ? `&end=${Math.ceil(end)}` : ''}`;
-                                                    return (
-                                                        <iframe
-                                                            width="100%"
-                                                            height="100%"
-                                                            src={embedUrl}
-                                                            title="YouTube video player"
-                                                            frameBorder="0"
-                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                                            allowFullScreen
-                                                        ></iframe>
-                                                    );
-                                                })()}
-                                            </div>
+                                            <React.Suspense fallback={
+                                                <div className="w-full aspect-video bg-secondary-100 dark:bg-secondary-800 rounded-xl flex items-center justify-center">
+                                                    <Icon name="spinner" className="w-6 h-6 animate-spin text-secondary-400" />
+                                                </div>
+                                            }>
+                                                <EmbeddedVideoPlayer
+                                                    videoId={videoId}
+                                                    startTime={start}
+                                                    endTime={end}
+                                                    isMobile={isMobile}
+                                                />
+                                            </React.Suspense>
+
                                             {canPlayAudio && (
                                                 <button
                                                     onClick={handlePlay}

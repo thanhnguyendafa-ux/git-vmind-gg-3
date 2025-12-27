@@ -23,6 +23,10 @@ const EmbeddedVideoPlayer: React.FC<EmbeddedVideoPlayerProps> = ({
     const loopCountRef = useRef<number>(0);
     const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Refs for stale closure fix
+    const loopModeRef = useRef<1 | 3 | -1>(1);
+    const playbackSpeedRef = useRef<number>(1);
+
     // Load YouTube iframe API
     useEffect(() => {
         if (typeof window === 'undefined' || (window as any).YT) return;
@@ -54,11 +58,13 @@ const EmbeddedVideoPlayer: React.FC<EmbeddedVideoPlayerProps> = ({
             playerRef.current = new (window as any).YT.Player(`player-${videoId}`, {
                 videoId: videoId,
                 playerVars: {
+                    autoplay: 1,
                     start: Math.floor(startTime),
                     end: endTime ? Math.ceil(endTime) : undefined,
                     controls: 0,
                     modestbranding: 1,
                     rel: 0,
+                    origin: window.location.origin
                 },
                 events: {
                     onReady: onPlayerReady,
@@ -69,7 +75,10 @@ const EmbeddedVideoPlayer: React.FC<EmbeddedVideoPlayerProps> = ({
     };
 
     const onPlayerReady = (event: any) => {
-        event.target.setPlaybackRate(playbackSpeed);
+        event.target.setPlaybackRate(playbackSpeedRef.current);
+        // Force sync and autoplay on ready
+        event.target.seekTo(startTime, true);
+        event.target.playVideo();
     };
 
     const onPlayerStateChange = (event: any) => {
@@ -94,7 +103,7 @@ const EmbeddedVideoPlayer: React.FC<EmbeddedVideoPlayerProps> = ({
                 if (currentTime >= segmentEnd) {
                     loopCountRef.current++;
 
-                    if (loopMode === -1 || loopCountRef.current < loopMode) {
+                    if (loopModeRef.current === -1 || loopCountRef.current < loopModeRef.current) {
                         // Restart segment
                         playerRef.current.seekTo(startTime, true);
                         playerRef.current.playVideo();
@@ -113,6 +122,15 @@ const EmbeddedVideoPlayer: React.FC<EmbeddedVideoPlayerProps> = ({
             if (isPlaying) {
                 playerRef.current.pauseVideo();
             } else {
+                // Ensure we are playing from the A (startTime) point if coming from a stopped state
+                // or if the current position is outside the A-B range
+                const currentTime = playerRef.current.getCurrentTime();
+                const segmentEnd = endTime || playerRef.current.getDuration();
+
+                if (currentTime < startTime || currentTime >= segmentEnd) {
+                    playerRef.current.seekTo(startTime, true);
+                }
+
                 playerRef.current.playVideo();
             }
         }
@@ -126,23 +144,28 @@ const EmbeddedVideoPlayer: React.FC<EmbeddedVideoPlayerProps> = ({
         }
     };
 
+    // React to speed changes instantly
+    useEffect(() => {
+        if (playerRef.current && playerRef.current.setPlaybackRate) {
+            playerRef.current.setPlaybackRate(playbackSpeedRef.current);
+        }
+    }, [playbackSpeed]);
+
     const cycleLoop = () => {
         setLoopMode(prev => {
-            if (prev === 1) return 3;
-            if (prev === 3) return -1;
-            return 1;
+            const next = prev === 1 ? 3 : prev === 3 ? -1 : 1;
+            loopModeRef.current = next;
+            return next;
         });
         loopCountRef.current = 0;
     };
 
     const cycleSpeed = () => {
+        const speeds = [0.5, 0.7, 0.8, 0.9, 1, 1.2, 1.5];
         setPlaybackSpeed(prev => {
-            const speeds = [0.5, 1, 1.5];
             const currentIndex = speeds.indexOf(prev);
             const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
-            if (playerRef.current) {
-                playerRef.current.setPlaybackRate(nextSpeed);
-            }
+            playbackSpeedRef.current = nextSpeed;
             return nextSpeed;
         });
     };

@@ -18,7 +18,8 @@ interface ImportToTableModalProps {
     segmentIndex?: number;
 }
 
-const CANONICAL_NAME = "ExtractedVideoAB";
+const CANONICAL_VIDEO = "ExtractedVideoAB";
+const CANONICAL_TRANSCRIPT = "ExtractedtranscriptAB";
 
 const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
     isOpen, onClose, transcriptText, videoUrl, translation,
@@ -65,19 +66,9 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
 
         // Priority 2: Canonical name "ExtractedVideoAB"
         if (!detectedVideoColId) {
-            const canonicalCol = selectedTable.columns.find(c => c.name === CANONICAL_NAME);
+            const canonicalCol = selectedTable.columns.find(c => c.name === CANONICAL_VIDEO);
             if (canonicalCol) {
                 detectedVideoColId = canonicalCol.id;
-                // Auto-sync config if missing
-                if (!selectedTable.videoConfig || selectedTable.videoConfig.videoColumnId !== canonicalCol.id) {
-                    updateTable({
-                        ...selectedTable,
-                        videoConfig: {
-                            videoColumnId: canonicalCol.id,
-                            sourceColumnId: canonicalCol.id
-                        }
-                    });
-                }
             }
         }
 
@@ -89,53 +80,103 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
 
         setTargetVideoColId(detectedVideoColId);
 
-        // 2. Text Column (Priority: First Text Column)
-        const textCols = selectedTable.columns.filter(c =>
-            c.id !== selectedTable.videoConfig?.videoColumnId &&
-            c.id !== selectedTable.imageConfig?.imageColumnId
-        );
+        // 2. Transcript/Audio Column Detection
+        let detectedTextColId = '';
 
-        if (textCols.length > 0) {
-            // Try to find "Sentence" or "Phrase" or "Text"
-            const sentCol = textCols.find(c => /sentence|phrase|text|transcript/i.test(c.name));
-            setTargetTextColId(sentCol ? sentCol.id : textCols[0].id);
+        // Priority 1: Canonical name "ExtractedtranscriptAB"
+        const transcriptCol = selectedTable.columns.find(c => c.name === CANONICAL_TRANSCRIPT);
+        if (transcriptCol) {
+            detectedTextColId = transcriptCol.id;
         }
+
+        // Priority 2: Regex/Type fallback
+        if (!detectedTextColId) {
+            const textCols = selectedTable.columns.filter(c =>
+                c.id !== detectedVideoColId &&
+                c.id !== selectedTable.imageConfig?.imageColumnId
+            );
+
+            if (textCols.length > 0) {
+                // Try to find "Sentence" or "Phrase" or "Text"
+                const sentCol = textCols.find(c => /sentence|phrase|text|transcript/i.test(c.name));
+                detectedTextColId = sentCol ? sentCol.id : textCols[0].id;
+            }
+        }
+        setTargetTextColId(detectedTextColId);
 
         // 3. Meaning Column
-        const meaningCol = textCols.find(c => /meaning|translation|vietnamese/i.test(c.name));
-        if (meaningCol && meaningCol.id !== targetTextColId) {
+        const remainingCols = selectedTable.columns.filter(c =>
+            c.id !== detectedVideoColId &&
+            c.id !== detectedTextColId &&
+            c.id !== selectedTable.imageConfig?.imageColumnId
+        );
+        const meaningCol = remainingCols.find(c => /meaning|translation|vietnamese/i.test(c.name));
+        if (meaningCol) {
             setTargetMeaningColId(meaningCol.id);
         }
-    }, [selectedTable, targetTextColId]);
+    }, [selectedTable]);
 
     const handleCreateVideoColumn = async () => {
         if (!selectedTable) return;
 
-        // CRITICAL: Check for canonical name first to prevent duplicates
-        const existing = selectedTable.columns.find(c => c.name === CANONICAL_NAME);
+        const existing = selectedTable.columns.find(c => c.name === CANONICAL_VIDEO);
         if (existing) {
             setTargetVideoColId(existing.id);
-            showToast(`Using existing '${CANONICAL_NAME}' column`, "info");
+            showToast(`Using existing '${CANONICAL_VIDEO}' column`, "info");
             return;
         }
 
         setIsCreatingCol(true);
         try {
-            const newCol: Column = {
-                id: crypto.randomUUID(),
-                name: CANONICAL_NAME // Changed from 'Video Clips'
-            };
+            const newColId = crypto.randomUUID();
+            const newCol: Column = { id: newColId, name: CANONICAL_VIDEO };
+
             const updatedTable: Table = {
                 ...selectedTable,
                 columns: [...selectedTable.columns, newCol],
+                videoColumnIds: Array.from(new Set([...(selectedTable.videoColumnIds || []), newColId])),
                 videoConfig: {
-                    videoColumnId: newCol.id,
+                    videoColumnId: newColId,
                     sourceColumnId: targetTextColId || selectedTable.columns[0].id
                 }
             };
             await updateTable(updatedTable);
-            setTargetVideoColId(newCol.id);
-            showToast(`'${CANONICAL_NAME}' column created!`, "success");
+            setTargetVideoColId(newColId);
+            showToast(`'${CANONICAL_VIDEO}' video column created!`, "success");
+        } catch (error) {
+            showToast("Failed to create column", "error");
+        } finally {
+            setIsCreatingCol(false);
+        }
+    };
+
+    const handleCreateTranscriptColumn = async () => {
+        if (!selectedTable) return;
+
+        const existing = selectedTable.columns.find(c => c.name === CANONICAL_TRANSCRIPT);
+        if (existing) {
+            setTargetTextColId(existing.id);
+            showToast(`Using existing '${CANONICAL_TRANSCRIPT}' column`, "info");
+            return;
+        }
+
+        setIsCreatingCol(true);
+        try {
+            const newColId = crypto.randomUUID();
+            const newCol: Column = { id: newColId, name: CANONICAL_TRANSCRIPT };
+
+            const updatedTable: Table = {
+                ...selectedTable,
+                columns: [...selectedTable.columns, newCol],
+                // Auto-set as Audio (language detection fallback to English for dictation)
+                columnAudioConfig: {
+                    ...(selectedTable.columnAudioConfig || {}),
+                    [newColId]: { language: 'en-US' }
+                }
+            };
+            await updateTable(updatedTable);
+            setTargetTextColId(newColId);
+            showToast(`'${CANONICAL_TRANSCRIPT}' audio column created!`, "success");
         } catch (error) {
             showToast("Failed to create column", "error");
         } finally {
@@ -175,57 +216,67 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
 
             await upsertRow(selectedTable.id, newRow);
 
-            // Update VideoConfig if it's missing or different
-            if (!selectedTable.videoConfig || selectedTable.videoConfig.videoColumnId !== targetVideoColId) {
-                const updatedTable = {
-                    ...selectedTable,
-                    videoConfig: {
-                        videoColumnId: targetVideoColId,
-                        sourceColumnId: targetTextColId
-                    }
-                };
-                await updateTable(updatedTable);
+            // 1. Auto-format Types (Video & Audio)
+            let finalTable = { ...selectedTable };
+            let needsTableUpdate = false;
+
+            // Ensure Video Config
+            if (targetVideoColId && (!finalTable.videoConfig || finalTable.videoConfig.videoColumnId !== targetVideoColId)) {
+                finalTable.videoConfig = { videoColumnId: targetVideoColId, sourceColumnId: targetTextColId };
+                finalTable.videoColumnIds = Array.from(new Set([...(finalTable.videoColumnIds || []), targetVideoColId]));
+                needsTableUpdate = true;
             }
 
-            // Ensure "Dictation YoutubeAB" Interaction exists
-            const hasDictationRelation = selectedTable.relations?.some(r =>
-                r.compatibleModes?.includes(StudyMode.Flashcards) &&
-                r.name.toLowerCase().includes('dictation')
-            );
-
-            if (!hasDictationRelation) {
-                const dictationRelation = {
-                    id: crypto.randomUUID(),
-                    name: 'Dictation YoutubeAB',
-                    questionColumnIds: [targetTextColId],
-                    answerColumnIds: [targetTextColId],
-                    compatibleModes: [StudyMode.Flashcards],
-                    interactionModes: [],
-                    design: {
-                        front: {
-                            backgroundType: 'solid' as const,
-                            backgroundValue: 'var(--color-surface)',
-                            gradientAngle: 0,
-                            layout: 'vertical' as const,
-                            elementOrder: [targetVideoColId, targetTextColId].filter(Boolean) as string[],
-                            typography: {}
-                        },
-                        back: {
-                            backgroundType: 'solid' as const,
-                            backgroundValue: 'var(--color-surface)',
-                            gradientAngle: 0,
-                            layout: 'vertical' as const,
-                            elementOrder: [targetTextColId, targetMeaningColId].filter(Boolean) as string[],
-                            typography: {}
-                        },
-                        designLinked: true
-                    }
+            // Ensure Audio Config
+            if (targetTextColId && !finalTable.columnAudioConfig?.[targetTextColId]) {
+                finalTable.columnAudioConfig = {
+                    ...(finalTable.columnAudioConfig || {}),
+                    [targetTextColId]: { language: 'en-US' }
                 };
+                needsTableUpdate = true;
+            }
 
-                await updateTable({
-                    ...selectedTable,
-                    relations: [...(selectedTable.relations || []), dictationRelation]
-                });
+            // 2. Ensure "Youtube Dictation" Relation exists with Typing mode
+            const relationName = 'Youtube Dictation';
+            const existingRelationIndex = finalTable.relations?.findIndex(r => r.name === relationName);
+
+            const dictationRelation: any = {
+                id: existingRelationIndex !== -1 ? finalTable.relations[existingRelationIndex].id : crypto.randomUUID(),
+                name: relationName,
+                questionColumnIds: [targetVideoColId].filter(Boolean), // Question is ONLY Video
+                answerColumnIds: [targetTextColId],
+                compatibleModes: [StudyMode.Flashcards, StudyMode.Typing],
+                interactionModes: [StudyMode.Typing], // FORCE TYPING
+                design: {
+                    front: {
+                        backgroundType: 'solid',
+                        backgroundValue: 'var(--color-surface)',
+                        layout: 'vertical',
+                        elementOrder: [targetVideoColId].filter(Boolean), // Front face ONLY shows Video
+                        typography: {}
+                    },
+                    back: {
+                        backgroundType: 'solid',
+                        backgroundValue: 'var(--color-surface)',
+                        layout: 'vertical',
+                        elementOrder: [targetTextColId, targetMeaningColId].filter(Boolean),
+                        typography: {}
+                    },
+                    designLinked: true
+                }
+            };
+
+            if (existingRelationIndex === -1) {
+                finalTable.relations = [...(finalTable.relations || []), dictationRelation];
+                needsTableUpdate = true;
+            } else {
+                // Update existing to ensure it's still Typing
+                finalTable.relations = finalTable.relations.map(r => r.name === relationName ? dictationRelation : r);
+                needsTableUpdate = true;
+            }
+
+            if (needsTableUpdate) {
+                await updateTable(finalTable);
             }
 
             showToast("Imported successfully!", "success");
@@ -259,26 +310,39 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
                     {selectedTable && (
                         <>
                             <div className="p-3 bg-secondary-50 dark:bg-secondary-800/50 rounded-lg space-y-3">
-                                {/* Text Mapping */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-text-subtle uppercase">Text Source</span>
-                                        <span className="text-sm truncate w-40">{transcriptText}</span>
+                                {/* Transcript/Audio Mapping */}
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-text-subtle uppercase">Text Source</span>
+                                            <span className="text-sm truncate w-40">{transcriptText}</span>
+                                        </div>
+                                        <Icon name="arrowRight" className="w-4 h-4 text-text-subtle" />
+                                        <div className="w-40">
+                                            <select
+                                                value={targetTextColId}
+                                                onChange={(e) => setTargetTextColId(e.target.value)}
+                                                className="w-full bg-white dark:bg-black border border-border rounded px-2 py-1 text-xs"
+                                            >
+                                                <option value="">Select Column</option>
+                                                <option disabled>---</option>
+                                                {selectedTable.columns.map(c => {
+                                                    const isAudio = !!selectedTable.columnAudioConfig?.[c.id];
+                                                    return <option key={c.id} value={c.id}>{c.name} {isAudio ? '(Audio)' : ''}</option>;
+                                                })}
+                                            </select>
+                                        </div>
                                     </div>
-                                    <Icon name="arrowRight" className="w-4 h-4 text-text-subtle" />
-                                    <div className="w-40">
-                                        <select
-                                            value={targetTextColId}
-                                            onChange={(e) => setTargetTextColId(e.target.value)}
-                                            className="w-full bg-white dark:bg-black border border-border rounded px-2 py-1 text-xs"
+                                    {!targetTextColId && (
+                                        <button
+                                            onClick={handleCreateTranscriptColumn}
+                                            disabled={isCreatingCol}
+                                            className="text-[10px] text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
                                         >
-                                            <option value="">Select Column</option>
-                                            <option disabled>---</option>
-                                            {selectedTable.columns.map(c => (
-                                                <option key={c.id} value={c.id}>{c.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                            <Icon name="plus" className="w-3 h-3" />
+                                            {isCreatingCol ? 'Creating...' : `Create '${CANONICAL_TRANSCRIPT}' column`}
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Video Mapping */}
@@ -311,7 +375,7 @@ const ImportToTableModal: React.FC<ImportToTableModalProps> = ({
                                             className="text-[10px] text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
                                         >
                                             <Icon name="plus" className="w-3 h-3" />
-                                            {isCreatingCol ? 'Creating...' : `Create '${CANONICAL_NAME}' column`}
+                                            {isCreatingCol ? 'Creating...' : `Create '${CANONICAL_VIDEO}' column`}
                                         </button>
                                     )}
                                     {targetVideoColId && (
