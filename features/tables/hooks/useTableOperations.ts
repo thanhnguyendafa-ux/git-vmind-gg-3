@@ -43,7 +43,7 @@ export const useTableOperations = (table: Table) => {
         return success;
     };
 
-    const handleSaveColumns = (newColumns: Column[], newAudioConfig: Record<string, { language: string }>, newImageConfig: Table['imageConfig'], newVideoConfig: Table['videoConfig']) => {
+    const handleSaveColumns = (newColumns: Column[], newAudioConfig: Record<string, { language: string }>, newImageConfig: Table['imageConfig'], newVideoConfig: Table['videoConfig'], newVideoColumnIds: string[]) => {
         const deletedColIds = new Set(table.columns.filter(c => !newColumns.some(nc => nc.id === c.id)).map(c => c.id));
         const updatedRows = table.rows.map(row => {
             const newCols = { ...row.cols };
@@ -56,7 +56,8 @@ export const useTableOperations = (table: Table) => {
             rows: updatedRows,
             columnAudioConfig: newAudioConfig,
             imageConfig: newImageConfig,
-            videoConfig: newVideoConfig
+            videoConfig: newVideoConfig,
+            videoColumnIds: newVideoColumnIds
         });
         showToast('Table structure updated.', 'success');
     };

@@ -174,7 +174,8 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                             };
 
                             const isImageColumn = table.imageConfig?.imageColumnId === col.id;
-                            const isVideoColumn = table.videoConfig?.videoColumnId === col.id;
+                            // NEW: Support multiple video columns via videoColumnIds array
+                            const isVideoColumn = (table.videoColumnIds && table.videoColumnIds.includes(col.id)) || table.videoConfig?.videoColumnId === col.id;
 
                             if (isImageColumn && text && !isDesignMode) {
                                 contentNode = (
@@ -228,6 +229,7 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                                         {onPlayAudio && text && !isDesignMode && (
                                             <button onClick={handlePlay} className={`p-2 rounded-full transition-colors flex-shrink-0 ${isPlayingThis ? 'text-primary-500 bg-primary-100 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}><Icon name={isPlayingThis ? "volume-up" : "volume-down"} className="w-4 h-4" /></button>
                                         )}
+
                                     </div>
                                 );
                             }

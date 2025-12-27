@@ -10,7 +10,7 @@ interface ColumnEditorModalProps {
     isOpen: boolean;
     onClose: () => void;
     table: Table;
-    onSave: (newColumns: Column[], newAudioConfig: Record<string, { language: string }>, newImageConfig: Table['imageConfig'], newVideoConfig: Table['videoConfig']) => void;
+    onSave: (newColumns: Column[], newAudioConfig: Record<string, { language: string }>, newImageConfig: Table['imageConfig'], newVideoConfig: Table['videoConfig'], newVideoColumnIds: string[]) => void;
 }
 
 const LANGUAGES = [
@@ -35,7 +35,7 @@ const ColumnEditorModal: React.FC<ColumnEditorModalProps> = ({ isOpen, onClose, 
     // Local state to track configs before saving
     const [localAudioConfig, setLocalAudioConfig] = React.useState<Record<string, { language: string }>>({});
     const [localImageColumnId, setLocalImageColumnId] = React.useState<string | null>(null);
-    const [localVideoColumnId, setLocalVideoColumnId] = React.useState<string | null>(null);
+    const [localVideoColumnIds, setLocalVideoColumnIds] = React.useState<string[]>([]);
 
     const [expandedColId, setExpandedColId] = React.useState<string | null>(null);
     const [linkTemplateColId, setLinkTemplateColId] = React.useState<string | null>(null);
@@ -50,7 +50,8 @@ const ColumnEditorModal: React.FC<ColumnEditorModalProps> = ({ isOpen, onClose, 
             setEditableColumns(JSON.parse(JSON.stringify(table.columns)));
             setLocalAudioConfig(JSON.parse(JSON.stringify(table.columnAudioConfig || {})));
             setLocalImageColumnId(table.imageConfig?.imageColumnId || null);
-            setLocalVideoColumnId(table.videoConfig?.videoColumnId || null);
+            const initialVideoIds = table.videoColumnIds || (table.videoConfig?.videoColumnId ? [table.videoConfig.videoColumnId] : []);
+            setLocalVideoColumnIds(initialVideoIds);
             setExpandedColId(null);
         }
         // Dependency on `isOpen` only prevents resetting unsaved changes if `table` prop updates in background
@@ -75,7 +76,7 @@ const ColumnEditorModal: React.FC<ColumnEditorModalProps> = ({ isOpen, onClose, 
         delete newAudio[id];
         setLocalAudioConfig(newAudio);
         if (localImageColumnId === id) setLocalImageColumnId(null);
-        if (localVideoColumnId === id) setLocalVideoColumnId(null);
+        setLocalVideoColumnIds(prev => prev.filter(vid => vid !== id));
     };
 
     const handleDragSort = () => {
@@ -95,26 +96,26 @@ const ColumnEditorModal: React.FC<ColumnEditorModalProps> = ({ isOpen, onClose, 
             delete newAudio[colId];
             setLocalAudioConfig(newAudio);
             if (localImageColumnId === colId) setLocalImageColumnId(null);
-            if (localVideoColumnId === colId) setLocalVideoColumnId(null);
+            setLocalVideoColumnIds(prev => prev.filter(id => id !== colId));
         } else if (type === 'audio') {
             // Set audio default, clear image/video
             setLocalAudioConfig(prev => ({ ...prev, [colId]: { language: 'en-US' } })); // Default to US English
             if (localImageColumnId === colId) setLocalImageColumnId(null);
-            if (localVideoColumnId === colId) setLocalVideoColumnId(null);
+            setLocalVideoColumnIds(prev => prev.filter(id => id !== colId));
         } else if (type === 'image') {
             // Set image, clear audio/video
             const newAudio = { ...localAudioConfig };
             delete newAudio[colId];
             setLocalAudioConfig(newAudio);
             setLocalImageColumnId(colId);
-            if (localVideoColumnId === colId) setLocalVideoColumnId(null);
+            setLocalVideoColumnIds(prev => prev.filter(id => id !== colId));
         } else if (type === 'video') {
             // Set video, clear audio/image
             const newAudio = { ...localAudioConfig };
             delete newAudio[colId];
             setLocalAudioConfig(newAudio);
             if (localImageColumnId === colId) setLocalImageColumnId(null);
-            setLocalVideoColumnId(colId);
+            setLocalVideoColumnIds(prev => prev.includes(colId) ? prev : [...prev, colId]);
         }
     };
 
@@ -134,14 +135,14 @@ const ColumnEditorModal: React.FC<ColumnEditorModalProps> = ({ isOpen, onClose, 
         }
 
         let finalVideoConfig: Table['videoConfig'] = null;
-        if (localVideoColumnId) {
+        if (localVideoColumnIds.length === 1) {
             finalVideoConfig = {
-                videoColumnId: localVideoColumnId,
-                sourceColumnId: table.videoConfig?.sourceColumnId || localVideoColumnId // Default to itself
+                videoColumnId: localVideoColumnIds[0],
+                sourceColumnId: table.videoConfig?.sourceColumnId || localVideoColumnIds[0]
             };
         }
 
-        onSave(editableColumns, localAudioConfig, finalImageConfig, finalVideoConfig);
+        onSave(editableColumns, localAudioConfig, finalImageConfig, finalVideoConfig, localVideoColumnIds);
     };
 
     const handleSaveLinkTemplate = async (template: string) => {
@@ -169,7 +170,7 @@ const ColumnEditorModal: React.FC<ColumnEditorModalProps> = ({ isOpen, onClose, 
                         {editableColumns.map((col, index) => {
                             const isAudio = !!localAudioConfig[col.id];
                             const isImage = localImageColumnId === col.id;
-                            const isVideo = localVideoColumnId === col.id;
+                            const isVideo = localVideoColumnIds.includes(col.id);
                             const currentType: ColumnType = isVideo ? 'video' : (isImage ? 'image' : (isAudio ? 'audio' : 'text'));
 
                             return (

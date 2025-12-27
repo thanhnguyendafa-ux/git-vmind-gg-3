@@ -147,20 +147,28 @@ const EmbeddedVideoPlayer: React.FC<EmbeddedVideoPlayerProps> = ({
         });
     };
 
+    const handleStop = () => {
+        if (playerRef.current) {
+            setIsPlaying(false);
+            playerRef.current.pauseVideo();
+            playerRef.current.seekTo(startTime, true);
+        }
+    };
+
     const loopLabel = loopMode === -1 ? '∞' : `${loopMode}x`;
     const speedLabel = `${playbackSpeed}x`;
 
     return (
-        <div className="w-full flex flex-col items-center gap-2">
+        <div className="w-full flex flex-col items-center gap-3">
             {/* Video Container */}
-            <div className={`w-full ${isMobile ? 'max-w-full' : 'max-w-[400px]'} aspect-video bg-black rounded-lg overflow-hidden shadow-md relative`}>
+            <div className={`w-full ${isMobile ? 'max-w-full' : 'max-w-[400px]'} aspect-video bg-black rounded-lg overflow-hidden shadow-md relative group`}>
                 <div id={`player-${videoId}`} className="w-full h-full"></div>
 
-                {/* Tap to Play Overlay (for mobile autoplay issues) */}
+                {/* Tap to Play Overlay */}
                 {!isPlaying && (
                     <div
                         onClick={togglePlay}
-                        className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[1px] cursor-pointer"
+                        className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[1px] cursor-pointer z-10"
                     >
                         <div className="w-16 h-16 rounded-full bg-primary-600/90 text-white flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform">
                             <Icon name="play" className="w-8 h-8 ml-1" />
@@ -169,59 +177,60 @@ const EmbeddedVideoPlayer: React.FC<EmbeddedVideoPlayerProps> = ({
                 )}
             </div>
 
-            {/* Controls */}
-            {isMobile && (
+            {/* Listening Deck (Fixed Control Bar) - Option A */}
+            <div className="flex items-center justify-between gap-2 w-full max-w-[400px] bg-secondary-100 dark:bg-secondary-800 rounded-xl p-2 shadow-sm border border-secondary-200 dark:border-secondary-700">
+                {/* Loop */}
                 <button
-                    onClick={() => setShowControls(!showControls)}
-                    className="text-xs text-secondary-500 hover:text-primary-600 dark:text-secondary-400 dark:hover:text-primary-400 py-1"
+                    onClick={cycleLoop}
+                    className="flex flex-col items-center justify-center gap-0.5 w-[calc(20%-8px)] h-[56px] rounded-lg bg-surface dark:bg-secondary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 active:scale-95 transition-all"
+                    title="Toggle Loop Mode"
                 >
-                    {showControls ? '▲ Hide Controls' : '▼ Show Controls'}
+                    <Icon name="repeat" className={`w-5 h-5 ${loopMode !== 1 ? 'text-primary-500' : 'text-text-subtle'}`} />
+                    <span className={`text-[10px] font-bold ${loopMode !== 1 ? 'text-primary-600' : 'text-text-subtle'}`}>{loopLabel}</span>
                 </button>
-            )}
 
-            {showControls && (
-                <div className="flex items-center gap-2 bg-secondary-100 dark:bg-secondary-800 rounded-lg p-2 shadow-sm">
-                    {/* Loop Toggle */}
-                    <button
-                        onClick={cycleLoop}
-                        className="flex items-center gap-1 px-3 py-2 rounded-lg bg-surface dark:bg-secondary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors min-w-[44px] min-h-[44px]"
-                        title="Loop"
-                    >
-                        <Icon name="repeat" className="w-4 h-4" />
-                        <span className="text-xs font-bold">{loopLabel}</span>
-                    </button>
+                {/* Speed */}
+                <button
+                    onClick={cycleSpeed}
+                    className="flex flex-col items-center justify-center gap-0.5 w-[calc(20%-8px)] h-[56px] rounded-lg bg-surface dark:bg-secondary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 active:scale-95 transition-all"
+                    title="Playback Speed"
+                >
+                    <Icon name="lightning-bolt" className={`w-5 h-5 ${playbackSpeed !== 1 ? 'text-amber-500' : 'text-text-subtle'}`} />
+                    <span className={`text-[10px] font-bold ${playbackSpeed !== 1 ? 'text-amber-600' : 'text-text-subtle'}`}>{speedLabel}</span>
+                </button>
 
-                    {/* Speed Toggle */}
-                    <button
-                        onClick={cycleSpeed}
-                        className="flex items-center gap-1 px-3 py-2 rounded-lg bg-surface dark:bg-secondary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors min-w-[44px] min-h-[44px]"
-                        title="Speed"
-                    >
-                        <span className="text-xs font-bold">{speedLabel}</span>
-                    </button>
+                {/* Play/Pause (Center Highlight) */}
+                <button
+                    onClick={togglePlay}
+                    className={`flex items-center justify-center w-[calc(20%-8px)] h-[56px] rounded-lg shadow-sm active:scale-95 transition-all ${isPlaying
+                        ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-400 border border-primary-200 dark:border-primary-800'
+                        : 'bg-primary-500 text-white hover:bg-primary-600 shadow-md'
+                        }`}
+                    title={isPlaying ? 'Pause' : 'Play'}
+                >
+                    <Icon name={isPlaying ? 'pause' : 'play'} className="w-8 h-8" />
+                </button>
 
-                    {/* Play/Pause */}
-                    <button
-                        onClick={togglePlay}
-                        className={`p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] ${isPlaying
-                            ? 'bg-primary-500 text-white hover:bg-primary-600'
-                            : 'bg-surface dark:bg-secondary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20'
-                            }`}
-                        title={isPlaying ? 'Pause' : 'Play'}
-                    >
-                        <Icon name={isPlaying ? 'pause' : 'play'} className="w-5 h-5" />
-                    </button>
+                {/* Stop (New) */}
+                <button
+                    onClick={handleStop}
+                    className="flex flex-col items-center justify-center gap-0.5 w-[calc(20%-8px)] h-[56px] rounded-lg bg-surface dark:bg-secondary-700 hover:bg-error-50 dark:hover:bg-error-900/20 active:scale-95 transition-all group"
+                    title="Stop & Reset"
+                >
+                    <div className="w-4 h-4 bg-text-subtle group-hover:bg-error-500 rounded-sm transition-colors mb-1"></div>
+                    <span className="text-[10px] font-bold text-text-subtle group-hover:text-error-600">Stop</span>
+                </button>
 
-                    {/* Repeat */}
-                    <button
-                        onClick={handleRepeat}
-                        className="p-2 rounded-lg bg-surface dark:bg-secondary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors min-w-[44px] min-h-[44px]"
-                        title="Restart segment"
-                    >
-                        <Icon name="refresh" className="w-5 h-5" />
-                    </button>
-                </div>
-            )}
+                {/* Repeat */}
+                <button
+                    onClick={handleRepeat}
+                    className="flex flex-col items-center justify-center gap-0.5 w-[calc(20%-8px)] h-[56px] rounded-lg bg-surface dark:bg-secondary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 active:scale-95 transition-all"
+                    title="Replay Segment"
+                >
+                    <Icon name="refresh" className="w-5 h-5 text-text-subtle hover:text-primary-500" />
+                    <span className="text-[10px] font-bold text-text-subtle">Replay</span>
+                </button>
+            </div>
         </div>
     );
 };

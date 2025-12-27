@@ -244,6 +244,7 @@ export interface Table {
   relations: Relation[];
   imageConfig?: { imageColumnId: string; sourceColumnId: string; } | null;
   videoConfig?: { videoColumnId: string; sourceColumnId: string; } | null;
+  videoColumnIds?: string[]; // NEW: Support multiple video columns
   /** @deprecated Use columnAudioConfig and Relation.audioConfig instead */
   audioConfig?: { sourceColumnId: string; language?: string; } | null;
   columnAudioConfig?: Record<string, { language: string; }>;
