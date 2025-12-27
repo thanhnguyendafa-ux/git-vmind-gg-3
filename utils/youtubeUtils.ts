@@ -15,10 +15,17 @@ export function extractVideoID(url: string): string | null {
 }
 
 export function extractStartTime(url: string): number {
-    // Handles formats like ?t=82, &t=82s
-    const regex = /[?&](?:t|start)=(\d+)/;
+    // Handles formats like ?t=82, &t=82.5, &start=82
+    const regex = /[?&](?:t|start)=(\d+(?:\.\d+)?)/;
     const match = url.match(regex);
-    return match ? parseInt(match[1], 10) : 0;
+    return match ? parseFloat(match[1]) : 0;
+}
+
+export function extractEndTime(url: string): number | null {
+    // Handles hash formats like #end=90.5
+    const regex = /#end=(\d+(?:\.\d+)?)/;
+    const match = url.match(regex);
+    return match ? parseFloat(match[1]) : null;
 }
 
 /**

@@ -638,8 +638,17 @@ export class VmindSyncEngine {
                 if (oldIds || rest.conceptLevelIds) {
                     dbRow.concept_level_ids = oldIds || rest.conceptLevelIds;
                 }
+                if (rest.tagIds) {
+                    dbRow.tag_ids = rest.tagIds;
+                    delete dbRow.tagIds;
+                }
                 if (rest.conceptNotes) {
                     dbRow.concept_notes = rest.conceptNotes;
+                }
+                // Map updatedAt to snake_case
+                if (dbRow.updatedAt) {
+                    dbRow.updated_at = dbRow.updatedAt;
+                    delete dbRow.updatedAt;
                 }
 
                 const { error: upsertError } = await supabase.from('vocab_rows').upsert(dbRow);
@@ -667,6 +676,7 @@ export class VmindSyncEngine {
                 if (dataForDb.isPublic !== undefined) { dataForDb.is_public = dataForDb.isPublic; delete dataForDb.isPublic; }
                 if (dataForDb.ankiConfig) { dataForDb.anki_config = dataForDb.ankiConfig; delete dataForDb.ankiConfig; }
                 if (dataForDb.tagIds) { dataForDb.tag_ids = dataForDb.tagIds; delete dataForDb.tagIds; }
+                if (dataForDb.videoConfig) { dataForDb.video_config = dataForDb.videoConfig; delete dataForDb.videoConfig; }
                 if (dataForDb.viewConfig) { dataForDb.view_settings = dataForDb.viewConfig; delete dataForDb.viewConfig; }
                 if (dataForDb.columnUrlTemplates) { dataForDb.column_url_templates = dataForDb.columnUrlTemplates; delete dataForDb.columnUrlTemplates; }
                 delete dataForDb.tags;

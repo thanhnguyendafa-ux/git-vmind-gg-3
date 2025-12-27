@@ -9,6 +9,7 @@ import { loadYouTubeAPI } from '../../utils/youtubeUtils';
 import { extractVideoID } from '../../utils/youtubeUtils';
 import { useTableStore } from '../../stores/useTableStore';
 import { StudyMode } from '../../types';
+import ImportToTableModal from './components/ImportToTableModal';
 
 const normalizeText = (s: string) => s.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").replace(/\s{2,}/g, " ").trim();
 
@@ -43,6 +44,7 @@ const DictationSessionScreen: React.FC = () => {
     const [playerError, setPlayerError] = useState<string | null>(null);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [isBlindMode, setIsBlindMode] = useState(true);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     const playerRef = useRef<any>(null);
     const segmentTimeoutRef = useRef<number | null>(null);
@@ -180,11 +182,19 @@ const DictationSessionScreen: React.FC = () => {
         executePlay();
     };
 
+    const actionButtonsRef = React.useRef<HTMLDivElement>(null);
+    const mainContentRef = React.useRef<HTMLElement>(null);
+
     const handleCheck = () => {
         const userAnswer = userInputs[activeIndex] || '';
         const correctText = activeSnippet ? activeSnippet.fullText : currentEntry.text;
         const isCorrect = normalizeText(userAnswer) === normalizeText(correctText);
         setResults(prev => ({ ...prev, [activeIndex]: isCorrect ? 'correct' : 'incorrect' }));
+
+        // Auto-scroll to buttons after check on mobile
+        setTimeout(() => {
+            actionButtonsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
     };
 
     const handleFinish = () => {
@@ -219,7 +229,7 @@ const DictationSessionScreen: React.FC = () => {
 
     return (
         <div className="flex flex-col md:flex-row h-[100dvh] bg-background dark:bg-secondary-900 pb-[env(safe-area-inset-bottom)] overflow-hidden">
-            <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto hide-scrollbar">
+            <main ref={mainContentRef} className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto hide-scrollbar">
                 <header className="flex-shrink-0 flex justify-between items-center mb-4">
                     <div className="flex items-center gap-3 overflow-hidden">
                         <button onClick={() => { handleFinishDictationSession(activeDictationSession, { correct: 0, total: 0 }); }} className="md:hidden p-2 -ml-2 rounded-full hover:bg-secondary-200 dark:hover:bg-secondary-700 text-text-subtle">
@@ -302,6 +312,7 @@ const DictationSessionScreen: React.FC = () => {
                             )}
                         </div>
 
+                        {/* Playback Controls Row - Mobile Friendly */}
                         <div className="flex items-center justify-center gap-4 mb-4">
                             <div>
                                 <select id="loop-select-session" value={loopCount} onChange={e => setLoopCount(Number(e.target.value))} className="bg-secondary-100 dark:bg-secondary-700 border-none rounded-lg px-3 py-2 text-xs font-semibold focus:ring-0">
@@ -332,7 +343,7 @@ const DictationSessionScreen: React.FC = () => {
                         {!hasChecked ? (
                             <button onClick={handleCheck} disabled={!userInputs[activeIndex]} className="mt-4 w-full bg-primary-600 text-white font-bold py-3.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 shadow-lg shadow-primary-500/20 transition-all active:scale-[0.98]">Check Answer</button>
                         ) : (
-                            <div className="mt-4 space-y-3 animate-fadeIn">
+                            <div ref={actionButtonsRef} className="mt-4 space-y-3 animate-fadeIn">
                                 {showAnswer ? (
                                     <div className="p-4 bg-primary-50 dark:bg-primary-900/10 border border-primary-200 dark:border-primary-800/50 rounded-lg text-sm text-text-main dark:text-secondary-100 leading-relaxed animate-fadeIn">
                                         <div className="text-[10px] uppercase font-bold text-primary-600 mb-1 tracking-wider">Correct Transcript</div>
@@ -356,8 +367,16 @@ const DictationSessionScreen: React.FC = () => {
                                         onClick={handleSaveJournalClick}
                                         disabled={isJournaled}
                                         className="w-full sm:flex-1 py-3.5 px-4 text-text-main bg-secondary-100 dark:bg-secondary-800 rounded-xl font-bold hover:bg-secondary-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                                        title="Save to Journal"
                                     >
-                                        <Icon name="book" className="w-5 h-5" /> {isJournaled ? 'Saved to Journal' : 'Save to Journal'}
+                                        <Icon name="book" className="w-5 h-5" /> {isJournaled ? 'Saved' : 'Journal'}
+                                    </button>
+                                    <button
+                                        onClick={() => setIsImportModalOpen(true)}
+                                        className="w-full sm:flex-1 py-3.5 px-4 text-primary-700 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/50 rounded-xl font-bold hover:bg-primary-100 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                        title="Import to Table"
+                                    >
+                                        <Icon name="table" className="w-5 h-5" /> Import
                                     </button>
                                 </div>
                             </div>
@@ -371,22 +390,22 @@ const DictationSessionScreen: React.FC = () => {
                 </div>
             </main>
 
-            {/* Drawer/Sidebar - Collapsible on Mobile */}
+            {/* Bottom Sheet / Drawer for Mobile Transcript Index */}
             <aside
-                className={`fixed inset-x-0 bottom-0 z-40 bg-surface dark:bg-secondary-800 border-t border-secondary-200 dark:border-secondary-700 shadow-[0_-5px_30px_rgba(0,0,0,0.1)] transition-all duration-300 transform md:relative md:w-80 md:inset-auto md:border-t-0 md:border-l md:shadow-none flex flex-col ${isTranscriptVisible ? 'h-[40vh] md:h-full translate-y-0' : 'h-12 md:h-full md:w-0 md:border-none translate-y-0'}`}
+                className={`fixed inset-x-0 bottom-0 z-40 bg-surface dark:bg-secondary-800 border-t border-secondary-200 dark:border-secondary-700 shadow-[0_-5px_30px_rgba(0,0,0,0.15)] transition-transform duration-300 md:relative md:w-80 md:inset-auto md:border-t-0 md:border-l md:shadow-none flex flex-col ${isTranscriptVisible ? 'h-[45vh] md:h-full translate-y-0' : 'h-14 md:h-full md:w-0 md:border-none translate-y-0'}`}
             >
                 <div
                     onClick={() => setIsTranscriptVisible(!isTranscriptVisible)}
-                    className="p-3 flex flex-col md:flex-row md:justify-between md:items-center cursor-pointer md:cursor-default active:bg-secondary-50 md:active:bg-transparent"
+                    className="p-3 flex flex-col md:flex-row md:justify-between md:items-center cursor-pointer md:cursor-default active:bg-secondary-50 md:active:bg-transparent touch-manipulation relative"
                 >
                     {/* Mobile Drag Handle Indicator */}
-                    <div className="md:hidden w-10 h-1 bg-secondary-300 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2"></div>
+                    <div className="md:hidden w-12 h-1.5 bg-secondary-300/50 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2"></div>
 
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center justify-between w-full mt-3 md:mt-0">
                         <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-sm mt-2 md:mt-0 flex items-center gap-2">
+                            <h3 className="font-semibold text-sm flex items-center gap-2 text-text-main dark:text-secondary-100">
                                 <Icon name="list" className="w-4 h-4" />
-                                Transcript Index
+                                <span className="hidden xs:inline">Transcript Index</span>
                             </h3>
                         </div>
 
@@ -398,22 +417,21 @@ const DictationSessionScreen: React.FC = () => {
                                     setIsBlindMode(!isBlindMode);
                                 }}
                                 title={isBlindMode ? "Show all text" : "Hide text (Blind Mode)"}
-                                className={`flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-full transition-all ${isBlindMode ? 'bg-primary-100 text-primary-600' : 'bg-secondary-100 dark:bg-secondary-700 text-text-subtle'}`}
+                                className={`flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-full transition-all ${isBlindMode ? 'bg-primary-100 text-primary-600' : 'bg-secondary-100 dark:bg-secondary-700 text-text-subtle'}`}
                             >
                                 <Icon name={isBlindMode ? 'eye-off' : 'eye'} className="w-5 h-5 md:w-4 md:h-4" />
                             </button>
                             <button title="Toggle transcript visibility" className="p-1 text-text-subtle hidden md:block"><Icon name={isTranscriptVisible ? 'eye-off' : 'eye'} className="w-5 h-5" /></button>
                         </div>
                     </div>
-                    <span className="md:hidden text-[10px] text-text-subtle mt-1 text-center">{isTranscriptVisible ? 'Tap to collapse' : 'Tap to expand'}</span>
                 </div>
 
                 {isTranscriptVisible && (
-                    <div className="flex-1 overflow-y-auto bg-background/50 dark:bg-secondary-900/50">
+                    <div className="flex-1 overflow-y-auto bg-background/50 dark:bg-secondary-900/50 pb-[env(safe-area-inset-bottom)]">
                         {transcript.map((entry, index) => {
                             const isLinkedStart = practiceMode === 'linked' && linkedSnippetsMap.has(index);
                             return (
-                                <div key={index} onClick={() => navigate(index)} className={`p-3 cursor-pointer border-l-4 flex items-start gap-3 transition-colors ${activeIndex === index ? 'bg-white dark:bg-secondary-800 border-primary-500 shadow-sm' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}>
+                                <div key={index} onClick={() => navigate(index)} className={`p-3 md:p-3 cursor-pointer border-l-4 flex items-start gap-3 transition-colors ${activeIndex === index ? 'bg-white dark:bg-secondary-800 border-primary-500 shadow-sm' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}>
                                     {isLinkedStart && <Icon name="link" className="w-3.5 h-3.5 text-primary-500 mt-1 flex-shrink-0" title="Linked Snippet" />}
                                     <div className="flex-grow">
                                         <div className="flex items-center gap-2 text-xs font-mono text-text-subtle mb-0.5">
@@ -430,6 +448,17 @@ const DictationSessionScreen: React.FC = () => {
                     </div>
                 )}
             </aside>
+
+            {isImportModalOpen && (
+                <ImportToTableModal
+                    isOpen={isImportModalOpen}
+                    onClose={() => setIsImportModalOpen(false)}
+                    transcriptText={activeSnippet ? activeSnippet.fullText : currentEntry.text}
+                    videoUrl={`https://www.youtube.com/watch?v=${videoId}&t=${currentEntry.start.toFixed(2)}#end=${(currentEntry.start + (activeSnippet ? activeSnippet.audioDuration : currentEntry.duration)).toFixed(2)}`}
+                    dictationNoteId={note.id}
+                    segmentIndex={activeIndex}
+                />
+            )}
         </div>
     );
 };

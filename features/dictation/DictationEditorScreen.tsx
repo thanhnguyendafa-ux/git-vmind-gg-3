@@ -489,140 +489,166 @@ const DictationEditorScreen: React.FC = () => {
         : '';
 
     return (
-        <div className="p-4 sm:p-6 mx-auto animate-fadeIn flex flex-col h-screen">
-            <header className="flex items-center justify-between mb-6 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => { setEditingDictationNote(null); setCurrentScreen(Screen.Dictation); }} className="p-2 rounded-full hover:bg-secondary-200 dark:hover:bg-secondary-700 text-text-subtle">
-                        <Icon name="arrowLeft" className="w-6 h-6" />
+        <div className="flex flex-col h-screen bg-secondary-50 dark:bg-secondary-900 animate-fadeIn font-sans selection:bg-primary-100 dark:selection:bg-primary-900">
+            {/* Header - Compact on Mobile */}
+            <header className="flex items-center justify-between px-4 py-3 bg-surface dark:bg-secondary-800 border-b border-secondary-200 dark:border-secondary-700 shadow-sm flex-shrink-0 z-20">
+                <div className="flex items-center gap-2 overflow-hidden">
+                    <button
+                        onClick={() => { setEditingDictationNote(null); setCurrentScreen(Screen.Dictation); }}
+                        className="p-2 -ml-2 rounded-full hover:bg-secondary-100 dark:hover:bg-secondary-700 text-text-subtle active:scale-95 transition-transform"
+                    >
+                        <Icon name="arrowLeft" className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                     <input
                         type="text"
                         value={localNote.title}
                         onChange={(e) => setLocalNote({ ...localNote, title: e.target.value })}
                         onBlur={handleTitleBlur}
-                        className="text-2xl font-bold bg-transparent focus:outline-none focus:bg-secondary-100 dark:focus:bg-secondary-800 rounded px-2 -ml-2 text-text-main dark:text-secondary-100"
-                        placeholder="Dictation Title"
+                        className="text-lg sm:text-lg md:text-xl font-bold bg-transparent focus:outline-none focus:bg-secondary-100 dark:focus:bg-secondary-700 rounded px-2 w-full truncate text-text-main dark:text-secondary-100 transition-colors"
+                        placeholder="Untitled Session"
                     />
                 </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={toggleStar} title={localNote.isStarred ? "Mark as incomplete" : "Mark as complete"} className={`p-2 rounded-full hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors ${localNote.isStarred ? 'text-warning-500' : 'text-secondary-400'}`}>
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                    <button
+                        onClick={toggleStar}
+                        className={`p-2 rounded-full hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors active:scale-90 ${localNote.isStarred ? 'text-warning-500' : 'text-secondary-400'}`}
+                    >
                         <Icon name={localNote.isStarred ? "star" : "star-outline"} variant={localNote.isStarred ? 'filled' : 'outline'} className="w-6 h-6" />
                     </button>
-                    <button onClick={handleDelete} className="text-error-500 hover:bg-error-50 dark:hover:bg-error-900/20 px-3 py-2 rounded-md font-semibold text-sm">Delete</button>
-                    <Button onClick={handleSave}>Done</Button>
+
+                    {/* Desktop Only Actions */}
+                    <div className="hidden md:flex items-center gap-2">
+                        <button onClick={handleDelete} className="text-error-500 hover:bg-error-50 dark:hover:bg-error-900/20 px-3 py-2 rounded-md font-semibold text-sm transition-colors">Delete</button>
+                        <Button onClick={handleSave} size="sm">Done</Button>
+                    </div>
+
+                    {/* Mobile Menu (Optional, simplified for now) */}
+                    <button onClick={handleSave} className="md:hidden text-primary-600 font-semibold text-sm px-2">Done</button>
                 </div>
             </header>
 
-            <div className="flex flex-col md:flex-row gap-6 flex-1 overflow-hidden">
-                {/* Left Panel: Video & Config */}
-                <div className="w-full md:w-1/3 flex-shrink-0 flex flex-col gap-4 overflow-y-auto hide-scrollbar">
-                    <div className="bg-surface dark:bg-secondary-800 p-4 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700">
-                        <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">YouTube URL</label>
-                        <input
-                            type="text"
-                            value={youtubeUrl}
-                            onChange={(e) => {
-                                setYoutubeUrl(e.target.value);
-                                const videoId = extractVideoID(e.target.value);
-                                const startTime = extractStartTime(e.target.value);
-                                setPreviewVideoId(videoId);
-                                setPreviewStartTime(startTime);
-                            }}
-                            className="w-full bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                            placeholder="https://www.youtube.com/watch?v=..."
-                        />
-                        {previewVideoId && (
-                            <>
-                                <div id="yt-player-editor" className="mt-4 aspect-video rounded-lg overflow-hidden bg-black shadow-md relative z-10"></div>
-                                <div className="mt-4 grid grid-cols-2 gap-3">
-                                    <Button
-                                        variant="secondary"
-                                        onClick={handleMarkA}
-                                        className="flex flex-col items-center py-4 h-auto active:scale-95 transition-transform border-2 border-transparent hover:border-primary-500/20"
-                                    >
-                                        <span className="text-xs uppercase font-extrabold text-primary-600 dark:text-primary-400 mb-1 tracking-wider">Point A</span>
-                                        <span className="text-lg font-mono font-bold text-text-main dark:text-secondary-100">{markedStartTime !== null ? formatTimestamp(markedStartTime) : '--:--'}</span>
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        onClick={handleMarkB}
-                                        className="flex flex-col items-center py-4 h-auto active:scale-95 transition-transform border-2 border-transparent hover:border-primary-500/20"
-                                    >
-                                        <span className="text-xs uppercase font-extrabold text-primary-600 dark:text-primary-400 mb-1 tracking-wider">Point B</span>
-                                        <span className="text-lg font-mono font-bold text-text-main dark:text-secondary-100">{markedEndTime !== null ? formatTimestamp(markedEndTime) : '--:--'}</span>
-                                    </Button>
-                                </div>
-                                <Button
-                                    onClick={handleSurgicalCut}
-                                    className="w-full mt-3 py-4 bg-gradient-to-r from-indigo-600 to-primary-600 hover:from-indigo-700 hover:to-primary-700 text-white font-bold shadow-lg shadow-primary-500/20 active:scale-[0.98] transition-all"
-                                    disabled={markedStartTime === null || markedEndTime === null}
-                                >
-                                    <div className="flex items-center justify-center gap-2">
-                                        <Icon name="plus" className="w-5 h-5" />
-                                        <span>Add to Session</span>
-                                    </div>
-                                </Button>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Transcript Input - Promoted to main UI */}
-                    {/* Transcript Input - Collapsible */}
-                    <div className="bg-surface dark:bg-secondary-800 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 overflow-hidden">
-                        <div
-                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition-colors"
-                            onClick={() => setIsImportOpen(!isImportOpen)}
-                        >
-                            <h3 className="font-bold text-text-main dark:text-secondary-100 text-sm flex items-center gap-2">
-                                📜 Import Transcript
-                            </h3>
-                            <Icon name={isImportOpen ? "chevron-up" : "chevron-down"} className="w-4 h-4 text-text-subtle" />
-                        </div>
-
-                        {isImportOpen && (
-                            <div className="p-4 pt-0 animate-fadeIn">
-                                <p className="text-[10px] text-text-subtle mb-3 uppercase tracking-wider font-semibold">
-                                    Open YouTube → Transcript → Copy All → Paste Below
-                                </p>
-                                <textarea
-                                    className="w-full h-40 bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-md p-2 text-xs font-mono mb-3 focus:ring-1 focus:ring-primary-500 outline-none resize-none"
-                                    placeholder={`1:18\nChina could soon...`}
-                                    value={importText}
-                                    onChange={(e) => setImportText(e.target.value)}
+            <div className="flex flex-col md:flex-row gap-0 md:gap-6 flex-1 overflow-hidden">
+                {/* Left Panel (Mobile: Top) - Video & Controls */}
+                <div className="w-full md:w-1/3 flex-shrink-0 flex flex-col bg-surface dark:bg-secondary-800 md:bg-transparent z-10 shadow-sm md:shadow-none border-b md:border-b-0 border-secondary-200 dark:border-secondary-700">
+                    <div className="p-0 md:p-0">
+                        {/* YouTube Input Container - Collapsible on Mobile to Save Space if needed? */}
+                        {!previewVideoId ? (
+                            <div className="p-4">
+                                <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">Paste YouTube Link</label>
+                                <input
+                                    type="text"
+                                    value={youtubeUrl}
+                                    onChange={(e) => {
+                                        setYoutubeUrl(e.target.value);
+                                        const videoId = extractVideoID(e.target.value);
+                                        const startTime = extractStartTime(e.target.value);
+                                        setPreviewVideoId(videoId);
+                                        setPreviewStartTime(startTime);
+                                    }}
+                                    className="w-full bg-secondary-100 dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all shadow-sm"
+                                    placeholder="https://youtu.be/..."
                                 />
-                                <Button onClick={handleParseTranscript} className="w-full" disabled={!importText.trim()}>
-                                    🚀 Import Clipboard
-                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col">
+                                {/* Sticky Video Player on Mobile */}
+                                <div className="relative w-full aspect-video bg-black shadow-lg">
+                                    <div id="yt-player-editor" className="absolute inset-0 w-full h-full"></div>
+                                </div>
+
+                                {/* Controls Container */}
+                                <div className="p-3 sm:p-4 space-y-3 bg-surface dark:bg-secondary-800">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={handleMarkA}
+                                            className="group relative flex flex-col items-center justify-center py-3 px-4 bg-secondary-100 dark:bg-secondary-700 rounded-xl active:scale-95 transition-all border-2 border-transparent hover:border-primary-500/30 overflow-hidden"
+                                        >
+                                            <div className="absolute inset-0 bg-primary-500/0 group-active:bg-primary-500/10 transition-colors" />
+                                            <span className="text-[10px] uppercase font-extrabold text-secondary-500 dark:text-secondary-400 mb-0.5 tracking-widest">Mark A</span>
+                                            <span className="text-xl sm:text-2xl font-mono font-bold text-primary-600 dark:text-primary-400">
+                                                {markedStartTime !== null ? formatTimestamp(markedStartTime) : '--:--'}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            onClick={handleMarkB}
+                                            className="group relative flex flex-col items-center justify-center py-3 px-4 bg-secondary-100 dark:bg-secondary-700 rounded-xl active:scale-95 transition-all border-2 border-transparent hover:border-primary-500/30 overflow-hidden"
+                                        >
+                                            <div className="absolute inset-0 bg-primary-500/0 group-active:bg-primary-500/10 transition-colors" />
+                                            <span className="text-[10px] uppercase font-extrabold text-secondary-500 dark:text-secondary-400 mb-0.5 tracking-widest">Mark B</span>
+                                            <span className="text-xl sm:text-2xl font-mono font-bold text-primary-600 dark:text-primary-400">
+                                                {markedEndTime !== null ? formatTimestamp(markedEndTime) : '--:--'}
+                                            </span>
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        onClick={handleSurgicalCut}
+                                        disabled={markedStartTime === null || markedEndTime === null}
+                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-indigo-600 to-primary-600 hover:from-indigo-700 hover:to-primary-700 text-white rounded-xl font-bold shadow-md shadow-primary-500/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                                    >
+                                        <Icon name="plus" className="w-5 h-5" />
+                                        <span>Add Segment to Session</span>
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="hidden md:block bg-surface dark:bg-secondary-800 p-4 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 flex-1">
-                        <h3 className="font-bold text-text-main dark:text-secondary-100 mb-2">Tools</h3>
-                        <div className="flex flex-wrap gap-2">
-                            <Button size="sm" variant="secondary" onClick={handleMerge} disabled={selectedStart === null || selectedEnd === null || selectedStart === selectedEnd}>Merge Selected</Button>
-                            <Button size="sm" variant="secondary" onClick={handleSplit} disabled={selectedStart === null || selectedEnd === null || selectedStart !== selectedEnd}>Split Segment</Button>
-                            <Button size="sm" variant="primary" onClick={handleOpenLinkModal} disabled={selectedStart === null}>Link to Table</Button>
-                            <Button size="sm" variant="secondary" onClick={handleClearSession} disabled={!localNote.transcript || localNote.transcript.length === 0} className="text-secondary-500">🗑️ Clear Session</Button>
+                    {/* Collapsible Import Section */}
+                    <div className="px-3 pb-3 md:px-0 md:pb-0">
+                        <div className="bg-surface dark:bg-secondary-800 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 overflow-hidden">
+                            <div
+                                className="p-3 flex items-center justify-between cursor-pointer hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition-colors"
+                                onClick={() => setIsImportOpen(!isImportOpen)}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-secondary-100 dark:bg-secondary-700 rounded-lg">
+                                        <Icon name="clipboard" className="w-4 h-4 text-text-subtle" />
+                                    </div>
+                                    <h3 className="font-semibold text-text-main dark:text-secondary-100 text-sm">
+                                        Import Transcript
+                                    </h3>
+                                </div>
+                                <Icon name={isImportOpen ? "chevron-up" : "chevron-down"} className="w-4 h-4 text-text-subtle" />
+                            </div>
+
+                            {isImportOpen && (
+                                <div className="p-3 pt-0 animate-fadeIn">
+                                    <textarea
+                                        className="w-full h-32 bg-secondary-50 dark:bg-secondary-900/50 border border-secondary-200 dark:border-secondary-600 rounded-lg p-3 text-xs font-mono mb-3 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none transition-all placeholder:text-secondary-400"
+                                        placeholder={`Paste full transcript here...\n1:18 China could soon...\n2:30 The economy is...`}
+                                        value={importText}
+                                        onChange={(e) => setImportText(e.target.value)}
+                                    />
+                                    <Button onClick={handleParseTranscript} className="w-full py-2.5" disabled={!importText.trim()} size="sm">
+                                        Parse & Load
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-                        <p className="text-xs text-text-subtle mt-4">
-                            <strong>Tip:</strong> Hold Shift to select multiple segments.
-                        </p>
                     </div>
                 </div>
 
-                {/* Right Panel: Transcript Editor */}
-                <div className="flex-1 bg-surface dark:bg-secondary-800 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-secondary-200 dark:border-secondary-700 flex justify-between items-center">
-                        <h3 className="font-bold text-text-main dark:text-secondary-100">Transcript</h3>
-                        <span className="text-xs text-text-subtle">{transcript.length} segments</span>
+                {/* Right Panel (Mobile: Bottom) - Transcript List */}
+                <div className="flex-1 flex flex-col bg-surface dark:bg-secondary-800 md:rounded-tl-2xl border-t md:border-t-0 md:border-l border-secondary-200 dark:border-secondary-700 overflow-hidden relative">
+                    <div className="p-3 md:p-4 border-b border-secondary-100 dark:border-secondary-700 flex justify-between items-center bg-surface/50 dark:bg-secondary-800/50 backdrop-blur-sm z-10">
+                        <h3 className="font-bold text-text-main dark:text-secondary-100 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-primary-500 block"></span>
+                            Transcript
+                        </h3>
+                        <span className="px-2 py-1 bg-secondary-100 dark:bg-secondary-700 rounded-md text-xs font-mono text-text-subtle">
+                            {transcript.length} Segments
+                        </span>
                     </div>
-                    {/* Add padding bottom for mobile to account for fixed bar */}
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-24 md:pb-2">
+
+                    {/* Transcript List with proper padding for mobile bottom bar */}
+                    <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 pb-32 md:pb-4 scroll-smooth">
                         {transcript.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-text-subtle p-4 text-center">
-                                <p>No transcript loaded.</p>
-                                <p className="text-sm mt-2">Use the "Import Transcript" box on the left to add content.</p>
+                            <div className="h-full flex flex-col items-center justify-center text-text-subtle p-8 text-center opacity-60">
+                                <Icon name="document" className="w-12 h-12 mb-3 text-secondary-300 dark:text-secondary-600" />
+                                <p className="font-medium">No lines yet</p>
+                                <p className="text-xs mt-1 max-w-[200px]">Import text or use the video controls to add segments.</p>
                             </div>
                         ) : (
                             transcript.map((entry, index) => {
@@ -631,28 +657,23 @@ const DictationEditorScreen: React.FC = () => {
                                     <div
                                         key={index}
                                         onClick={(e) => handleSegmentClick(index, e)}
-                                        className={`p-3 rounded-md cursor-pointer border transition-all ${isSelected ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 ring-1 ring-primary-500' : 'border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50'}`}
+                                        className={`group relative p-3 rounded-xl cursor-pointer border transition-all duration-200 ${isSelected
+                                                ? 'bg-primary-50/80 dark:bg-primary-900/30 border-primary-500 shadow-sm ring-1 ring-primary-500/50 translate-x-1'
+                                                : 'bg-white dark:bg-secondary-700/30 border-transparent hover:bg-secondary-50 dark:hover:bg-secondary-700/50 hover:border-secondary-200 dark:hover:border-secondary-600'
+                                            }`}
                                     >
                                         <div className="flex gap-3">
-                                            <span className="text-xs font-mono text-text-subtle mt-1.5 select-none flex-shrink-0 w-12">
+                                            <span className="text-[10px] sm:text-xs font-mono text-text-subtle mt-1.5 select-none flex-shrink-0 w-10 sm:w-12 text-right opacity-70 group-hover:opacity-100 transition-opacity">
                                                 {new Date(entry.start * 1000).toISOString().substr(14, 5)}
                                             </span>
                                             <textarea
                                                 value={entry.text}
                                                 onChange={(e) => handleTextChange(index, e.target.value)}
                                                 onBlur={handleTextBlur}
-                                                onClick={(e) => {
-                                                    // Don't bubble up to the container if we are interacting with the textarea, 
-                                                    // BUT we usually want selection logic to happen too.
-                                                    // If we stopPropagation, clicking here WON'T select the row for merging tools.
-                                                    // If we want to edit AND select, we let it bubble.
-                                                    // However, text selection inside textarea might be tricky if the parent also handles clicks.
-                                                    // Since the parent `div` click handles `selectedStart/End`, letting it bubble is fine.
-                                                    // The textarea handles its own focus.
-                                                }}
-                                                className="flex-grow bg-transparent border-none outline-none focus:ring-0 focus:bg-secondary-100/50 dark:focus:bg-secondary-700/50 rounded p-1 text-sm text-text-main dark:text-secondary-100 resize-none overflow-hidden leading-relaxed"
-                                                rows={Math.max(1, Math.ceil(entry.text.length / 60))}
+                                                className="flex-grow bg-transparent border-none outline-none focus:ring-0 rounded p-0 text-sm sm:text-base text-text-main dark:text-secondary-100 resize-none overflow-hidden leading-relaxed font-medium"
+                                                rows={Math.max(1, Math.ceil(entry.text.length / 50))}
                                                 style={{ minHeight: '24px' }}
+                                                spellCheck={false}
                                             />
                                         </div>
                                     </div>
@@ -663,57 +684,55 @@ const DictationEditorScreen: React.FC = () => {
                 </div>
             </div>
 
-            {/* Mobile Bottom Action Bar */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface/95 dark:bg-secondary-900/95 backdrop-blur-md border-t border-secondary-200 dark:border-secondary-700 p-3 z-50 flex items-center justify-between pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleMerge}
-                    disabled={selectedStart === null || selectedEnd === null || selectedStart === selectedEnd}
-                    className="flex flex-col items-center gap-1 h-auto py-1 px-2 min-w-[3.5rem]"
-                >
-                    <Icon name="git-merge" className="w-5 h-5" />
-                    <span className="text-[10px] font-medium">Merge</span>
-                </Button>
+            {/* Mobile Sticky Bottom Action Bar - Glassmorphism & Safe Area */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-secondary-900/90 backdrop-blur-xl border-t border-secondary-200 dark:border-secondary-800 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] transition-transform duration-300">
+                <div className="flex items-center justify-between px-2 py-2">
+                    <button
+                        onClick={handleMerge}
+                        disabled={selectedStart === null || selectedEnd === null || selectedStart === selectedEnd}
+                        className="flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-secondary-600 dark:text-secondary-400 disabled:opacity-30 disabled:grayscale active:bg-secondary-100 dark:active:bg-secondary-800 transition-colors"
+                    >
+                        <div className="p-1.5 rounded-lg bg-secondary-100 dark:bg-secondary-800 group-active:scale-95 transition-transform">
+                            <Icon name="git-merge" className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-semibold">Merge</span>
+                    </button>
 
-                <div className="w-px h-8 bg-secondary-200 dark:bg-secondary-700 mx-1"></div>
+                    <button
+                        onClick={handleSplit}
+                        disabled={selectedStart === null || selectedEnd === null || selectedStart !== selectedEnd}
+                        className="flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-secondary-600 dark:text-secondary-400 disabled:opacity-30 disabled:grayscale active:bg-secondary-100 dark:active:bg-secondary-800 transition-colors"
+                    >
+                        <div className="p-1.5 rounded-lg bg-secondary-100 dark:bg-secondary-800 group-active:scale-95 transition-transform">
+                            <Icon name="git-split" className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-semibold">Split</span>
+                    </button>
 
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleSplit}
-                    disabled={selectedStart === null || selectedEnd === null || selectedStart !== selectedEnd}
-                    className="flex flex-col items-center gap-1 h-auto py-1 px-2 min-w-[3.5rem]"
-                >
-                    <Icon name="git-split" className="w-5 h-5" />
-                    <span className="text-[10px] font-medium">Split</span>
-                </Button>
+                    <button
+                        onClick={handleOpenLinkModal}
+                        disabled={selectedStart === null}
+                        className="flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-primary-600 dark:text-primary-400 disabled:opacity-30 disabled:grayscale active:bg-primary-50 dark:active:bg-primary-900/20 transition-colors"
+                    >
+                        <div className="p-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/30 group-active:scale-95 transition-transform">
+                            <Icon name="link" className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-bold">Link</span>
+                    </button>
 
-                <div className="w-px h-8 bg-secondary-200 dark:bg-secondary-700 mx-1"></div>
+                    <div className="w-px h-8 bg-secondary-200 dark:bg-secondary-800 mx-1"></div>
 
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleOpenLinkModal}
-                    disabled={selectedStart === null}
-                    className="flex flex-col items-center gap-1 h-auto py-1 px-2 min-w-[3.5rem] text-primary-600 dark:text-primary-400"
-                >
-                    <Icon name="link" className="w-5 h-5" />
-                    <span className="text-[10px] font-medium">Link</span>
-                </Button>
-
-                <div className="w-px h-8 bg-secondary-200 dark:bg-secondary-700 mx-1"></div>
-
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleClearSession}
-                    disabled={!localNote.transcript || localNote.transcript.length === 0}
-                    className="flex flex-col items-center gap-1 h-auto py-1 px-2 min-w-[3.5rem] text-error-500"
-                >
-                    <Icon name="trash" className="w-5 h-5" />
-                    <span className="text-[10px] font-medium">Clear</span>
-                </Button>
+                    <button
+                        onClick={handleClearSession}
+                        disabled={!localNote.transcript || localNote.transcript.length === 0}
+                        className="flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-error-500 disabled:opacity-30 disabled:grayscale active:bg-error-50 dark:active:bg-error-900/20 transition-colors"
+                    >
+                        <div className="p-1.5 rounded-lg bg-error-50 dark:bg-error-900/20 group-active:scale-95 transition-transform">
+                            <Icon name="trash" className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-medium">Clear</span>
+                    </button>
+                </div>
             </div>
 
             <CreateDictationLinkModal

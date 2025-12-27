@@ -10,6 +10,7 @@ import { DEFAULT_TYPOGRAPHY, DARK_MODE_DEFAULT_TYPOGRAPHY } from '../../../../ta
 import { SmartTextarea, DesignerBlock, QuickInsertHandle } from '../../../../tables/components/RelationSettings/DesignComponents';
 import { playSpeech, detectLanguageFromText } from '../../../../../services/audioService';
 import { useAudioStore } from '../../../../../stores/useAudioStore';
+import { extractVideoID, extractStartTime, extractEndTime } from '../../../../../utils/youtubeUtils';
 
 interface CardFaceProps {
     face: 'front' | 'back';
@@ -70,7 +71,7 @@ const CardFace: React.FC<CardFaceProps> = ({
     if (!design || !row || !table) return null;
 
     const elements = design.elementOrder || Object.keys(design.typography);
-    
+
     // Detect Cloze Mode System Block
     const isClozeMode = relation && (relation.interactionModes?.includes(StudyMode.ClozeTyping) || relation.interactionModes?.includes(StudyMode.ClozeMCQ));
 
@@ -90,15 +91,15 @@ const CardFace: React.FC<CardFaceProps> = ({
     return (
         <>
             <div className={`flex flex-col w-full relative group/container ${design.layout === 'vertical' ? 'flex-col gap-2' : 'flex-row gap-4'}`}>
-                
+
                 {/* Top Drop Zone for Index 0 */}
                 {isDesignMode && elements.length > 0 && onInsertElement && (
                     <div className="absolute -top-3 left-0 w-full h-4 z-40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center group/dropzone">
                         <div className="absolute inset-x-0 h-px bg-primary-500/50 group-hover/dropzone:bg-primary-500 transition-colors"></div>
-                        <QuickInsertHandle 
-                            index={0} 
-                            onInsert={(idx, t, c) => onInsertElement(face, idx, t, c)} 
-                            table={table} 
+                        <QuickInsertHandle
+                            index={0}
+                            onInsert={(idx, t, c) => onInsertElement(face, idx, t, c)}
+                            table={table}
                             isMobile={isMobile}
                             className="relative z-[70]"
                         />
@@ -113,7 +114,7 @@ const CardFace: React.FC<CardFaceProps> = ({
                     let typography = defaultTypo;
                     let type: 'data' | 'label' | 'text' | 'divider' = 'data';
                     let elementColId = '';
-                    
+
                     const txtBox = design.textBoxes?.find(t => t.id === id);
 
                     if (id.startsWith('label-')) {
@@ -128,13 +129,13 @@ const CardFace: React.FC<CardFaceProps> = ({
                     } else if (txtBox) {
                         type = txtBox.id.startsWith('txt-divider-') ? 'divider' : 'text';
                         typography = txtBox.typography;
-                        
+
                         if (type === 'divider') {
-                            contentNode = <div className="py-2 w-full"><hr className="border-secondary-300 dark:border-secondary-600"/></div>;
+                            contentNode = <div className="py-2 w-full"><hr className="border-secondary-300 dark:border-secondary-600" /></div>;
                         } else if (isDesignMode) {
                             contentNode = (
-                                <SmartTextarea 
-                                    value={txtBox.text} 
+                                <SmartTextarea
+                                    value={txtBox.text}
                                     onChange={(val) => onUpdateElement?.(face, id, { text: val })}
                                     typography={typography}
                                     table={table}
@@ -143,7 +144,7 @@ const CardFace: React.FC<CardFaceProps> = ({
                             );
                         } else {
                             const resolvedText = resolveVariables(txtBox.text, row, table.columns);
-                            
+
                             // Check for mixed content (Images in text)
                             const parts = resolvedText.split(URL_CAPTURE_REGEX);
                             const hasImage = parts.some(p => isImageUrl(p));
@@ -153,20 +154,20 @@ const CardFace: React.FC<CardFaceProps> = ({
                                     <div className="flex flex-col gap-2 w-full items-center">
                                         {parts.map((part, i) => {
                                             if (isImageUrl(part)) {
-                                                 return (
-                                                    <div 
+                                                return (
+                                                    <div
                                                         key={i}
                                                         onClick={(e) => { e.stopPropagation(); setZoomedImgSrc(part); }}
                                                         className="relative max-w-full cursor-zoom-in group"
                                                     >
-                                                        <img 
-                                                            src={part} 
-                                                            alt="Content" 
-                                                            className={`${isZoomed ? 'max-h-[80vh] w-auto' : 'max-h-60 w-auto'} object-contain rounded-md shadow-sm border border-secondary-200 dark:border-secondary-700`} 
+                                                        <img
+                                                            src={part}
+                                                            alt="Content"
+                                                            className={`${isZoomed ? 'max-h-[80vh] w-auto' : 'max-h-60 w-auto'} object-contain rounded-md shadow-sm border border-secondary-200 dark:border-secondary-700`}
                                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                                         />
                                                     </div>
-                                                 );
+                                                );
                                             }
                                             if (!part.trim()) return null;
                                             return (
@@ -203,7 +204,7 @@ const CardFace: React.FC<CardFaceProps> = ({
                         if (col) {
                             const text = row.cols[id] || (isDesignMode ? `[${col.name} Data]` : '');
                             typography = design.typography[id] || defaultTypo;
-                            
+
                             // Audio Logic: Check Config -> Fallback to Auto-detect
                             const audioConfigForCol = table.columnAudioConfig?.[col.id];
                             const canPlayAudio = text && !isDesignMode;
@@ -214,7 +215,7 @@ const CardFace: React.FC<CardFaceProps> = ({
                                 e.stopPropagation();
                                 if (onPlayAudio && text) onPlayAudio(text, col.id);
                             };
-                            
+
                             // Image Logic: Configured OR Detected
                             const isConfiguredImage = table.imageConfig?.imageColumnId === col.id;
                             const looksLikeImage = isImageUrl(text);
@@ -231,9 +232,9 @@ const CardFace: React.FC<CardFaceProps> = ({
                                                 src={text}
                                                 alt="Content"
                                                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
-                                                onError={(e) => { 
+                                                onError={(e) => {
                                                     // Hide broken image container
-                                                    e.currentTarget.style.display = 'none'; 
+                                                    e.currentTarget.style.display = 'none';
                                                     // In a real app we might want to unmount or show text fallback here
                                                 }}
                                             />
@@ -254,28 +255,67 @@ const CardFace: React.FC<CardFaceProps> = ({
                                     </div>
                                 );
                             } else {
-                                contentNode = (
-                                    <div className="flex items-center gap-2 w-full">
-                                        <div className="flex-1 min-w-0" style={typography}>
-                                            <ExpandableText text={text} typography={typography} isZoomed={isZoomed} />
+                                // Video Logic
+                                const isConfiguredVideo = table.videoConfig?.videoColumnId === col.id;
+                                const videoId = extractVideoID(text);
+                                const shouldRenderVideo = (isConfiguredVideo || videoId) && text && !isDesignMode;
+
+                                if (shouldRenderVideo && videoId) {
+                                    contentNode = (
+                                        <div className="flex flex-col items-center gap-3 w-full">
+                                            <div className="w-full aspect-video rounded-xl overflow-hidden shadow-lg border border-secondary-200 dark:border-secondary-700 bg-black relative">
+                                                {(() => {
+                                                    const start = extractStartTime(text);
+                                                    const end = extractEndTime(text);
+                                                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0${start ? `&start=${Math.floor(start)}` : ''}${end ? `&end=${Math.ceil(end)}` : ''}`;
+                                                    return (
+                                                        <iframe
+                                                            width="100%"
+                                                            height="100%"
+                                                            src={embedUrl}
+                                                            title="YouTube video player"
+                                                            frameBorder="0"
+                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                            allowFullScreen
+                                                        ></iframe>
+                                                    );
+                                                })()}
+                                            </div>
+                                            {canPlayAudio && (
+                                                <button
+                                                    onClick={handlePlay}
+                                                    className={`p-2 rounded-full transition-colors flex-shrink-0 ${isPlayingThis ? 'text-primary-500 bg-primary-100 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}
+                                                    title="Play Audio"
+                                                >
+                                                    <Icon name={isPlayingThis ? "volume-up" : "volume-down"} className="w-4 h-4" />
+                                                </button>
+                                            )}
                                         </div>
-                                        {canPlayAudio && (
-                                            <button
-                                                onClick={handlePlay}
-                                                className={`p-2 rounded-full transition-colors flex-shrink-0 ${isPlayingThis ? 'text-primary-500 bg-primary-100 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}
-                                                title="Play Audio"
-                                            >
-                                                <Icon name={isPlayingThis ? "volume-up" : "volume-down"} className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    </div>
-                                );
+                                    );
+                                } else {
+                                    contentNode = (
+                                        <div className="flex items-center gap-2 w-full">
+                                            <div className="flex-1 min-w-0" style={typography}>
+                                                <ExpandableText text={text} typography={typography} isZoomed={isZoomed} />
+                                            </div>
+                                            {canPlayAudio && (
+                                                <button
+                                                    onClick={handlePlay}
+                                                    className={`p-2 rounded-full transition-colors flex-shrink-0 ${isPlayingThis ? 'text-primary-500 bg-primary-100 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}
+                                                    title="Play Audio"
+                                                >
+                                                    <Icon name={isPlayingThis ? "volume-up" : "volume-down"} className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                }
                             }
                         }
                     }
 
                     if (contentNode === null) return null;
-                    
+
                     // --- System Block Check ---
                     // Is this element part of the core question columns in Cloze Mode?
                     const isSystemBlock = isClozeMode && face === 'front' && relation?.questionColumnIds.includes(id);
@@ -308,7 +348,7 @@ const CardFace: React.FC<CardFaceProps> = ({
 
             {/* Lightbox Portal for Zoomed Image */}
             {zoomedImgSrc && createPortal(
-                <div 
+                <div
                     className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn cursor-zoom-out"
                     onClick={(e) => { e.stopPropagation(); setZoomedImgSrc(null); }}
                 >
@@ -322,7 +362,7 @@ const CardFace: React.FC<CardFaceProps> = ({
                         src={zoomedImgSrc}
                         alt="Zoomed view"
                         className="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-sm cursor-default"
-                        onClick={(e) => e.stopPropagation()} 
+                        onClick={(e) => e.stopPropagation()}
                     />
                 </div>,
                 document.body

@@ -243,6 +243,7 @@ export interface Table {
   rowCount?: number;
   relations: Relation[];
   imageConfig?: { imageColumnId: string; sourceColumnId: string; } | null;
+  videoConfig?: { videoColumnId: string; sourceColumnId: string; } | null;
   /** @deprecated Use columnAudioConfig and Relation.audioConfig instead */
   audioConfig?: { sourceColumnId: string; language?: string; } | null;
   columnAudioConfig?: Record<string, { language: string; }>;

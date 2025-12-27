@@ -10,6 +10,7 @@ import { playSpeech, detectLanguageFromText } from '../../../../../services/audi
 import { useUIStore } from '../../../../../stores/useUIStore';
 import { DEFAULT_TYPOGRAPHY, DARK_MODE_DEFAULT_TYPOGRAPHY } from '../../../../tables/designConstants';
 import { SmartTextarea, DesignerBlock, QuickInsertHandle } from '../../../../tables/components/RelationSettings/DesignComponents';
+import { extractVideoID, extractStartTime, extractEndTime } from '../../../../../utils/youtubeUtils';
 
 interface CardFaceRendererProps {
     face: 'front' | 'back';
@@ -80,15 +81,15 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
     return (
         <>
             <div className={`flex flex-col w-full relative group/container ${design.layout === 'vertical' ? 'flex-col gap-2' : 'flex-row gap-4'}`}>
-                
+
                 {/* Top Drop Zone for Index 0 */}
                 {isDesignMode && elements.length > 0 && onInsertElement && (
                     <div className="absolute -top-3 left-0 w-full h-4 z-40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center group/dropzone">
                         <div className="absolute inset-x-0 h-px bg-primary-500/50 group-hover/dropzone:bg-primary-500 transition-colors"></div>
-                        <QuickInsertHandle 
-                            index={0} 
-                            onInsert={(idx, t, c) => onInsertElement(face, idx, t, c)} 
-                            table={table} 
+                        <QuickInsertHandle
+                            index={0}
+                            onInsert={(idx, t, c) => onInsertElement(face, idx, t, c)}
+                            table={table}
                             isMobile={isMobile}
                             className="relative z-[70]"
                         />
@@ -100,7 +101,7 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                     let typography = defaultTypo;
                     let type: 'data' | 'label' | 'text' | 'divider' = 'data';
                     let elementColId = '';
-                    
+
                     const txtBox = design.textBoxes?.find(t => t.id === id);
 
                     // --- 1. Labels ---
@@ -113,18 +114,18 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                             typography = design.typography[id] || { ...defaultTypo, fontSize: '0.75rem', opacity: 0.7, fontWeight: 'bold' };
                             contentNode = <div style={typography} className="w-full break-words whitespace-pre-wrap">{col.name}</div>;
                         }
-                    } 
+                    }
                     // --- 2. Text Boxes & Dividers ---
                     else if (txtBox) {
                         type = txtBox.id.startsWith('txt-divider-') ? 'divider' : 'text';
                         typography = txtBox.typography;
-                        
+
                         if (type === 'divider') {
-                            contentNode = <div className="py-2 w-full"><hr className="border-secondary-300 dark:border-secondary-600"/></div>;
+                            contentNode = <div className="py-2 w-full"><hr className="border-secondary-300 dark:border-secondary-600" /></div>;
                         } else if (isDesignMode) {
                             contentNode = (
-                                <SmartTextarea 
-                                    value={txtBox.text} 
+                                <SmartTextarea
+                                    value={txtBox.text}
                                     onChange={(val) => onUpdateElement?.(face, id, { text: val })}
                                     typography={typography}
                                     table={table}
@@ -154,7 +155,7 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                                 </div>
                             );
                         }
-                    } 
+                    }
                     // --- 3. Data Columns ---
                     else {
                         type = 'data';
@@ -163,16 +164,17 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                         if (col) {
                             const text = row.cols[id] || (isDesignMode ? `[${col.name} Data]` : '');
                             typography = design.typography[id] || defaultTypo;
-                            
+
                             const audioId = `${card.id}-${id}`; // Just for matching playing state
-                            const isPlayingThis = currentAudioId === audioId; 
+                            const isPlayingThis = currentAudioId === audioId;
 
                             const handlePlay = (e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 if (onPlayAudio && text) onPlayAudio(text, col.id);
                             };
-                            
+
                             const isImageColumn = table.imageConfig?.imageColumnId === col.id;
+                            const isVideoColumn = table.videoConfig?.videoColumnId === col.id;
 
                             if (isImageColumn && text && !isDesignMode) {
                                 contentNode = (
@@ -195,6 +197,35 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                                         {onPlayAudio && <button onClick={handlePlay} className={`p-2 rounded-full transition-colors flex-shrink-0 ${isPlayingThis ? 'text-primary-500 bg-primary-100 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}><Icon name={isPlayingThis ? "volume-up" : "volume-down"} className="w-4 h-4" /></button>}
                                     </div>
                                 );
+                            } else if (isVideoColumn && text && !isDesignMode) {
+                                const videoId = extractVideoID(text);
+                                const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : '';
+                                contentNode = (
+                                    <div className="flex flex-col items-center gap-2 w-full">
+                                        {videoId ? (
+                                            <div
+                                                onClick={(e) => { e.stopPropagation(); setZoomedImgSrc(text); }}
+                                                className="relative w-full max-w-[200px] aspect-video flex-shrink-0 cursor-pointer group bg-black rounded-lg border border-secondary-200 dark:border-secondary-700 overflow-hidden shadow-md"
+                                            >
+                                                <img
+                                                    src={thumbnailUrl}
+                                                    alt="Video Thumbnail"
+                                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                                />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center group-hover:bg-primary-500/80 group-hover:border-primary-400 transition-all">
+                                                        <Icon name="play" className="w-5 h-5 text-white ml-0.5" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-[10px] text-error-500 bg-error-50 dark:bg-error-900/20 px-2 py-1 rounded truncate max-w-full">
+                                                Invalid Video URL: {text}
+                                            </div>
+                                        )}
+                                        {onPlayAudio && <button onClick={handlePlay} className={`p-2 rounded-full transition-colors flex-shrink-0 ${isPlayingThis ? 'text-primary-500 bg-primary-100 dark:bg-primary-900/20' : 'text-text-subtle hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}><Icon name={isPlayingThis ? "volume-up" : "volume-down"} className="w-4 h-4" /></button>}
+                                    </div>
+                                );
                             } else {
                                 contentNode = (
                                     <div className="flex items-center gap-2 w-full">
@@ -213,7 +244,7 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                     if (contentNode === null) return null;
 
                     const isSelected = isDesignMode && id === selectedElementId;
-                    
+
                     // --- System Block Check ---
                     // Is this element part of the core question columns in Cloze Mode?
                     const isSystemBlock = isClozeMode && face === 'front' && relation?.questionColumnIds.includes(id);
@@ -223,7 +254,7 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                         return (
                             <div key={id} className="relative group/block pl-4">
                                 {onInsertElement && <QuickInsertHandle index={index + 1} onInsert={(idx, t, c) => onInsertElement(face, idx, t, c)} table={table} isMobile={isMobile} />}
-                                
+
                                 <DesignerBlock
                                     id={id}
                                     isSelected={isSelected || false}
@@ -233,8 +264,8 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                                     onDelete={() => onDeleteElement?.(face, id)}
                                     type={type}
                                     onChangeType={
-                                        (type === 'data' || type === 'label') && onChangeElementType && elementColId 
-                                            ? () => onChangeElementType(face, elementColId, type === 'data' ? 'label' : 'data') 
+                                        (type === 'data' || type === 'label') && onChangeElementType && elementColId
+                                            ? () => onChangeElementType(face, elementColId, type === 'data' ? 'label' : 'data')
                                             : undefined
                                     }
                                     index={index}
@@ -251,9 +282,9 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                 })}
             </div>
 
-             {/* Lightbox Portal for Zoomed Image */}
-             {zoomedImgSrc && createPortal(
-                <div 
+            {/* Lightbox Portal for Zoomed Media (Image or Video) */}
+            {zoomedImgSrc && createPortal(
+                <div
                     className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn cursor-zoom-out"
                     onClick={(e) => { e.stopPropagation(); setZoomedImgSrc(null); }}
                 >
@@ -263,12 +294,40 @@ const CardFaceRenderer: React.FC<CardFaceRendererProps> = ({
                     >
                         <Icon name="x" className="w-8 h-8" />
                     </button>
-                    <img
-                        src={zoomedImgSrc}
-                        alt="Zoomed view"
-                        className="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-sm cursor-default"
-                        onClick={(e) => e.stopPropagation()} 
-                    />
+                    {(() => {
+                        const videoId = extractVideoID(zoomedImgSrc);
+                        if (videoId) {
+                            const start = extractStartTime(zoomedImgSrc);
+                            const end = extractEndTime(zoomedImgSrc);
+                            const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1${start ? `&start=${Math.floor(start)}` : ''}${end ? `&end=${Math.ceil(end)}` : ''}`;
+                            return (
+                                <div className="w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+                                    <iframe
+                                        width="100%"
+                                        height="100%"
+                                        src={embedUrl}
+                                        title="YouTube video player"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
+                                    ></iframe>
+                                </div>
+                            );
+                        }
+                        return (
+                            <img
+                                src={zoomedImgSrc}
+                                alt="Zoomed view"
+                                className="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-sm cursor-default"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        );
+                    })()}
+                    <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none px-4">
+                        <span className="inline-block px-3 py-1 bg-black/50 text-white/80 text-xs rounded-full backdrop-blur-md font-mono max-w-full truncate">
+                            {zoomedImgSrc}
+                        </span>
+                    </div>
                 </div>,
                 document.body
             )}
