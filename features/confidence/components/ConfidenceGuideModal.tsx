@@ -5,8 +5,8 @@ import { Button } from '../../../components/ui/Button';
 import Icon from '../../../components/ui/Icon';
 
 interface ConfidenceGuideModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+    isOpen: boolean;
+    onClose: () => void;
 }
 
 const QUIZ_QUESTIONS = [
@@ -230,8 +230,115 @@ const QuizView: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     );
 };
 
+const ShortcutsView: React.FC = () => (
+    <div className="space-y-6 animate-fadeIn pb-4">
+        {/* Navigation & Control */}
+        <section className="space-y-3">
+            <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
+                <Icon name="command-line" className="w-5 h-5" />
+                <h3 className="font-bold text-lg">General Control</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+                <div className="p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-xl border border-secondary-200 dark:border-secondary-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Smart Escape (Close Popups / End Session)</span>
+                        <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">Esc</kbd>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* Answering Phase */}
+        <section className="space-y-3">
+            <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
+                <Icon name="chat-bubble-left-right" className="w-5 h-5" />
+                <h3 className="font-bold text-lg">Answering Questions</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+                <div className="p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-xl border border-secondary-200 dark:border-secondary-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm">Select Option A / False / Focus Typing</span>
+                        <div className="flex items-center gap-1">
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">Ctrl</kbd>
+                            <span>+</span>
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">1</kbd>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm">Select Option B / True</span>
+                        <div className="flex items-center gap-1">
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">Ctrl</kbd>
+                            <span>+</span>
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">2</kbd>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm">Select Option C / D</span>
+                        <div className="flex items-center gap-1">
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">Ctrl</kbd>
+                            <span>+</span>
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">3</kbd>
+                            <span>/</span>
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">4</kbd>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* Evaluation Phase */}
+        <section className="space-y-3">
+            <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
+                <Icon name="star" className="w-5 h-5" />
+                <h3 className="font-bold text-lg">Rating & Review</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+                <div className="p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-xl border border-secondary-200 dark:border-secondary-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm">Rate Card (Again to Superb)</span>
+                        <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5, 6].map(k => (
+                                <kbd key={k} className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">{k}</kbd>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="h-px bg-secondary-200 dark:bg-secondary-700 my-2" />
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm">Edit Card Detail</span>
+                        <div className="flex items-center gap-1">
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">Ctrl</kbd>
+                            <span>+</span>
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">5</kbd>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm">View Card Info</span>
+                        <div className="flex items-center gap-1">
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">Ctrl</kbd>
+                            <span>+</span>
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">6</kbd>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm">Relation Settings</span>
+                        <div className="flex items-center gap-1">
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">Ctrl</kbd>
+                            <span>+</span>
+                            <kbd className="px-2 py-1 bg-surface dark:bg-secondary-700 border border-secondary-300 dark:border-secondary-600 rounded text-xs font-bold shadow-sm">7</kbd>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <p className="text-xs text-text-subtle italic text-center mt-4">
+            * Note: Answering shortcuts work only before revealing. Rating shortcuts work only after revealing.
+        </p>
+    </div>
+);
+
 const ConfidenceGuideModal: React.FC<ConfidenceGuideModalProps> = ({ isOpen, onClose }) => {
-    const [activeTab, setActiveTab] = React.useState<'guide' | 'quiz'>('guide');
+    const [activeTab, setActiveTab] = React.useState<'guide' | 'shortcuts' | 'quiz'>('guide');
 
     // Reset tab when modal opens
     React.useEffect(() => {
@@ -241,24 +348,31 @@ const ConfidenceGuideModal: React.FC<ConfidenceGuideModalProps> = ({ isOpen, onC
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Confidence Mode Guide" containerClassName="max-w-3xl w-full max-h-[90vh]">
             <div className="flex flex-col h-full">
-                <div className="flex border-b border-secondary-200 dark:border-secondary-700 px-6 pt-2">
+                <div className="flex border-b border-secondary-200 dark:border-secondary-700 px-6 pt-2 overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setActiveTab('guide')}
-                        className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                            activeTab === 'guide'
-                                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                                : 'border-transparent text-text-subtle hover:text-text-main'
-                        }`}
+                        className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'guide'
+                            ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                            : 'border-transparent text-text-subtle hover:text-text-main'
+                            }`}
                     >
                         Guide
                     </button>
                     <button
+                        onClick={() => setActiveTab('shortcuts')}
+                        className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'shortcuts'
+                            ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                            : 'border-transparent text-text-subtle hover:text-text-main'
+                            }`}
+                    >
+                        Shortcuts
+                    </button>
+                    <button
                         onClick={() => setActiveTab('quiz')}
-                        className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                            activeTab === 'quiz'
-                                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                                : 'border-transparent text-text-subtle hover:text-text-main'
-                        }`}
+                        className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${activeTab === 'quiz'
+                            ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                            : 'border-transparent text-text-subtle hover:text-text-main'
+                            }`}
                     >
                         Quiz
                     </button>
@@ -267,6 +381,8 @@ const ConfidenceGuideModal: React.FC<ConfidenceGuideModalProps> = ({ isOpen, onC
                 <div className="p-6 overflow-y-auto">
                     {activeTab === 'guide' ? (
                         <GuideView onTakeQuiz={() => setActiveTab('quiz')} />
+                    ) : activeTab === 'shortcuts' ? (
+                        <ShortcutsView />
                     ) : (
                         <QuizView onClose={onClose} />
                     )}

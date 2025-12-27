@@ -308,17 +308,6 @@ const ConfidenceSessionScreen: React.FC = () => {
         }
     };
 
-    // Handle Escape key to exit fullscreen
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isFullscreen) {
-                setIsFullscreen(false);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFullscreen]);
-
     const sessionTables = useMemo(() => tables.filter(t => session.tableIds.includes(t.id)), [tables, session.tableIds]);
     const allRows = useMemo(() => sessionTables.flatMap(t => t.rows), [sessionTables]);
 
@@ -982,6 +971,108 @@ const ConfidenceSessionScreen: React.FC = () => {
         }
         return () => clearTimeout(timer);
     }, [question, currentRow, session.tableIds, fetchTablePayload, loadingTableIds]);
+
+    // --- KEYBOARD SHORTCUTS ---
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Priority 1: Smart Escape (Close Modals -> Fullscreen -> End Session)
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                if (rowForDetailModal) { setRowForDetailModal(null); return; }
+                if (rowForInfoModal) { setRowForInfoModal(null); return; }
+                if (relationToEdit) { setRelationToEdit(null); return; }
+                if (isJumpModalOpen) { setIsJumpModalOpen(false); return; }
+                if (isIntervalEditorOpen) { setIsIntervalEditorOpen(false); return; }
+                if (simulationData) { setSimulationData(null); return; }
+                if (isSessionLevelPickerOpen) { setIsSessionLevelPickerOpen(false); return; }
+
+                if (isFullscreen) {
+                    setIsFullscreen(false);
+                } else {
+                    setIsEndSessionConfirmOpen(true);
+                }
+                return;
+            }
+
+            // Priority 2: Control combos (Metadata management & Answer Selection)
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    // --- Answer Selection (Ctrl 1-4) ---
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                        // Only trigger if not answered (answering phase) or strictly for typing focus
+                        if (!isAnswered && v3Card) {
+                            e.preventDefault();
+                            if (v3Card.type === 'mcq') {
+                                const idx = parseInt(e.key) - 1;
+                                // Find button containing the specific letter badge (A, B, C, D)
+                                const letter = String.fromCharCode(65 + idx);
+                                const buttons = Array.from(document.querySelectorAll('main button'));
+                                const targetBtn = buttons.find(b => {
+                                    const badge = b.querySelector('span'); // The first span is usually the letter badge in McqLayout
+                                    return badge && badge.textContent?.trim() === letter;
+                                });
+                                if (targetBtn) (targetBtn as HTMLButtonElement).click();
+
+                            } else if (v3Card.type === 'truefalse') {
+                                if (e.key === '1') { // Ctrl+1 = False
+                                    const btn = document.querySelector('button[aria-label="False"]');
+                                    if (btn) (btn as HTMLButtonElement).click();
+                                } else if (e.key === '2') { // Ctrl+2 = True
+                                    const btn = document.querySelector('button[aria-label="True"]');
+                                    if (btn) (btn as HTMLButtonElement).click();
+                                }
+
+                            } else if (v3Card.type === 'typing' && e.key === '1') {
+                                // Ctrl+1 = Focus Input
+                                const input = document.querySelector('input[type="text"], textarea');
+                                if (input) (input as HTMLElement).focus();
+                            }
+                        }
+                        break;
+
+                    // --- Modal Shortcuts (Ctrl 5-7) ---
+                    case '5': // Edit Card
+                        e.preventDefault();
+                        if (currentRow) setRowForDetailModal(currentRow);
+                        break;
+                    case '6': // Info
+                        e.preventDefault();
+                        if (currentRow) setRowForInfoModal(currentRow);
+                        break;
+                    case '7': // Relation Settings
+                        e.preventDefault();
+                        if (currentRelation) setRelationToEdit(currentRelation);
+                        break;
+                }
+                return;
+            }
+
+            // Priority 3: Numeric keys (Rating) - ONLY if answer is revealed
+            if (isAnswered && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+                const numericKey = parseInt(e.key);
+                if (numericKey >= 1 && numericKey <= 6) {
+                    e.preventDefault();
+                    const statusMap: Record<number, FlashcardStatus> = {
+                        1: FlashcardStatus.Again,
+                        2: FlashcardStatus.Hard,
+                        3: FlashcardStatus.Good,
+                        4: FlashcardStatus.Easy,
+                        5: FlashcardStatus.Perfect,
+                        6: FlashcardStatus.Superb
+                    };
+                    const status = statusMap[numericKey];
+                    if (status) handleRate(status);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isFullscreen, isAnswered, currentRow, currentRelation, handleRate, v3Card,
+        rowForDetailModal, rowForInfoModal, relationToEdit, isJumpModalOpen, isIntervalEditorOpen, simulationData, isSessionLevelPickerOpen]);
 
     if (!question || !currentRow || !currentRelation || !currentTable || !v3Card) {
         if (isDataMissing) {
