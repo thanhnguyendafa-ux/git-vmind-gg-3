@@ -14,6 +14,7 @@ const DEFAULT_TRACKS: Track[] = [];
 const MusicPlayer: React.FC = () => {
     const {
         isOpen, isPlaying, currentTrack, volume, repeatMode, isShuffled, shuffledQueue, customTracks,
+        isLoadingTrack, loadingTrackId, setTrackReady, setIsLoadingTrack,
         togglePlay, setTrack, setVolume, setIsOpen, cycleRepeatMode, toggleShuffle, addCustomTrack, removeCustomTrack
     } = useMusicStore();
     const { showToast } = useUIStore();
@@ -173,84 +174,152 @@ const MusicPlayer: React.FC = () => {
         };
     }, [playNext, showToast]);
 
+    // --- Async Loading Helpers ---
+    const loadYouTubeTrack = React.useCallback(async (videoId: string) => {
+        const ytPlayer = playerRef.current;
+        if (!ytPlayer || !ytPlayer.loadVideoById) return;
+
+        return new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error("YouTube loading timed out"));
+            }, 10000);
+
+            // Temporarily swap onStateChange or use a polling mechanism
+            // Since we use the global onStateChange in setup, we can use it to detect when it's ready.
+            // But ytPlayer.loadVideoById(id) usually triggers PLAYING if auto-play is enabled.
+
+            // For YouTube, we consider it "ready" once it starts playing or reaches a specific state
+            // But we actually just want to know it's LOADED and READY to play.
+            ytPlayer.loadVideoById(videoId);
+
+            // youtube-music-player doesn't have a simple 'onLoaded' for loadVideoById
+            // so we wait for onReady or just assume it's loading.
+            // A better way is to listen for stateChange to PLAYING (1) or BUFFERING (3)
+
+            const checkState = setInterval(() => {
+                const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
+                const data = ytPlayer.getVideoData ? ytPlayer.getVideoData() : null;
+
+                if (data && data.video_id === videoId && (state === 1 || state === 3 || state === 2 || state === 5)) {
+                    clearTimeout(timeout);
+                    clearInterval(checkState);
+                    resolve();
+                }
+            }, 100);
+        });
+    }, []);
+
+    const loadAudioTrack = React.useCallback(async (url: string) => {
+        const audioEl = audioRef.current;
+        if (!audioEl) return;
+
+        return new Promise<void>((resolve, reject) => {
+            const onCanPlay = () => {
+                audioEl.removeEventListener('canplay', onCanPlay);
+                audioEl.removeEventListener('error', onError);
+                resolve();
+            };
+
+            const onError = (e: any) => {
+                audioEl.removeEventListener('canplay', onCanPlay);
+                audioEl.removeEventListener('error', onError);
+                reject(e);
+            };
+
+            audioEl.addEventListener('canplay', onCanPlay);
+            audioEl.addEventListener('error', onError);
+
+            audioEl.src = url;
+            audioEl.load();
+        });
+    }, []);
+
     // --- Dual-Engine Synchronization (Play/Pause/Track) ---
     React.useEffect(() => {
         const audioEl = audioRef.current;
         const ytPlayer = playerRef.current;
 
-        // 1. YouTube Active
-        if (isYouTube && ytPlayer && ytPlayer.loadVideoById) {
-            // Ensure HTML5 audio is silent
-            if (audioEl) {
-                audioEl.pause();
-                // Cleanly remove src to prevent any background loading/errors
-                if (audioEl.hasAttribute('src')) {
-                    audioEl.removeAttribute('src');
-                    audioEl.load(); // Flush
-                }
-            }
+        let isCancelled = false;
 
-            // Load video if changed
-            const currentData = ytPlayer.getVideoData ? ytPlayer.getVideoData() : null;
-            if (!currentData || currentData.video_id !== currentVideoId) {
-                ytPlayer.stopVideo();
-                ytPlayer.loadVideoById(currentVideoId);
-            }
-
-            // Sync State
-            if (isPlaying) {
-                ytPlayer.playVideo();
-            } else {
-                ytPlayer.pauseVideo();
-            }
-        }
-        // 2. HTML5 Audio Active
-        else if (!isYouTube && audioEl && currentTrack) {
-            // Ensure YT is silent
-            if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
-
-            const targetSrc = currentTrack.url.startsWith('/')
-                ? window.location.origin + currentTrack.url
-                : currentTrack.url;
-
-            // Only update if source is different or missing
-            // AND ensure we have a valid targetSrc
-            if (targetSrc && (audioEl.getAttribute('src') !== targetSrc)) {
-                // INTERRUPT
-                audioEl.pause();
-                // SET NEW SOURCE
-                audioEl.src = targetSrc;
-                audioEl.load();
-            }
-
-            if (isPlaying) {
-                const playPromise = audioEl.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        // Ignore AbortError - it's expected when rapid-switching tracks
-                        if (error.name === 'AbortError') return;
-                        // Ignore errors if the element has been detached vs src
-                        if (!audioEl.getAttribute('src')) return;
-
-                        console.error("Audio playback error:", error);
-                    });
-                }
-            } else {
-                audioEl.pause();
-            }
-        }
-        // 3. No Track / Reset
-        else {
-            if (audioEl) {
-                audioEl.pause();
-                if (audioEl.hasAttribute('src')) {
+        const syncPlayback = async () => {
+            if (!currentTrack) {
+                if (audioEl) {
+                    audioEl.pause();
                     audioEl.removeAttribute('src');
                 }
+                if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+                return;
             }
-            if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
-        }
 
-    }, [isYouTube, currentVideoId, currentTrack, isPlaying]);
+            // 1. Handle Track Change / Initial Load
+            if (isLoadingTrack && loadingTrackId === currentTrack.id) {
+                try {
+                    if (isYouTube) {
+                        if (audioEl) {
+                            audioEl.pause();
+                            audioEl.removeAttribute('src');
+                        }
+                        await loadYouTubeTrack(currentVideoId!);
+                    } else {
+                        if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+                        const targetSrc = currentTrack.url.startsWith('/')
+                            ? window.location.origin + currentTrack.url
+                            : currentTrack.url;
+                        await loadAudioTrack(targetSrc);
+                    }
+
+                    if (!isCancelled) {
+                        setTrackReady();
+                    }
+                } catch (error) {
+                    if (!isCancelled) {
+                        console.error("Failed to load track:", error);
+                        showToast("Cannot play this track. Skipping...", "error");
+                        setIsLoadingTrack(false);
+                        playNext();
+                    }
+                }
+                return;
+            }
+
+            // 2. Handle Play/Pause for already loaded track
+            if (!isLoadingTrack) {
+                if (isYouTube && ytPlayer && ytPlayer.playVideo) {
+                    if (isPlaying) {
+                        // Double check current video ID to avoid race
+                        const currentData = ytPlayer.getVideoData ? ytPlayer.getVideoData() : null;
+                        if (currentData && currentData.video_id === currentVideoId) {
+                            ytPlayer.playVideo();
+                        } else {
+                            // If IDs don't match for some reason, trigger reload
+                            setIsLoadingTrack(true, currentTrack.id);
+                        }
+                    } else {
+                        ytPlayer.pauseVideo();
+                    }
+                } else if (!isYouTube && audioEl) {
+                    if (isPlaying) {
+                        const playPromise = audioEl.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                if (error.name === 'AbortError') return;
+                                if (!audioEl.getAttribute('src')) return;
+                                console.error("Audio playback error:", error);
+                            });
+                        }
+                    } else {
+                        audioEl.pause();
+                    }
+                }
+            }
+        };
+
+        syncPlayback();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [isYouTube, currentVideoId, currentTrack?.id, isPlaying, isLoadingTrack, loadingTrackId, loadYouTubeTrack, loadAudioTrack, setTrackReady, playNext, showToast, setIsLoadingTrack]);
 
     // --- Synchronization (Volume) ---
     React.useEffect(() => {
@@ -336,8 +405,12 @@ const MusicPlayer: React.FC = () => {
                         <div className="flex items-center justify-around mb-4">
                             <button onClick={() => { playToggleSound(); toggleShuffle(allTrackIds); }} disabled={allTracks.length === 0} className={`p-2 transition-colors ${isShuffled ? 'text-primary-500' : 'text-text-subtle hover:text-primary-500'} disabled:opacity-50`} title="Shuffle"><Icon name="shuffle" className="w-5 h-5" /></button>
                             <button onClick={playPrev} disabled={allTracks.length === 0} className="p-2 text-text-subtle hover:text-primary-500 disabled:opacity-50"><Icon name="arrowLeft" className="w-6 h-6" /></button>
-                            <button onClick={togglePlay} disabled={allTracks.length === 0} className="w-14 h-14 flex items-center justify-center bg-primary-500 hover:bg-primary-600 text-white rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                                <Icon name={isPlaying ? 'pause' : 'play'} className="w-7 h-7" />
+                            <button onClick={togglePlay} disabled={allTracks.length === 0 || isLoadingTrack} className="w-14 h-14 flex items-center justify-center bg-primary-500 hover:bg-primary-600 text-white rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                {isLoadingTrack ? (
+                                    <Icon name="spinner" className="w-7 h-7 animate-spin" />
+                                ) : (
+                                    <Icon name={isPlaying ? 'pause' : 'play'} className="w-7 h-7" />
+                                )}
                             </button>
                             <button onClick={playNext} disabled={allTracks.length === 0} className="p-2 text-text-subtle hover:text-primary-500 disabled:opacity-50"><Icon name="arrowRight" className="w-6 h-6" /></button>
                             <button onClick={() => { playToggleSound(); cycleRepeatMode(); }} className={`p-2 transition-colors ${repeatMode !== 'none' ? 'text-primary-500' : 'text-text-subtle hover:text-primary-500'}`} title={`Repeat: ${repeatMode}`}><Icon name={repeatIcon[repeatMode]} className="w-5 h-5" /></button>
@@ -347,8 +420,17 @@ const MusicPlayer: React.FC = () => {
                         <div className="text-center mb-4">
                             <p className="font-semibold text-text-main dark:text-secondary-100 truncate px-4">{currentTrack?.name || (allTracks.length === 0 ? 'No tracks added' : 'Select a track')}</p>
                             <p className="text-xs text-text-subtle mt-1 flex items-center justify-center gap-1">
-                                {isYouTube && <Icon name="youtube" className="w-3 h-3 text-error-500" variant="filled" />}
-                                {currentTrack?.isCustom ? (isYouTube ? 'YouTube Audio' : 'Custom URL') : (allTracks.length === 0 ? 'Add YouTube/MP3 below' : 'Local Asset')}
+                                {isLoadingTrack ? (
+                                    <span className="flex items-center gap-1">
+                                        <Icon name="spinner" className="w-3 h-3 animate-spin" />
+                                        Loading...
+                                    </span>
+                                ) : (
+                                    <>
+                                        {isYouTube && <Icon name="youtube" className="w-3 h-3 text-error-500" variant="filled" />}
+                                        {currentTrack?.isCustom ? (isYouTube ? 'YouTube Audio' : 'Custom URL') : (allTracks.length === 0 ? 'Add YouTube/MP3 below' : 'Local Asset')}
+                                    </>
+                                )}
                             </p>
                         </div>
 
@@ -417,11 +499,17 @@ const MusicPlayer: React.FC = () => {
                                             className={`group flex items-center justify-between p-2 rounded-md text-sm font-semibold transition-colors cursor-pointer ${currentTrack?.id === track.id ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300' : 'hover:bg-secondary-100 dark:hover:bg-secondary-700/50'}`}
                                         >
                                             <div className="flex items-center gap-2 min-w-0">
-                                                {currentTrack?.id === track.id && isPlaying ? (
-                                                    <span className="flex h-2 w-2 relative flex-shrink-0">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
-                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
-                                                    </span>
+                                                {currentTrack?.id === track.id ? (
+                                                    isLoadingTrack ? (
+                                                        <Icon name="spinner" className="w-4 h-4 animate-spin text-primary-500" />
+                                                    ) : isPlaying ? (
+                                                        <span className="flex h-2 w-2 relative flex-shrink-0">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
+                                                        </span>
+                                                    ) : (
+                                                        <Icon name={isYtItem ? 'youtube' : track.icon} className={`w-4 h-4 flex-shrink-0 opacity-70 ${isYtItem ? 'text-error-500' : ''}`} />
+                                                    )
                                                 ) : (
                                                     <Icon name={isYtItem ? 'youtube' : track.icon} className={`w-4 h-4 flex-shrink-0 opacity-70 ${isYtItem ? 'text-error-500' : ''}`} />
                                                 )}
